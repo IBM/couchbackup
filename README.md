@@ -83,3 +83,10 @@ A backup file is a text file where each line contains a JSON encoded array of up
     [{"a":501},{"a":502}...]
 
 
+## Why use CouchBackup?
+
+The easiest way to backup a CouchDB database is to copy the ".couch" file. This is fine on a single-node instance, but when running multi-node 
+Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
+or Cloudant database using the HTTP API.
+
+
