@@ -24,6 +24,7 @@ async.doUntil(function(callback){
     
     var docs = [];
     for(var i=0;i<Math.min(data.rows.length, blocksize); i++) {
+      delete data.rows[i].doc._rev
       docs.push(data.rows[i].doc);
     }
     

@@ -18,7 +18,9 @@ writer._transform = function (obj, encoding, done) {
   if(typeof arr == "object" && arr.length>0) {
     written += arr.length;
     process.stderr.write(" restored docs: "+written+"\r");
-    cloudant.bulk_write(arr, done);
+    cloudant.bulk_write(arr, function(err, data) {
+      done();
+    });
   } else {
     console.error("ERROR on line",linenumber,": not an array");
     done();    
