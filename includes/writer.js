@@ -1,31 +1,110 @@
-var stream = require('stream'),
-  cloudant = require('./cloudant.js'),
-  linenumber = 0;
-  written = 0;
 
-var writer = new stream.Transform( { objectMode: true } );
 
-// take an object
-writer._transform = function (obj, encoding, done) {
+
+var async = require('async'),
+    stream = require('stream');
+
+module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
+  
+  var buffer = [ ],
+    written = 0,
+    linenumber = 0;
     
-  linenumber++;
-  var arr = [];
-  try {
-    arr = JSON.parse(obj);
-  } catch(e) {
-    console.error("ERROR on line",linenumber,": cannot parse as JSON");
+  var cloudant = require('cloudant')(couch_url);
+  var db = cloudant.db.use(couch_database);
+
+  // process the writes in bulk as a queue
+  var q = async.queue(function(payload, cb) {
+    db.bulk(payload, function(err, data) {
+      if (err) {
+        writer.emit("writeerror", err);
+      } else {
+        written += payload.docs.length;
+        writer.emit("written", { documents: payload.docs.length, total: written});
+      }
+      cb();
+    });
+  }, parallelism);
+  
+  
+  // write the contents of the buffer to CouchDB in blocks of 500
+  var processBuffer = function(flush, callback) {
+  
+    if(flush || buffer.length>= buffer_size) {
+      var toSend = buffer.splice(0, buffer.length);
+      buffer = [];
+      q.push({docs: toSend});
+      
+      // wait until the buffer size falls to a reasonable level
+      async.until(
+        
+        // wait until the queue length drops to twice the paralellism 
+        // or until empty
+        function() {
+          if(flush) {
+            return q.idle() && q.length() ==0
+          } else {
+            return q.length() <= parallelism * 2
+          }
+        },
+        
+        function(cb) {
+          setTimeout(cb,100);
+        },
+        
+        function() {
+          if (flush) {
+            writer.emit("writecomplete", { total: written });
+          }
+          callback();
+        });
+
+
+    } else {
+      callback();
+    }
   }
-  if(typeof arr == "object" && arr.length>0) {
-    written += arr.length;
-    process.stderr.write(" restored docs: "+written+"\r");
-    cloudant.bulk_write(arr, function(err, data) {
+
+  var writer = new stream.Transform( { objectMode: true } );
+
+  // take an object
+  writer._transform = function (obj, encoding, done) {
+    
+    
+    linenumber++;
+    var arr = [];
+    try {
+      arr = JSON.parse(obj);
+    } catch(e) {
+      console.error("ERROR on line",linenumber,": cannot parse as JSON");
+    }
+    if (typeof arr == "object" && arr.length > 0) {
+     
+      for (var i in arr) {
+        buffer.push(arr[i]);
+      }
+      
+      // optionally write to the buffer
+      this.pause();
+      processBuffer(false,  function() {
+        done();
+      });
+      
+    } else {
+      console.error("ERROR on line",linenumber,": not an array");
+      done();    
+    }
+
+  };
+
+  // called when we need to flush everything
+  writer._flush = function(done) {
+    processBuffer(true, function() {
       done();
     });
-  } else {
-    console.error("ERROR on line",linenumber,": not an array");
-    done();    
-  }
-
+  };
+  
+  return writer;
 };
 
-module.exports = writer;
+
