@@ -1,7 +1,7 @@
 
 var backup = require('./includes/backup.js'),
   restore = require('./includes/restore.js'),
-  debug = require('debug')('couchimport'),
+  debug = require('debug')('couchbackup'),
   fs = require('fs');
 
 module.exports = {
