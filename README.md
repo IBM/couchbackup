@@ -89,6 +89,28 @@ The easiest way to backup a CouchDB database is to copy the ".couch" file. This 
 Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
 or Cloudant database using the HTTP API.
 
+It's worth remembering that the CouchBackup isn't recording the full MVCC history of each document, only
+the winning revision if each document - any unresolved conflicts will be lost in the backup. This is intentional
+and would allow you to transfer the winning revisions from a heavily conflicted database to a new 
+location very easily.
+
+## Options reference
+
+
+### Environment variables
+
+* COUCH_URL - the URL of the CouchDB/Cloudant server e.g. http://127.0.0.1:5984
+* COUCH_DATABASE - the name of the database to act upon e.g. mydb (default 'test')
+* COUCH_PARALLELISM - the number of HTTP requests to perform in parallel when restoring a backup e.g. 10 (Default 5)
+* COUCH_BUFFER_SIZE - the number of documents fetched and restored at once e.g. 100 (default 500)
+
+### Command-line paramters
+
+* --url - same as COUCH_URL environment variable
+* --db - same as COUCH_DATABASE 
+* --parallelism - same as COUCH_PARALLELISM
+* --buffer - same as COUCH_BUFFER_SIZE
+
 ## Using programmatically
 
 You can now use `couchbackup` programatically. First install the `couchbackup` into your project 
