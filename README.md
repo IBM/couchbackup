@@ -89,4 +89,55 @@ The easiest way to backup a CouchDB database is to copy the ".couch" file. This 
 Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
 or Cloudant database using the HTTP API.
 
+## Using programmatically
+
+You can now use `couchbackup` programatically. First install the `couchbackup` into your project 
+with `npm install --save couchbackup`. Then you can import the library into your code:
+
+
+```
+  var couchbackup = require('couchbackup');
+```
+
+Define some options, using an object that contains attributes with the same names as the environment 
+variables used to configure the command-line utilities:
+
+```
+var opts = {
+  "COUCH_URL": "http://127.0.0.1:5984",
+  "COUCH_DATABASE": "mydb",
+}
+```
+
+The you can backup data to a stream:
+
+
+```
+couchbackup.backupStream(process.stdout, opts, function() {
+  // done!
+});
+``
+
+or to a file
+
+```
+couchbackup.backupFile("backup.txt", opts, function() {
+  // done!
+});
+``
+
+Similarly, you can restore from a stream:
+
+```
+couchbackup.restoreStream(process.stdin, opts, function() {
+  // done!
+});
+```
+
+The `couchbackup` functions emit events:
+
+* written - when a group of documents is backuped up or restored
+* writecomplete - emitted once when all documents are backed up or restored
+* writeerror - emitted when something goes wrong
+
 
