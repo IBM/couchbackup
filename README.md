@@ -14,6 +14,8 @@
 CouchBackup is a command-line utility that allows a CouchDB database to be backed-up to a text file. 
 It comes with a companion command-line utility that can restore the backed up data.
 
+** N.B. couchbackup does not do CouchDB replication, it simply pages throught the /_all_docs endpoint. Conflicts, deletions and revision history are discarded. Only the winning revisions (without the _rev) survive. **
+
 ## Installation
 
 To install use npm:
