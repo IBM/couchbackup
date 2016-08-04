@@ -14,7 +14,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "async": "1.5.2",
-    "cloudant": "1.4.1",
+    "cloudant": "1.4.3",
     "debug": "2.2.0",
     "minimist": "1.2.0"
   },
