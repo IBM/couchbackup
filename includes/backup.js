@@ -1,7 +1,9 @@
 var async = require('async');
 
 module.exports = function(url, dbname, blocksize) {
-  
+  if (typeof blocksize === 'string') {
+    blocksize = parseInt(blocksize);
+  }
   var events = require('events'),
   ee = new events.EventEmitter(),
   cloudant = require('cloudant')( url), 
@@ -10,18 +12,19 @@ module.exports = function(url, dbname, blocksize) {
   total = 0;
  
   async.doUntil(function(callback){
+
     var opts = { limit: blocksize+1, include_docs:true };
     if (startdocid) {
       opts.startkey_docid = startdocid;
     }
     db.list(opts, function(err, data) {
     
-      if(err) {
+      if (err) {
         ee.emit("writeerror", err);
-        return callback(err,null)
+        return callback(null,null)
       }
-    
-      if(data.rows.length == blocksize+1) {
+
+      if (data.rows.length === blocksize+1) {
         startdocid = data.rows[blocksize].id
       } else {
         startdocid = null
