@@ -28,9 +28,9 @@ module.exports = {
       });
   },
   backupFile:  function(filename, opts, callback) {
-    return backup(fs.creteWriteStream(fileanme), opts, callback);
+    return this.backupStream(fs.createWriteStream(filename), opts, callback);
   },
   restoreFile: function(filename, opts, callback) {
-    return restore(fs.createReadStream(filename), opts, callback);
+    return this.restoreStream(fs.createReadStream(filename), opts, callback);
   }
 }
