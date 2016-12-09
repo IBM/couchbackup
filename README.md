@@ -140,7 +140,7 @@ The you can backup data to a stream:
 couchbackup.backupStream(process.stdout, opts, function() {
   // done!
 });
-``
+```
 
 or to a file
 
@@ -148,7 +148,7 @@ or to a file
 couchbackup.backupFile("backup.txt", opts, function() {
   // done!
 });
-``
+```
 
 Similarly, you can restore from a stream:
 
