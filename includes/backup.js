@@ -61,7 +61,7 @@ module.exports = function(url, dbname, blocksize, parallelism) {
         ee.emit('writeerror', c);
       } else if (c.changes) {
         c.changes.forEach(function(r) {
-          buffer.push({id: c.id, rev: r.rev});
+          buffer.push({id: c.id});
         });
         processBuffer(false);
       }
