@@ -1,8 +1,9 @@
 var async = require('async'),
   events = require('events'),
+  fs = require('fs'),
   request = require('request');
 
-module.exports = function(url, dbname, blocksize, parallelism) {
+module.exports = function(url, dbname, blocksize, parallelism, log) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
@@ -12,12 +13,36 @@ module.exports = function(url, dbname, blocksize, parallelism) {
     db = cloudant.db.use(dbname),
     total = 0;
 
+  // logging, clear the file
+  if (log) {
+    if (fs.existsSync(log)) {
+      fs.unlinkSync(log);
+    }
+    var obj = {
+      start: new Date().toISOString(),
+      dbname: dbname, 
+      blocksize: blocksize,
+      parallelism: parallelism,
+      log: log,
+      url: url.replace(/\/\/.+@/g, '//****:****@')
+    };
+    fs.appendFileSync(log, JSON.stringify(obj) + '\n' );
+  }
+
   // list of document ids to process
   var buffer = [];
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
   var q = async.queue(function(payload, done) {
     var output = [];
+    var lastSeq = null;
+    payload.docs.map(function(obj) {
+      if (obj.seq) {
+        lastSeq = obj.seq;
+        delete obj.seq;
+      }
+      return obj;
+    });
 
     // do the /db/_bulk_get request
     db.bulk_get(payload, function(err, data) {
@@ -39,7 +64,21 @@ module.exports = function(url, dbname, blocksize, parallelism) {
       } else {
         ee.emit('writeerror', err);
       }
-      done();
+      if (log) {
+        var obj = {
+          time: t,
+          now: new Date().toISOString(),
+          total: total,
+          qlen: q.length()
+        };
+        if (lastSeq) {
+          obj.seq = lastSeq;
+        }
+        fs.appendFile(log, JSON.stringify(obj) + '\n', done);
+        lastSeq = null;
+      } else {
+        done();
+      }
     })
 
   }, parallelism);
@@ -62,9 +101,11 @@ module.exports = function(url, dbname, blocksize, parallelism) {
       if (c.error) {
         ee.emit('writeerror', c);
       } else if (c.changes) {
-        c.changes.forEach(function(r) {
-          buffer.push({id: c.id});
-        });
+        var obj = {id: c.id}
+        if (c.seq) {
+          obj.seq = c.seq;
+        }
+        buffer.push(obj);
         processBuffer(false);
       }
     }
@@ -76,7 +117,7 @@ module.exports = function(url, dbname, blocksize, parallelism) {
     .pipe(require('./change.js')(onChange))
     .on('finish', function() {
       processBuffer(true);
-      q.drain = function() {
+      q.drain = function() {       
         ee.emit('writecomplete', { total: total});
       };
     });;

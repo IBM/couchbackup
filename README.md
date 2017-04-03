@@ -100,6 +100,7 @@ or Cloudant database using the HTTP API.
 * COUCH_DATABASE - the name of the database to act upon e.g. mydb (default 'test')
 * COUCH_PARALLELISM - the number of HTTP requests to perform in parallel when restoring a backup e.g. 10 (Default 5)
 * COUCH_BUFFER_SIZE - the number of documents fetched and restored at once e.g. 100 (default 500)
+* COUCH_LOG - the file to store logging information during backup
 
 ### Command-line paramters
 
@@ -107,6 +108,7 @@ or Cloudant database using the HTTP API.
 * --db - same as COUCH_DATABASE 
 * --parallelism - same as COUCH_PARALLELISM
 * --buffer - same as COUCH_BUFFER_SIZE
+* --log - same as COUCH_LOG
 
 ## Using programmatically
 

@@ -6,7 +6,7 @@ var backup = require('./includes/backup.js'),
 
 module.exports = {
   backupStream: function(writeStream, opts, callback) {
-    return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM)
+    return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM, opts.COUCH_LOG)
       .on('written', function(obj) {
         debug(' backed up docs: ', obj.total, 'Time', obj.time);
         writeStream.write(JSON.stringify(obj.data) + '\n');

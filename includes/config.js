@@ -1,11 +1,13 @@
 var theconfig = {};
 var argv = require('minimist')(process.argv.slice(2));
+var path = require('path');
 
 // configure the CouchDB paramss
 theconfig.COUCH_URL = 'http://localhost:5984';
 theconfig.COUCH_DATABASE = 'test';
 theconfig.COUCH_PARALLELISM = 5;
 theconfig.COUCH_BUFFER_SIZE = 500;
+theconfig.COUCH_LOG = null;
 
 // if we have a custom CouchDB url
 if( typeof process.env.COUCH_URL !== 'undefined') {
@@ -13,33 +15,41 @@ if( typeof process.env.COUCH_URL !== 'undefined') {
 }
 
 // if we have a specified databases
-if( typeof process.env.COUCH_DATABASE !== 'undefined') {
+if (typeof process.env.COUCH_DATABASE !== 'undefined') {
   theconfig.COUCH_DATABASE = process.env.COUCH_DATABASE;
 }
 
 // if we have a specified buffer size
-if( typeof process.env.COUCH_BUFFER_SIZE !== 'undefined') {
+if (typeof process.env.COUCH_BUFFER_SIZE !== 'undefined') {
   theconfig.COUCH_BUFFER_SIZE = parseInt(process.env.COUCH_BUFFER_SIZE);
 }
 
 // if we have a specified parallelism
-if( typeof process.env.COUCH_PARALLELISM !== 'undefined') {
+if (typeof process.env.COUCH_PARALLELISM !== 'undefined') {
   theconfig.COUCH_PARALLELISM = parseInt(process.env.COUCH_PARALLELISM);
+}
+
+// if we have a specified log file
+if (typeof process.env.COUCH_LOG !== 'undefined') {
+  theconfig.COUCH_LOG = path.normalize(process.env.COUCH_LOG);
 }
 
 
 // override with command-line parameters
-if(argv.url) {
+if (argv.url) {
   theconfig.COUCH_URL = argv.url;
 }
-if(argv.db) {
+if (argv.db) {
   theconfig.COUCH_DATABASE = argv.db;
 }
-if(argv.buffer) {
+if (argv.buffer) {
   theconfig.COUCH_BUFFER_SIZE = parseInt(argv.buffer);
 }
-if(argv.parallelism) {
+if (argv.parallelism) {
   theconfig.COUCH_PARALLELISM = parseInt(argv.parallelism);
+}
+if (argv.log) {
+  theconfig.COUCH_LOG = path.normalize(argv.log)
 }
 
 console.error('******************');
