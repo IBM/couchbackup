@@ -8,7 +8,7 @@ module.exports = {
   backupStream: function(writeStream, opts, callback) {
     return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM)
       .on('written', function(obj) {
-        debug(' backed up docs: ', obj.total);
+        debug(' backed up docs: ', obj.total, 'Time', obj.time);
         writeStream.write(JSON.stringify(obj.data) + '\n');
       })
       .on('writeerror', function(obj) {

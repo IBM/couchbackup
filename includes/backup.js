@@ -7,6 +7,7 @@ module.exports = function(url, dbname, blocksize, parallelism) {
     blocksize = parseInt(blocksize);
   }
   var ee = new events.EventEmitter(),
+    start = new Date().getTime(),
     cloudant = require('cloudant')( url), 
     db = cloudant.db.use(dbname),
     total = 0;
@@ -33,7 +34,8 @@ module.exports = function(url, dbname, blocksize, parallelism) {
           }
         });
         total += output.length;
-        ee.emit('written', { length: output.length, total: total, data: output});
+        var t = (new Date().getTime() - start)/1000;
+        ee.emit('written', { length: output.length, time: t, total: total, data: output});
       } else {
         ee.emit('writeerror', err);
       }
