@@ -6,24 +6,27 @@ var backup = require('./includes/backup.js'),
 
 module.exports = {
   backupStream: function(writeStream, opts, callback) {
-    return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE)
-      .on("written", function(obj) {
-        debug(" backed up docs: ", obj.total);
-        writeStream.write(JSON.stringify(obj.data) + "\n");
+    return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM)
+      .on('written', function(obj) {
+        debug(' backed up docs: ', obj.total);
+        writeStream.write(JSON.stringify(obj.data) + '\n');
       })
-      .on("writecomplete", function(obj) {
-        debug("Backup complete - written" + JSON.stringify(obj));
+      .on('writeerror', function(obj) {
+        debug('Error' + JSON.stringify(obj));
+      })
+      .on('writecomplete', function(obj) {
+        debug('Backup complete - written' + JSON.stringify(obj));
         callback(null,obj);
       });
     
   },
   restoreStream: function(readStream, opts, callback) {
     return restore(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM, readStream)
-      .on("written", function(obj) {
-        debug(" written ", obj.total);
+      .on('written', function(obj) {
+        debug(' written ', obj.total);
       })
-      .on("writecomplete", function(obj) {
-        debug("restore complete");
+      .on('writecomplete', function(obj) {
+        debug('restore complete');
         callback(null, obj);
       });
   },

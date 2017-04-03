@@ -13,9 +13,9 @@
   "author": "Glynn Bird",
   "license": "Apache-2.0",
   "dependencies": {
-    "async": "2.0.1",
-    "cloudant": "1.4.3",
-    "debug": "2.2.0",
+    "async": "2.3.0",
+    "cloudant": "1.7.1",
+    "debug": "2.6.3",
     "minimist": "1.2.0"
   },
   "main": "app.js",

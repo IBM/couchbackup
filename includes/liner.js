@@ -8,7 +8,7 @@ liner._transform = function (chunk, encoding, done) {
      data = this._lastLineData + data;
    }
    
-   var lines = data.split("\n");
+   var lines = data.split('\n');
    this._lastLineData = lines.splice(lines.length-1,1)[0];
 
    for(var i in lines) {

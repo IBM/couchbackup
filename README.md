@@ -14,7 +14,7 @@
 CouchBackup is a command-line utility that allows a CouchDB database to be backed-up to a text file. 
 It comes with a companion command-line utility that can restore the backed up data.
 
-** N.B. couchbackup does not do CouchDB replication, it simply pages throught the /_all_docs endpoint. Conflicts, deletions and revision history are discarded. Only the winning revisions (without the _rev) survive. **
+** N.B. couchbackup does not do CouchDB replication as such, it simply streams througha database's _changes feed, and uses `POST /db/_bulk_get` to fetch the documents. **
 
 ## Installation
 
@@ -24,7 +24,7 @@ To install use npm:
 
 ## Usage
 
-Either environement variables or command-line options can be used to specify the URL of the CouchDB or Cloudant instance, and the database to work with.
+Either environment variables or command-line options can be used to specify the URL of the CouchDB or Cloudant instance, and the database to work with.
 
 ### The URL
 
@@ -91,13 +91,8 @@ The easiest way to backup a CouchDB database is to copy the ".couch" file. This 
 Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
 or Cloudant database using the HTTP API.
 
-It's worth remembering that the CouchBackup isn't recording the full MVCC history of each document, only
-the winning revision if each document - any unresolved conflicts will be lost in the backup. This is intentional
-and would allow you to transfer the winning revisions from a heavily conflicted database to a new 
-location very easily.
 
 ## Options reference
-
 
 ### Environment variables
 

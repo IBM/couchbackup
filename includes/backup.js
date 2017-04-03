@@ -1,52 +1,83 @@
-var async = require('async');
+var async = require('async'),
+  events = require('events'),
+  request = require('request');
 
-module.exports = function(url, dbname, blocksize) {
+module.exports = function(url, dbname, blocksize, parallelism) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
-  var events = require('events'),
-  ee = new events.EventEmitter(),
-  cloudant = require('cloudant')( url), 
-  db = cloudant.db.use(dbname),
-  startdocid=null,
-  total = 0;
- 
-  async.doUntil(function(callback){
+  var ee = new events.EventEmitter(),
+    cloudant = require('cloudant')( url), 
+    db = cloudant.db.use(dbname),
+    total = 0;
 
-    var opts = { limit: blocksize+1, include_docs:true };
-    if (startdocid) {
-      opts.startkey_docid = startdocid;
-    }
-    db.list(opts, function(err, data) {
-    
-      if (err) {
-        ee.emit("writeerror", err);
-        return callback(null,null)
-      }
+  // list of document ids to process
+  var buffer = [];
 
-      if (data.rows.length === blocksize+1) {
-        startdocid = data.rows[blocksize].id
+  // queue to process the fetch requests in an orderly fashion using _bulk_get
+  var q = async.queue(function(payload, done) {
+    var output = [];
+
+    // do the /db/_bulk_get request
+    db.bulk_get(payload, function(err, data) {
+      if (!err) {
+
+        // create an output array with the docs returned
+        data.results.forEach(function(d) {
+          if (d.docs) {
+            d.docs.forEach(function(doc) {
+              if (doc.ok) {
+                output.push(doc.ok);
+              }
+            });
+          }
+        });
+        total += output.length;
+        ee.emit('written', { length: output.length, total: total, data: output});
       } else {
-        startdocid = null
+        ee.emit('writeerror', err);
       }
-    
-      var docs = [];
-      for (var i=0; i<Math.min(data.rows.length, blocksize); i++) {
-        delete data.rows[i].doc._rev
-        docs.push(data.rows[i].doc);
-      }
-    
-      total += docs.length;
-      ee.emit("written", { length: docs.length, total: total, data: docs});
-      callback(null);
+      done();
     })
-  },
-  function() {
-    return (startdocid == null);
-  }, 
-  function(err){
-    ee.emit("writecomplete", { total: total, err: err});
-  });
+
+  }, parallelism);
+
+  // send documents ids to the queue in batches of 500 + the last batch
+  var processBuffer = function(lastOne) {
+    if (buffer.length >= blocksize || lastOne) {
+      var n = blocksize;
+      if (lastOne) {
+        n = buffer.length;
+      }
+      var batch = { docs: buffer.splice(0, blocksize) };
+      q.push(batch)
+    }
+  };
+
+  // called once per received change
+  var onChange = function(c) {
+    if (c) {
+      if (c.error) {
+        ee.emit('writeerror', c);
+      } else if (c.changes) {
+        c.changes.forEach(function(r) {
+          buffer.push({id: c.id, rev: r.rev});
+        });
+        processBuffer(false);
+      }
+    }
+  };
+
+  // stream the changes feed
+  request(url + '/' + encodeURIComponent(dbname) + '/_changes')
+    .pipe(require('./liner.js'))
+    .pipe(require('./change.js')(onChange))
+    .on('finish', function() {
+      processBuffer(true);
+      q.drain = function() {
+        ee.emit('writecomplete', { total: total});
+      };
+    });;
   
   return ee;
 };
