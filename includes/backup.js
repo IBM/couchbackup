@@ -71,7 +71,7 @@ module.exports = function(url, dbname, blocksize, parallelism) {
   };
 
   // stream the changes feed
-  request(url + '/' + encodeURIComponent(dbname) + '/_changes')
+  request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=10000')
     .pipe(require('./liner.js'))
     .pipe(require('./change.js')(onChange))
     .on('finish', function() {
