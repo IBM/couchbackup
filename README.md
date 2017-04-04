@@ -1,5 +1,7 @@
 # CouchBackup
 
+[![Build Status](https://travis-ci.org/glynnbird/couchbackup.svg?branch=master)](https://travis-ci.org/glynnbird/couchbackup)
+
 ```
  _____                  _    ______            _                
 /  __ \                | |   | ___ \          | |               
