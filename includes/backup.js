@@ -60,7 +60,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log) {
         });
         total += output.length;
         var t = (new Date().getTime() - start)/1000;
-        ee.emit('written', { length: output.length, time: t, total: total, data: output});
+        ee.emit('written', { length: output.length, time: t, total: total, data: output, qlen: q.length()*blocksize + buffer.length});
       } else {
         ee.emit('writeerror', err);
       }
@@ -69,7 +69,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log) {
           time: t,
           now: new Date().toISOString(),
           total: total,
-          qlen: q.length()
+          qlen: q.length()*blocksize + buffer.length
         };
         if (lastSeq) {
           obj.seq = lastSeq;
