@@ -8,6 +8,7 @@ theconfig.COUCH_DATABASE = 'test';
 theconfig.COUCH_PARALLELISM = 5;
 theconfig.COUCH_BUFFER_SIZE = 500;
 theconfig.COUCH_LOG = null;
+theconfig.COUCH_RESUME = false;
 
 // if we have a custom CouchDB url
 if( typeof process.env.COUCH_URL !== 'undefined') {
@@ -34,6 +35,11 @@ if (typeof process.env.COUCH_LOG !== 'undefined') {
   theconfig.COUCH_LOG = path.normalize(process.env.COUCH_LOG);
 }
 
+// if we are instructed to resume
+if (typeof process.env.COUCH_RESUME !== 'undefined' && process.env.COUCH_RESUME === 'true') {
+  theconfig.COUCH_RESUME = true;
+}
+
 
 // override with command-line parameters
 if (argv.url) {
@@ -49,7 +55,10 @@ if (argv.parallelism) {
   theconfig.COUCH_PARALLELISM = parseInt(argv.parallelism);
 }
 if (argv.log) {
-  theconfig.COUCH_LOG = path.normalize(argv.log)
+  theconfig.COUCH_LOG = path.normalize(argv.log);
+}
+if (argv.resume && argv.resume === 'true') {
+  theconfig.COUCH_RESUME = true;
 }
 
 console.error('******************');
