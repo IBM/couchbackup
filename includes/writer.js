@@ -1,6 +1,3 @@
-
-
-
 var async = require('async'),
     stream = require('stream');
 
@@ -15,12 +12,13 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
 
   // process the writes in bulk as a queue
   var q = async.queue(function(payload, cb) {
+    payload.new_edits = false;
     db.bulk(payload, function(err, data) {
       if (err) {
-        writer.emit("writeerror", err);
+        writer.emit('writeerror', err);
       } else {
         written += payload.docs.length;
-        writer.emit("written", { documents: payload.docs.length, total: written});
+        writer.emit('written', { documents: payload.docs.length, total: written});
       }
       cb();
     });
@@ -54,7 +52,7 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
         
         function() {
           if (flush) {
-            writer.emit("writecomplete", { total: written });
+            writer.emit('writecomplete', { total: written });
           }
           callback();
         });
@@ -76,9 +74,9 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
     try {
       arr = JSON.parse(obj);
     } catch(e) {
-      console.error("ERROR on line",linenumber,": cannot parse as JSON");
+      console.error('ERROR on line', linenumber, ': cannot parse as JSON');
     }
-    if (typeof arr == "object" && arr.length > 0) {
+    if (typeof arr === 'object' && arr.length > 0) {
      
       for (var i in arr) {
         buffer.push(arr[i]);
@@ -91,7 +89,7 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
       });
       
     } else {
-      console.error("ERROR on line",linenumber,": not an array");
+      console.error('ERROR on line', linenumber, ': not an array');
       done();    
     }
 
