@@ -50,7 +50,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
 
       // do the /db/_bulk_get request
       db.bulk_get(payload, function(err, data) {
-        if (!err) {
+        if (!err || !data || !data.results) {
 
           // create an output array with the docs returned
           data.results.forEach(function(d) {
