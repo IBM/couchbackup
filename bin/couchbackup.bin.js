@@ -6,6 +6,7 @@ process.env.DEBUG = 'couchbackup';
 var config = require('../includes/config.js'),
   debug = require('debug')('couchbackup'),
   fs = require('fs'),
+  ws = process.stdout,
   couchbackup = require('../app.js');
   
 if (config.COUCH_RESUME) {
@@ -20,8 +21,17 @@ if (config.COUCH_RESUME) {
   }
 }
 
-// backup to stdout
-couchbackup.backupStream(process.stdout, config, function() {
+// open output file
+if (config.COUCH_OUTPUT) {
+  var flags = 'w';
+  if (config.COUCH_LOG && config.COUCH_RESUME) {
+    flags = 'a';
+  }
+  ws = fs.createWriteStream(config.COUCH_OUTPUT, { flags: flags });
+}
+
+// backup to stdout or supplied file
+couchbackup.backupStream(ws, config, function() {
   
 });
 

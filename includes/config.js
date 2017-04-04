@@ -9,6 +9,7 @@ theconfig.COUCH_PARALLELISM = 5;
 theconfig.COUCH_BUFFER_SIZE = 500;
 theconfig.COUCH_LOG = null;
 theconfig.COUCH_RESUME = false;
+theconfig.COUCH_OUTPUT = null;
 
 // if we have a custom CouchDB url
 if( typeof process.env.COUCH_URL !== 'undefined') {
@@ -40,6 +41,10 @@ if (typeof process.env.COUCH_RESUME !== 'undefined' && process.env.COUCH_RESUME 
   theconfig.COUCH_RESUME = true;
 }
 
+// if we are given an output filename
+if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
+  theconfig.COUCH_OUTPUT = path.normalize(process.env.COUCH_OUTPUT);
+}
 
 // override with command-line parameters
 if (argv.url) {
@@ -59,6 +64,9 @@ if (argv.log) {
 }
 if (argv.resume && argv.resume === 'true') {
   theconfig.COUCH_RESUME = true;
+}
+if (argv.output) {
+  theconfig.COUCH_OUTPUT = path.normalize(argv.output);
 }
 
 console.error('******************');

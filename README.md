@@ -56,6 +56,20 @@ Another way of backing up is to set the COUCH_URL environment variable only and 
 
     couchbackup --db animals > animals.txt
   
+## Logging & resuming backups
+
+You may also create a log file which records the progress of the backup with the `--log` parameter e.g.
+
+    couchbackup --db animals --log animals.log > animals.txt
+
+This log file can be used to resume backups from where you left off with `--resume true`:
+
+    couchbackup --db animals --log animals.log --resume true >> animals.txt
+
+You may also specify the name of the output file, rather than directing the backup data to *stdout*:
+
+    couchbackup --db animals --log animals.log --resume true --output animals.txt
+
 ## Restore
 
 Now we have our backup text file, we can restore it to an existing database using the `couchrestore`:
@@ -65,7 +79,6 @@ Now we have our backup text file, we can restore it to an existing database usin
 or specifying the database name on the command-line:
 
     cat animals.txt | couchrestore --db animalsdb
-
 
 ## Compressed backups
 
@@ -84,6 +97,12 @@ A backup file is a text file where each line contains a JSON encoded array of up
     [{"a":1},{"a":2}...]
     [{"a":501},{"a":502}...]
 
+## What's in a log file?
+
+A log file contains the line for every bulk read we make from the database:
+
+    {"time":11.369,"now":"2017-04-04T08:15:14.358Z","total":19500,"qlen":2500,"seq":"19002-g1AAAACheJzLYWBgYMpgTmEQTM4vTc5ISXLIyU9OzMnILy7JAUklMiTV____PyuDOYmBQdMhFyjGnphilJRqbIpNDx6T8liAJEMDkPoPN1DhF9hAc2NzU1MzI2xaswBvWzH0"}
+    {"time":11.398,"now":"2017-04-04T08:15:14.387Z","total":20000,"qlen":2000,"seq":"19502-g1AAAACheJzLYWBgYMpgTmEQTM4vTc5ISXLIyU9OzMnILy7JAUklMiTV____PyuDOYmBQasnFyjGnphilJRqbIpNDx6T8liAJEMDkPoPN1BxEdhAc2NzU1MzI2xaswCGZjHq"}
 
 ## Why use CouchBackup?
 
@@ -91,6 +110,7 @@ The easiest way to backup a CouchDB database is to copy the ".couch" file. This 
 Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
 or Cloudant database using the HTTP API.
 
+This tool can be used to script the backup of your databases. Move the backup and log files to cheap Object Storage so that you have multiple copies of your precious data.
 
 ## Options reference
 
@@ -101,6 +121,8 @@ or Cloudant database using the HTTP API.
 * COUCH_PARALLELISM - the number of HTTP requests to perform in parallel when restoring a backup e.g. 10 (Default 5)
 * COUCH_BUFFER_SIZE - the number of documents fetched and restored at once e.g. 100 (default 500)
 * COUCH_LOG - the file to store logging information during backup
+* COUCH_RESUME - if 'true', resumes a previous backup from its last known position
+* COUCH_OUTPUT - the file name to store the backup data (defaults to stdout)
 
 ### Command-line paramters
 
@@ -109,6 +131,8 @@ or Cloudant database using the HTTP API.
 * --parallelism - same as COUCH_PARALLELISM
 * --buffer - same as COUCH_BUFFER_SIZE
 * --log - same as COUCH_LOG
+* --resume - same as COUCH_RESUME
+* --output - same as COUCH_OUTPUT
 
 ## Using programmatically
 

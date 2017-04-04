@@ -8,7 +8,7 @@ var async = require('async'),
 
 
 
-module.exports = function(url, dbname, blocksize, parallelism, log, resume) {
+module.exports = function(url, dbname, blocksize, parallelism, log, resume, output) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
@@ -18,6 +18,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume) {
     db = cloudant.db.use(dbname),
     total = 0;
 
+  // read the last sequence number, if applicable
   lastseq(log, resume,  function(err, lastSeq) {
 
     // logging, clear the file
@@ -120,7 +121,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume) {
     };
 
     // stream the changes feed
-     request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=10000&since=' + lastSeq)
+     request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=' + blocksize + '&since=' + lastSeq)
       .pipe(liner())
       .pipe(change(onChange))
       .on('finish', function() {
