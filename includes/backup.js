@@ -3,7 +3,7 @@ var async = require('async'),
   fs = require('fs'),
   liner = require('./liner.js'),
   change = require('./change.js'),
-  lastseq = require('./lastseq.js'),
+  resumeData = require('./resume.js'),
   request = require('request');
 
 
@@ -16,10 +16,12 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
     start = new Date().getTime(),
     cloudant = require('cloudant')( url), 
     db = cloudant.db.use(dbname),
+    batch = 0,
     total = 0;
 
   // read the last sequence number, if applicable
-  lastseq(log, resume,  function(err, lastSeq) {
+  resumeData(log, resume,  function(err, rd) {
+
 
     // logging, clear the file
     if (log) {
@@ -32,10 +34,9 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
         blocksize: blocksize,
         parallelism: parallelism,
         log: log,
-        url: url.replace(/\/\/.+@/g, '//****:****@'),
-        startSeq: lastSeq
+        url: url.replace(/\/\/.+@/g, '//****:****@')
       };
-      fs.appendFileSync(log, JSON.stringify(obj) + '\n' );
+      fs.appendFileSync(log, '# ' + JSON.stringify(obj) + '\n' );
     }
 
     // list of document ids to process
@@ -44,14 +45,8 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
     // queue to process the fetch requests in an orderly fashion using _bulk_get
     var q = async.queue(function(payload, done) {
       var output = [];
-      var lastSeq = null;
-      payload.docs.map(function(obj) {
-        if (obj.seq) {
-          lastSeq = obj.seq;
-          delete obj.seq;
-        }
-        return obj;
-      });
+      var thisBatch = payload.batch;
+      delete payload.batch;
 
       // do the /db/_bulk_get request
       db.bulk_get(payload, function(err, data) {
@@ -69,28 +64,30 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
           });
           total += output.length;
           var t = (new Date().getTime() - start)/1000;
-          ee.emit('written', { length: output.length, time: t, total: total, data: output, qlen: q.length()*blocksize + buffer.length});
+          ee.emit('written', { length: output.length, time: t, total: total, data: output, batch: thisBatch, qlen: q.length()*blocksize + buffer.length});
+          if (log) {
+            fs.appendFile(log, ':d batch' + thisBatch + '\n' , done);
+          } else {
+            done();
+          }
         } else {
           ee.emit('writeerror', err);
-        }
-        if (log) {
-          var obj = {
-            time: t,
-            now: new Date().toISOString(),
-            total: total,
-            qlen: q.length()*blocksize + buffer.length
-          };
-          if (lastSeq) {
-            obj.seq = lastSeq;
-          }
-          fs.appendFile(log, JSON.stringify(obj) + '\n', done);
-          lastSeq = null;
-        } else {
           done();
         }
-      })
+      });
 
     }, parallelism);
+
+    // resume any unfinished batches
+    if (resume && !rd.changesComplete) {
+      console.error('WARNING: couchbackup did not receive the full changes feed. You may need to run again to get the full data set');
+    }
+    if (resume && rd.unfinished.length > 0) {
+      console.error('resuming',rd.unfinished.length, 'batches');
+      for(var i in rd.unfinished) {
+        q.push(rd.unfinished[i]);
+      }
+    }
 
     // send documents ids to the queue in batches of 500 + the last batch
     var processBuffer = function(lastOne) {
@@ -99,8 +96,12 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
         if (lastOne) {
           n = buffer.length;
         }
-        var batch = { docs: buffer.splice(0, blocksize) };
-        q.push(batch)
+        var b = { docs: buffer.splice(0, blocksize), batch: batch };
+        if (log) {
+          fs.appendFileSync(log, ':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
+        }
+        batch++;
+        q.push(b);
       }
     };
 
@@ -109,11 +110,9 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
       if (c) {
         if (c.error) {
           ee.emit('writeerror', c);
+          done();
         } else if (c.changes) {
-          var obj = {id: c.id}
-          if (c.seq) {
-            obj.seq = c.seq;
-          }
+          var obj = {id: c.id};
           buffer.push(obj);
           processBuffer(false);
         }
@@ -121,15 +120,25 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
     };
 
     // stream the changes feed
-     request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=' + blocksize + '&since=' + lastSeq)
+    if (!resume) {
+     request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=10000')
       .pipe(liner())
       .pipe(change(onChange))
       .on('finish', function() {
         processBuffer(true);
+        if (log) {
+          fs.appendFileSync(log, ':changes_complete\n');
+        }
         q.drain = function() {       
           ee.emit('writecomplete', { total: total});
         };
       });;
+    } else {
+      q.drain = function() {       
+        ee.emit('writecomplete', { total: total});
+      };
+    }
+
   });
 
   
