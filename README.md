@@ -14,7 +14,7 @@
 CouchBackup is a command-line utility that allows a CouchDB database to be backed-up to a text file. 
 It comes with a companion command-line utility that can restore the backed up data.
 
-** N.B. couchbackup does not do CouchDB replication as such, it simply streams througha database's _changes feed, and uses `POST /db/_bulk_get` to fetch the documents. **
+** N.B. couchbackup does not do CouchDB replication as such, it simply streams through a database's _changes feed, and uses `POST /db/_bulk_get` to fetch the documents. **
 
 ## Installation
 
