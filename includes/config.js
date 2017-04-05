@@ -10,6 +10,7 @@ theconfig.COUCH_BUFFER_SIZE = 500;
 theconfig.COUCH_LOG = null;
 theconfig.COUCH_RESUME = false;
 theconfig.COUCH_OUTPUT = null;
+theconfig.COUCH_SHALLOW = false;
 
 // if we have a custom CouchDB url
 if( typeof process.env.COUCH_URL !== 'undefined') {
@@ -46,6 +47,11 @@ if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
   theconfig.COUCH_OUTPUT = path.normalize(process.env.COUCH_OUTPUT);
 }
 
+// if we only want a shallow copy
+if (typeof process.env.COUCH_SHALLOW !== 'undefined' && process.env.COUCH_SHALLOW === 'true') {
+  theconfig.COUCH_SHALLOW = true;
+}
+
 // override with command-line parameters
 if (argv.url) {
   theconfig.COUCH_URL = argv.url;
@@ -67,6 +73,9 @@ if (argv.resume && argv.resume === 'true') {
 }
 if (argv.output) {
   theconfig.COUCH_OUTPUT = path.normalize(argv.output);
+}
+if (argv.shallow && argv.shallow === 'true') {
+  theconfig.COUCH_SHALLOW = true;
 }
 
 // we need a log file of some sort, so make up a temporary filename

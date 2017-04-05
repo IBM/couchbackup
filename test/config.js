@@ -66,6 +66,14 @@ describe('Default parameters', function() {
     assert.equal(config.COUCH_OUTPUT, process.env.COUCH_OUTPUT);
     done();
   });
+
+  it('respects the COUCH_SHALLOW env variable', function(done) {
+    process.env.COUCH_SHALLOW = 'true';
+    var config = require('../includes/config.js');
+    assert.equal(typeof config.COUCH_SHALLOW, 'boolean');
+    assert.equal(config.COUCH_SHALLOW, true);
+    done();
+  });
  
   it('respects the --url command-line parameter', function(done) {
     process.argv = clone(argvstub);
@@ -122,6 +130,15 @@ describe('Default parameters', function() {
     var config = require('../includes/config.js');
     assert.equal(typeof config.COUCH_OUTPUT, 'string');
     assert.equal(config.COUCH_OUTPUT, filename);
+    done();
+  });
+
+  it('respects the --shallow command-line parameter', function(done) {
+    process.argv = clone(argvstub);
+    process.argv.push('--shallow', 'true');
+    var config = require('../includes/config.js');
+    assert.equal(typeof config.COUCH_SHALLOW, 'boolean');
+    assert.equal(config.COUCH_SHALLOW, true);
     done();
   });
  
