@@ -6,9 +6,12 @@ var backup = require('./includes/backup.js'),
 
 module.exports = {
   backupStream: function(writeStream, opts, callback) {
+    if (opts.COUCH_MODE === 'shallow') {
+      backup = require('./includes/shallowbackup.js');
+    }
     return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM, opts.COUCH_LOG, opts.COUCH_RESUME, opts.OUTPUT)
       .on('written', function(obj) {
-        debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Remaining', obj.qlen, 'Time', obj.time);
+        debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         writeStream.write(JSON.stringify(obj.data) + '\n');
       })
       .on('writeerror', function(obj) {
