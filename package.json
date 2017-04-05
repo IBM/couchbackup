@@ -16,7 +16,8 @@
     "async": "2.3.0",
     "cloudant": "1.7.1",
     "debug": "2.6.3",
-    "minimist": "1.2.0"
+    "minimist": "1.2.0",
+    "tmp": "0.0.31"
   },
   "main": "app.js",
   "bin": {

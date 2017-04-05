@@ -69,6 +69,13 @@ if (argv.output) {
   theconfig.COUCH_OUTPUT = path.normalize(argv.output);
 }
 
+// we need a log file of some sort, so make up a temporary filename
+if (!theconfig.COUCH_LOG) {
+  var tmp = require('tmp');
+  var tmpfile = tmp.fileSync();
+  theconfig.COUCH_LOG = tmpfile.name;
+}
+
 console.error('******************');
 console.error(' COUCHBACKUP/RESTORE - configuration')
 console.error('  ', JSON.stringify(theconfig, null, ' ').replace(/\/\/.+@/g, '//****:****@'));
