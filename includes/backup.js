@@ -6,7 +6,7 @@ var async = require('async'),
   logfilegetbatches = require('./logfilegetbatches.js');
 
 // process data in batches
-var processBatches = function(db, parallelism, log, batches, ee, start, grandtotal, callback) {
+var processBatches = function(cloudant, dbname, parallelism, log, batches, ee, start, grandtotal, callback) {
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -16,9 +16,15 @@ var processBatches = function(db, parallelism, log, batches, ee, start, grandtot
     delete payload.batch;
 
     // do the /db/_bulk_get request
-    db.bulk_get(payload, function(err, data) {
+    var r = {
+      db: dbname,
+      qs: { revs: true }, // gets previous revision tokens too
+      method: 'post',
+      path: '_bulk_get',
+      body: payload
+    };
+    cloudant.request(r, function(err, data) {
       if (!err && data && data.results) {
-
         // create an output array with the docs returned
         data.results.forEach(function(d) {
           if (d.docs) {
@@ -100,7 +106,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
           logfilegetbatches(log, batchestofetch, function(err, batches) {
 
             // process them in parallelised queue
-            processBatches(db, parallelism, log, batches, ee, start, total, function(err, data) {
+            processBatches(cloudant, dbname, parallelism, log, batches, ee, start, total, function(err, data) {
               total = data.total;
               done();
             });
