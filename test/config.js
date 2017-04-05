@@ -67,11 +67,11 @@ describe('Default parameters', function() {
     done();
   });
 
-  it('respects the COUCH_SHALLOW env variable', function(done) {
-    process.env.COUCH_SHALLOW = 'true';
+  it('respects the COUCH_MODE env variable', function(done) {
+    process.env.COUCH_MODE = 'shallow';
     var config = require('../includes/config.js');
-    assert.equal(typeof config.COUCH_SHALLOW, 'boolean');
-    assert.equal(config.COUCH_SHALLOW, true);
+    assert.equal(typeof config.COUCH_MODE, 'string');
+    assert.equal(config.COUCH_MODE, 'shallow');
     done();
   });
  
@@ -135,10 +135,10 @@ describe('Default parameters', function() {
 
   it('respects the --shallow command-line parameter', function(done) {
     process.argv = clone(argvstub);
-    process.argv.push('--shallow', 'true');
+    process.argv.push('--mode', 'shallow');
     var config = require('../includes/config.js');
-    assert.equal(typeof config.COUCH_SHALLOW, 'boolean');
-    assert.equal(config.COUCH_SHALLOW, true);
+    assert.equal(typeof config.COUCH_MODE, 'string');
+    assert.equal(config.COUCH_MODE, 'shallow');
     done();
   });
  

@@ -109,7 +109,7 @@ A log file contains a line:
 
 ## What is shallow mode?
 
-When you run `couchbackup` with `--shallow true` a simpler backup is performed, only backing up the winning revisions
+When you run `couchbackup` with `--mode shallow` a simpler backup is performed, only backing up the winning revisions
 of the database. No revision tokens are saved and any conflicting revisions are ignored. This is a faster, but less
 complete backup. Shallow backups cannot be resumed because they do not produce a log file.
 
@@ -132,7 +132,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * COUCH_LOG - the file to store logging information during backup
 * COUCH_RESUME - if 'true', resumes a previous backup from its last known position
 * COUCH_OUTPUT - the file name to store the backup data (defaults to stdout)
-* COUCH_SHALLOW - if 'true' only takes a shallow copy of the database - only winning revisions and no conflicts
+* COUCH_MODE - if 'shallow', only a superfical backup is done, ignoring conflicts and revision tokens. Defaults to 'full' - a full backup.
 
 ### Command-line paramters
 
@@ -143,7 +143,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * --log - same as COUCH_LOG
 * --resume - same as COUCH_RESUME
 * --output - same as COUCH_OUTPUT
-* --shallow - same as COUCH_SHALLOW
+* --mode - same as COUCH_MODE
 
 ## Using programmatically
 
