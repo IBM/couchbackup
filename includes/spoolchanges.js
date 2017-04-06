@@ -14,6 +14,7 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
   var buffer = [];
   var batch = 0;
   var doccount = 0;
+  var last_seq = null;
   var log_stream = fs.createWriteStream(log);
   console.error('Streaming changes to disk:');
 
@@ -41,6 +42,8 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
         doccount++;
         buffer.push(obj);
         processBuffer(false);
+      } else if (c.last_seq) {
+        last_seq = c.last_seq;
       }
     }
   };
@@ -51,7 +54,7 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
     .pipe(change(onChange))
     .on('finish', function() {
       processBuffer(true);
-      log_stream.write(':changes_complete\n');
+      log_stream.write(':changes_complete ' + last_seq + '\n');
       log_stream.end();
       console.error('');
       if (doccount === 0) {

@@ -8,7 +8,14 @@ module.exports = function(onChange) {
  
   change._transform = function (line, encoding, done) {
     var obj = null;
+
+    // one change per line - remove the trailing comma
     line = line.trim().replace(/,$/,'');
+
+    // extract thee last_seq at the end of the changes feed
+    if (line.match(/^"last_seq":/)) {
+      line = '{' + line;
+    }
     try {
       obj = JSON.parse(line);
     } catch(e) {
