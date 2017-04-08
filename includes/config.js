@@ -1,16 +1,6 @@
-var theconfig = {};
+var theconfig = require('./defaults.js').get();
 var argv = require('minimist')(process.argv.slice(2));
 var path = require('path');
-
-// configure the CouchDB paramss
-theconfig.COUCH_URL = 'http://localhost:5984';
-theconfig.COUCH_DATABASE = 'test';
-theconfig.COUCH_PARALLELISM = 5;
-theconfig.COUCH_BUFFER_SIZE = 500;
-theconfig.COUCH_LOG = null;
-theconfig.COUCH_RESUME = false;
-theconfig.COUCH_OUTPUT = null;
-theconfig.COUCH_MODE = 'full';
 
 // if we have a custom CouchDB url
 if( typeof process.env.COUCH_URL !== 'undefined') {
@@ -78,12 +68,6 @@ if (argv.mode && argv.mode === 'shallow') {
   theconfig.COUCH_MODE = 'shallow';
 }
 
-// we need a log file of some sort, so make up a temporary filename
-if (!theconfig.COUCH_LOG) {
-  var tmp = require('tmp');
-  var tmpfile = tmp.fileSync();
-  theconfig.COUCH_LOG = tmpfile.name;
-}
 
 console.error('******************');
 console.error(' COUCHBACKUP/RESTORE - configuration')
