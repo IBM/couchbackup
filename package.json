@@ -1,6 +1,6 @@
 {
   "name": "couchbackup",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "CouchBackup - command-line backup utility for CouchDB/Cloudant",
   "repository": "https://github.com/glynnbird/couchbackup.git",
   "keywords": [
