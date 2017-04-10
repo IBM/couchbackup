@@ -1,4 +1,5 @@
-var async = require('async');
+var async = require('async'),
+  request = require('request');
 
 module.exports = function(url, dbname, blocksize, parallelism, log, resume, output) {
 if (typeof blocksize === 'string') {
@@ -6,8 +7,7 @@ if (typeof blocksize === 'string') {
   }
   var events = require('events'),
   ee = new events.EventEmitter(),
-  cloudant = require('cloudant')( url), 
-  db = cloudant.db.use(dbname),
+
   startdocid=null,
   start = new Date().getTime(),
   batch = 1,
@@ -19,7 +19,13 @@ if (typeof blocksize === 'string') {
     if (startdocid) {
       opts.startkey_docid = startdocid;
     }
-    db.list(opts, function(err, data) {
+    var r = {
+      url: url + '/' + dbname + '/_all_docs',
+      method: 'get',
+      qs: opts,
+      json: true
+    };
+    request(r, function(err, res, data) {
     
       if (err) {
         ee.emit("writeerror", err);

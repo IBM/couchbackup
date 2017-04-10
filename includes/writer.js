@@ -1,4 +1,5 @@
 var async = require('async'),
+    request = require('request'),
     stream = require('stream');
 
 module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
@@ -6,14 +7,21 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
   var buffer = [ ],
     written = 0,
     linenumber = 0;
-    
-  var cloudant = require('cloudant')(couch_url);
-  var db = cloudant.db.use(couch_database);
 
   // process the writes in bulk as a queue
   var q = async.queue(function(payload, cb) {
-    payload.new_edits = false;
-    db.bulk(payload, function(err, data) {
+   // if we are restoring known revisions, we need to supply new_edits=false
+   if (payload.docs && payload.docs[0] && payload.docs[0]._rev)  {
+     payload.new_edits = false;
+   }
+   var r = {
+     url: couch_url + '/' + couch_database + '/_bulk_docs',
+     method: 'post',
+     json: true,
+     body: payload
+   };
+
+    request(r, function(err, res, data) {
       if (err) {
         writer.emit('writeerror', err);
       } else {

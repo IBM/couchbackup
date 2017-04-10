@@ -1,12 +1,13 @@
 var async = require('async'),
   events = require('events'),
+  request = require('request'),
   fs = require('fs'),
   spoolchanges = require('./spoolchanges.js'),
   logfilesummary = require('./logfilesummary.js'),
   logfilegetbatches = require('./logfilegetbatches.js');
 
 // process data in batches
-var processBatches = function(cloudant, dbname, parallelism, log, batches, ee, start, grandtotal, callback) {
+var processBatches = function(dburl, parallelism, log, batches, ee, start, grandtotal, callback) {
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -17,13 +18,13 @@ var processBatches = function(cloudant, dbname, parallelism, log, batches, ee, s
 
     // do the /db/_bulk_get request
     var r = {
-      db: dbname,
+      url: dburl + '/_bulk_get',
       qs: { revs: true }, // gets previous revision tokens too
       method: 'post',
-      path: '_bulk_get',
+      json: true,
       body: payload
     };
-    cloudant.request(r, function(err, data) {
+    request(r, function(err, res, data) {
       if (!err && data && data.results) {
         // create an output array with the docs returned
         data.results.forEach(function(d) {
@@ -66,10 +67,10 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
+  url = url.replace(/\/$/,'');
   var ee = new events.EventEmitter(),
     start = new Date().getTime(),
-    cloudant = require('cloudant')( url), 
-    db = cloudant.db.use(dbname),
+    dburl = url + '/' + dbname;
     batch = 0,
     maxbatches = 50,
     total = 0;
@@ -106,7 +107,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
           logfilegetbatches(log, batchestofetch, function(err, batches) {
 
             // process them in parallelised queue
-            processBatches(cloudant, dbname, parallelism, log, batches, ee, start, total, function(err, data) {
+            processBatches(dburl, parallelism, log, batches, ee, start, total, function(err, data) {
               total = data.total;
               done();
             });

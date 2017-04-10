@@ -40,6 +40,9 @@ module.exports = {
       .on('written', function(obj) {
         debug(' written ', obj.total);
       })
+      .on('writeerror', function(e) {
+        debug(' error', e);
+      })
       .on('writecomplete', function(obj) {
         debug('restore complete');
         callback(null, obj);
