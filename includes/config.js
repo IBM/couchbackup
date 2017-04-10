@@ -68,7 +68,6 @@ if (argv.mode && argv.mode === 'shallow') {
   theconfig.COUCH_MODE = 'shallow';
 }
 
-
 console.error('******************');
 console.error(' COUCHBACKUP/RESTORE - configuration')
 console.error('  ', JSON.stringify(theconfig, null, ' ').replace(/\/\/.+@/g, '//****:****@'));

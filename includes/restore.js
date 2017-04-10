@@ -1,5 +1,4 @@
 module.exports = function(url, dbname, buffersize, parallelism, readstream) {
-  
   liner = require('../includes/liner.js'),
   writer = require('../includes/writer.js')(url, dbname, buffersize, parallelism);
    
