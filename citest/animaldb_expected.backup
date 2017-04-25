@@ -1,0 +1,311 @@
+[
+  {
+    "_revisions": {
+      "ids": [
+        "eec205a9d413992850a6e32678485900",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 2
+    },
+    "_deleted": true,
+    "_rev": "2-eec205a9d413992850a6e32678485900",
+    "_id": "870908b66ac0ed114512e6fb6d00260f"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "97e93126a6337d173f9b2810c0b9c0b6",
+        "65b7a2bd321eab71f4985da5a3ce9f89"
+      ],
+      "start": 2
+    },
+    "_deleted": true,
+    "_rev": "2-97e93126a6337d173f9b2810c0b9c0b6",
+    "_id": "_design/validation"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "a918dd4f11704143b535f0ab3af4bf75"
+      ],
+      "start": 1
+    },
+    "indexes": {
+      "animals": {
+        "index": "function(doc){\n  index(\"default\", doc._id);\n  if(doc.min_length){\n    index(\"min_length\", doc.min_length, {\"store\": \"yes\"});\n  }\n  if(doc.diet){\n    index(\"diet\", doc.diet, {\"store\": \"yes\"});\n  }\n  if (doc.latin_name){\n    index(\"latin_name\", doc.latin_name, {\"store\": \"yes\"});\n  }\n  if (doc['class']){\n    index(\"class\", doc['class'], {\"store\": \"yes\"});\n  }\n}"
+      }
+    },
+    "views": {
+      "latin_name_sum": {
+        "reduce": "_sum",
+        "map": "function(doc) {\n  if(doc.latin_name){\n    emit(doc.latin_name, doc.latin_name.length);\n  }\n}"
+      },
+      "latin_name_count": {
+        "reduce": "_count",
+        "map": "function(doc) {\n  if(doc.latin_name){\n    emit(doc.latin_name, doc.latin_name.length);\n  }\n}"
+      },
+      "latin_name_jssum": {
+        "reduce": "function (key, values, rereduce){\n  return sum(values);\n}",
+        "map": "function(doc) {\n  if(doc.latin_name){\n    emit(doc.latin_name, doc.latin_name.length);\n  }\n}"
+      },
+      "latin_name": {
+        "map": "function(doc) {\n  if(doc.latin_name){\n    emit(doc.latin_name, doc.latin_name.length);\n  }\n}"
+      },
+      "diet_sum": {
+        "reduce": "_sum",
+        "map": "function(doc) {\n  if(doc.diet){\n    emit(doc.diet, 1);\n  }\n}"
+      },
+      "diet_count": {
+        "reduce": "_count",
+        "map": "function(doc) {\n  if(doc.diet && doc.latin_name){\n    emit(doc.diet, doc.latin_name);\n  }\n}"
+      },
+      "complex_count": {
+        "reduce": "_count",
+        "map": "function(doc){\n  if(doc.class && doc.diet){\n    emit([doc.class, doc.diet], 1);\n  }\n}"
+      },
+      "diet": {
+        "map": "function(doc) {\n  if(doc.diet){\n    emit(doc.diet, 1);\n  }\n}"
+      },
+      "complex_latin_name_count": {
+        "reduce": "_count",
+        "map": "function(doc){\n  if(doc.latin_name){\n    emit([doc.class, doc.diet, doc.latin_name], doc.latin_name.length)\n  }\n}"
+      },
+      "diet_jscount": {
+        "reduce": "function (key, values, rereduce){\n  return values.length;\n}",
+        "map": "function(doc) {\n  if(doc.diet){\n    emit(doc.diet, 1);\n  }\n}"
+      }
+    },
+    "_rev": "1-a918dd4f11704143b535f0ab3af4bf75",
+    "_id": "_design/views101"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "7826307a6b395070429e83f261352a3b",
+        "dfa39d5771438be0671b9aeb9cfaf03f",
+        "7cfc8cb30e742f3f0c47f00a41641095",
+        "b3347b33df6707d3edc30d3d2c92514e",
+        "feaa975470f75021a04af0efc5892131",
+        "50b9a2143521785c5d5459601be442b0",
+        "448436f26eb65552b3a7f42b66735d40",
+        "2154f4f4b84c346dcb2ac1f9beb00f22",
+        "21efe72e81dbbc12bb9e3468444a19da",
+        "7683cb78d66ddebdba78d983936be969",
+        "243ffe5a29873491c8283907c0314943",
+        "125a0b4b63635c587c07397218c9232b",
+        "45b7e56b0761e3a817bb69b336997a90"
+      ],
+      "start": 13
+    },
+    "_deleted": true,
+    "_rev": "13-7826307a6b395070429e83f261352a3b",
+    "_id": "_design/views101"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "fe45a3e06244adbe7ba145e74e57aba5",
+        "d06eb56cb789ce78ec85cb1af49ea8c2",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "omnivore",
+    "class": "mammal",
+    "_id": "aardvark",
+    "_rev": "3-fe45a3e06244adbe7ba145e74e57aba5",
+    "min_weight": 40,
+    "max_weight": 65,
+    "min_length": 1,
+    "max_length": 2.2,
+    "latin_name": "Orycteropus afer",
+    "wiki_page": "http://en.wikipedia.org/wiki/Aardvark"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "51aa94e4b0ef37271082033bba52b850",
+        "f9fb951ca8dadec1459450156b2205cf",
+        "617a372bba833d7acf3ccf2e7dece15a",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 4
+    },
+    "diet": "omnivore",
+    "class": "mammal",
+    "_id": "badger",
+    "_rev": "4-51aa94e4b0ef37271082033bba52b850",
+    "wiki_page": "http://en.wikipedia.org/wiki/Badger",
+    "min_weight": 7,
+    "max_weight": 30,
+    "min_length": 0.6,
+    "max_length": 0.9,
+    "latin_name": "Meles meles"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "eec205a9d413992850a6e32678485900",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 2
+    },
+    "_deleted": true,
+    "_rev": "2-eec205a9d413992850a6e32678485900",
+    "_id": "cat"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "f812228f45b5f4e496250556195372b2",
+        "87fd00c631695ea23156464c318f7381",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "herbivore",
+    "_id": "elephant",
+    "_rev": "3-f812228f45b5f4e496250556195372b2",
+    "wiki_page": "http://en.wikipedia.org/wiki/African_elephant",
+    "min_weight": 4700,
+    "max_weight": 6050,
+    "min_length": 3.2,
+    "max_length": 4,
+    "class": "mammal"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "7665c3e66315ff40616cceef62886bd8",
+        "aaaf10d5a68cdf22d95a5482a0e95549",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "herbivore",
+    "_id": "giraffe",
+    "_rev": "3-7665c3e66315ff40616cceef62886bd8",
+    "min_weight": 830,
+    "min_length": 5,
+    "max_weight": 1600,
+    "max_length": 6,
+    "wiki_page": "http://en.wikipedia.org/wiki/Giraffe",
+    "class": "mammal"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "6038cf35dfe1211f85484dec951142c7",
+        "6152e66a832ae9fc684dd85a55231797",
+        "757760a36a1997504d5086f01a2ea862",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 4
+    },
+    "_id": "kookaburra",
+    "_rev": "4-6038cf35dfe1211f85484dec951142c7",
+    "min_length": 0.28,
+    "max_length": 0.42,
+    "wiki_page": "http://en.wikipedia.org/wiki/Kookaburra",
+    "class": "bird",
+    "diet": "carnivore",
+    "latin_name": "Dacelo novaeguineae"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "552d9dbf91fa914a07756e69b9ceaafa",
+        "01101b0b2629741cdaa186740155c091",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "omnivore",
+    "_id": "lemur",
+    "_rev": "3-552d9dbf91fa914a07756e69b9ceaafa",
+    "wiki_page": "http://en.wikipedia.org/wiki/Ring-tailed_lemur",
+    "min_weight": 2.2,
+    "max_weight": 2.2,
+    "min_length": 0.95,
+    "max_length": 1.1,
+    "class": "mammal"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "631ea89ca94b23a3093c1ef7dfce10e0",
+        "8d2acaafcc52df876498043cb6493966",
+        "b972aafbd51d5b98eb4d4b9f9443ca7e",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 4
+    },
+    "diet": "herbivore",
+    "class": "mammal",
+    "_id": "llama",
+    "_rev": "4-631ea89ca94b23a3093c1ef7dfce10e0",
+    "min_weight": 130,
+    "max_weight": 200,
+    "min_length": 1.7,
+    "max_length": 1.8,
+    "latin_name": "Lama glama",
+    "wiki_page": "http://en.wikipedia.org/wiki/Llama"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "f578490963b0bd266f6c5bbf92302977",
+        "064c3a3c68465eb86b1c320998bfd309"
+      ],
+      "start": 2
+    },
+    "diet": "carnivore",
+    "_id": "panda",
+    "_rev": "2-f578490963b0bd266f6c5bbf92302977",
+    "wiki_page": "http://en.wikipedia.org/wiki/Panda",
+    "min_weight": 75,
+    "max_weight": 115,
+    "min_length": 1.2,
+    "max_length": 1.8,
+    "class": "mammal"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "4b2fb3b7d6a226b13951612d6ca15a6b",
+        "babeb6a21b505a3fddb4f2555499ebea",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "omnivore",
+    "class": "bird",
+    "_id": "snipe",
+    "_rev": "3-4b2fb3b7d6a226b13951612d6ca15a6b",
+    "min_weight": 0.08,
+    "max_weight": 0.14,
+    "min_length": 0.25,
+    "max_length": 0.27,
+    "latin_name": "Gallinago gallinago",
+    "wiki_page": "http://en.wikipedia.org/wiki/Common_Snipe"
+  },
+  {
+    "_revisions": {
+      "ids": [
+        "750dac460a6cc41e6999f8943b8e603e",
+        "784f6b108c3be1bcbfc7eec4b9ad134c",
+        "967a00dff5e02add41819138abb3284d"
+      ],
+      "start": 3
+    },
+    "diet": "herbivore",
+    "_id": "zebra",
+    "_rev": "3-750dac460a6cc41e6999f8943b8e603e",
+    "wiki_page": "http://en.wikipedia.org/wiki/Plains_zebra",
+    "min_length": 2,
+    "max_length": 2.5,
+    "min_weight": 175,
+    "max_weight": 387,
+    "class": "mammal"
+  }
+]
