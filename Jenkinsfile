@@ -19,8 +19,6 @@ stage('QA') {
                 sh 'npm install mocha-junit-reporter --save-dev'
                 // run unit tests
                 sh './node_modules/mocha/bin/mocha test --reporter mocha-junit-reporter'
-                // TODO - check output - backup animaldb
-                sh './bin/couchbackup.bin.js --url https://$DB_USER:$DB_PASSWORD@$DB_USER.cloudant.com --db animaldb  > /tmp/out'
             } finally {
                 junit 'test-results.xml'
             }
