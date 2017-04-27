@@ -13,7 +13,7 @@
                                                          |_|    
 ```
 
-CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed-up to a text file.
+CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed up to a text file.
 It comes with a companion command-line utility that can restore the backed up data.
 
 **N.B.**
