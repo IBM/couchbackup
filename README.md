@@ -29,6 +29,8 @@ To install use npm:
 npm install -g couchbackup
 ```
 
+The minimum required Node.js version is 4.8.2.
+
 ## Usage
 
 Either environment variables or command-line options can be used to specify the URL of the CouchDB or Cloudant instance, and the database to work with.
