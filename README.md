@@ -53,7 +53,7 @@ Alternatively we can use the `--url` command-line parameter.
 To define the name of the database to backup or restore, set the `COUCH_DATABASE` environment variable:
 
 ```sh
-export COUCH_DATABASE=animals
+export COUCH_DATABASE=animaldb
 ```
 
 Alternatively we can use the `--db` command-line parameter
@@ -69,7 +69,7 @@ couchbackup > backup.txt
 Another way of backing up is to set the `COUCH_URL` environment variable only and supply the database name on the command-line:
 
 ```sh
-couchbackup --db animals > animals.txt
+couchbackup --db animaldb > animaldb.txt
 ```
 
 ## Logging & resuming backups
@@ -77,19 +77,19 @@ couchbackup --db animals > animals.txt
 You may also create a log file which records the progress of the backup with the `--log` parameter e.g.
 
 ```sh
-couchbackup --db animals --log animals.log > animals.txt
+couchbackup --db animaldb --log animaldb.log > animaldb.txt
 ```
 
 This log file can be used to resume backups from where you left off with `--resume true`:
 
 ```sh
-couchbackup --db animals --log animals.log --resume true >> animals.txt
+couchbackup --db animaldb --log animaldb.log --resume true >> animaldb.txt
 ```
 
 You may also specify the name of the output file, rather than directing the backup data to *stdout*:
 
 ```sh
-couchbackup --db animals --log animals.log --resume true --output animals.txt
+couchbackup --db animaldb --log animaldb.log --resume true --output animaldb.txt
 ```
 
 ## Restore
@@ -97,13 +97,13 @@ couchbackup --db animals --log animals.log --resume true --output animals.txt
 Now we have our backup text file, we can restore it to an existing database using the `couchrestore`:
 
 ```sh
-cat animals.txt | couchrestore
+cat animaldb.txt | couchrestore
 ```
 
 or specifying the database name on the command-line:
 
 ```sh
-cat animals.txt | couchrestore --db animalsdb
+cat animaldb.txt | couchrestore --db animaldb2
 ```
 
 ## Compressed backups
@@ -111,13 +111,13 @@ cat animals.txt | couchrestore --db animalsdb
 If we want to compress the backup data before storing to disk, we can pipe the contents through `gzip`:
 
 ```sh
-couchbackup --db animals | gzip > animals.txt.gz
+couchbackup --db animaldb | gzip > animaldb.txt.gz
 ```
 
 and restore the file with:
 
 ```sh
-cat animals.tar.gz | gunzip | couchdbrestore --db animals2
+cat animaldb.tar.gz | gunzip | couchdbrestore --db animaldb2
 ```
 
 ## What's in a backup file?
