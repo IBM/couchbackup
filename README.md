@@ -19,6 +19,7 @@ It comes with a companion command-line utility that can restore the backed up da
 **N.B.**
 
 * **couchbackup does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
+* **couchbackup does not backup attachments, it is recommended to store attachments directly in an object store.**
 
 ## Installation
 
