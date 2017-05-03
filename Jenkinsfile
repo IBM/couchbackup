@@ -20,7 +20,8 @@ def setupNodeAndTest(version) {
                         nvm use ${version}
                         npm install mocha-junit-reporter --save-dev
                         ./node_modules/mocha/bin/mocha test --reporter mocha-junit-reporter
-                        cd citest; ./test_backup.sh
+                        cd citest
+                        ./test_backup.sh
                     """
                 } finally {
                     junit 'test-results.xml'
