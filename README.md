@@ -177,6 +177,20 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `--output` - same as `COUCH_OUTPUT`
 * `--mode` - same as `COUCH_MODE`
 
+## Exit Codes
+
+On error, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
+details them.
+
+### CouchBackup
+
+* `1`: generic error (sorry if you see this one).
+
+### CouchRestore
+
+* `1`: generic error.
+* `10`: restore target database does not exist.
+
 ## Using programmatically
 
 You can now use `couchbackup` programatically. First install the `couchbackup` into your project
