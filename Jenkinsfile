@@ -5,8 +5,9 @@ def setupNodeAndTest(version) {
         // Unstash the built content
         unstash name: 'built'
         // run tests using creds
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD']]) {
-            withEnv(["COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com", "NVM_DIR=${env.HOME}/.nvm"]) {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'],
+                         [$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW']]) {
+            withEnv(["COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com", "NVM_DIR=${env.HOME}/.nvm", "DBCOMPARE_VERSION=1.0.0", "DBCOMPARE_NAME=DatabaseCompare"]) {
                 try {
                     // Run in a single sh to preserve nvm Node version
                     // Load NVM
@@ -21,10 +22,14 @@ def setupNodeAndTest(version) {
                         npm install mocha-junit-reporter --save-dev
                         ./node_modules/mocha/bin/mocha test --reporter mocha-junit-reporter
                         cd citest
-                        ./test_backup.sh
+                        # setup DatabaseCompare
+                        curl -O -u ${env.ARTIFACTORY_USER}:${env.ARTIFACTORY_PW} https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
+                        unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
+                        # run backup and restore tests
+                        ../node_modules/mocha/bin/mocha test --reporter mocha-junit-reporter
                     """
                 } finally {
-                    junit 'test-results.xml'
+                    junit '**/test-results.xml'
                 }
             }
         }

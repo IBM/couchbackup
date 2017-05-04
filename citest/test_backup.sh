@@ -10,4 +10,6 @@
 # --exit-status flag because this requires a newer version of jq which
 # is not available everywhere)
 
-jq --slurp '.[0] == .[1]' animaldb_expected.backup animaldb_actual.backup | grep true
+cat animaldb_expected.backup | jq 'sort_by(._id, ._rev)' > animaldb_expected_sorted.backup
+
+jq --slurp '.[0] == .[1]' animaldb_expected_sorted.backup animaldb_actual.backup | grep true
