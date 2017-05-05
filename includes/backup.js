@@ -1,10 +1,10 @@
-var async = require('async'),
-  events = require('events'),
-  request = require('request'),
-  fs = require('fs'),
-  spoolchanges = require('./spoolchanges.js'),
-  logfilesummary = require('./logfilesummary.js'),
-  logfilegetbatches = require('./logfilegetbatches.js');
+const async = require('async');
+const events = require('events');
+const request = require('request');
+const fs = require('fs');
+const spoolchanges = require('./spoolchanges.js');
+const logfilesummary = require('./logfilesummary.js');
+const logfilegetbatches = require('./logfilegetbatches.js');
 
 // process data in batches
 var processBatches = function(dburl, parallelism, log, batches, ee, start, grandtotal, callback) {
@@ -37,10 +37,10 @@ var processBatches = function(dburl, parallelism, log, batches, ee, start, grand
           }
         });
         total += output.length;
-        var t = (new Date().getTime() - start)/1000;
-        ee.emit('written', { length: output.length, time:t, total: total, data: output, batch: thisBatch});
+        var t = (new Date().getTime() - start) / 1000;
+        ee.emit('written', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
         if (log) {
-          fs.appendFile(log, ':d batch' + thisBatch + '\n' , done);
+          fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
         } else {
           done();
         }
@@ -49,80 +49,72 @@ var processBatches = function(dburl, parallelism, log, batches, ee, start, grand
         done();
       }
     });
-
   }, parallelism);
 
-  for(var i in batches) {
+  for (var i in batches) {
     q.push(batches[i]);
   }
 
-  q.drain = function() {       
+  q.drain = function() {
     callback(null, {total: total});
   };
-
-}
+};
 
 // backup function
 module.exports = function(url, dbname, blocksize, parallelism, log, resume, output) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
-  url = url.replace(/\/$/,'');
-  var ee = new events.EventEmitter(),
-    start = new Date().getTime(),
-    dburl = url + '/' + dbname;
-    batch = 0,
-    maxbatches = 50,
-    total = 0;
+  url = url.replace(/\/$/, '');
+  const ee = new events.EventEmitter();
+  const start = new Date().getTime();
+  const dburl = url + '/' + dbname;
+  const maxbatches = 50;
+  var total = 0;
 
-    // read the changes feed and write it to our log file
-    spoolchanges(url, dbname, log, resume, blocksize, function(err, data) {
+  // read the changes feed and write it to our log file
+  spoolchanges(url, dbname, log, resume, blocksize, function(err, data) {
+    // no point continuing if we have no docs
+    if (err) {
+      return ee.emit('writeerror', err);
+    }
 
-      // no point continuing if we have no docs
-      if (err) {
-        return ee.emit('writeerror', err);
-      }
+    var finished = false;
+    async.doUntil(function(done) {
+      logfilesummary(log, function(err, summary) {
+        if (!summary.changesComplete) {
+          ee.emit('writeerror', 'WARNING: Changes did not finish spooling');
+        }
+        if (Object.keys(summary.batches).length === 0) {
+          finished = true;
+          return done();
+        }
 
-      var finished = false;
-      async.doUntil(function(done) {
-        logfilesummary(log, function(err, summary) {
-          if (!summary.changesComplete) {
-            ee.emit('writeerror', 'WARNING: Changes did not finish spooling');
-          }
-          if (Object.keys(summary.batches).length == 0) {
-            finished = true;
-            return done();
-          }
+        // decide which batch numbers to deal with
+        var batchestofetch = [];
+        var j = 0;
+        for (var i in summary.batches) {
+          batchestofetch.push(parseInt(i));
+          j++;
+          if (j >= maxbatches) break;
+        }
 
-          // decide which batch numbers to deal with
-          var batchestofetch = [];
-          var j = 0;
-          for(var i in summary.batches) {
-            batchestofetch.push(parseInt(i));
-            j++;
-            if (j >= maxbatches) break; 
-          }
-
-          // fetch the batch data from file
-          logfilegetbatches(log, batchestofetch, function(err, batches) {
-
-            // process them in parallelised queue
-            processBatches(dburl, parallelism, log, batches, ee, start, total, function(err, data) {
-              total = data.total;
-              done();
-            });
+        // fetch the batch data from file
+        logfilegetbatches(log, batchestofetch, function(err, batches) {
+          // process them in parallelised queue
+          processBatches(dburl, parallelism, log, batches, ee, start, total, function(err, data) {
+            total = data.total;
+            done();
           });
-        });   
-
-
-      }, function() {
-        // repeat until finished
-        return finished;
-      }, function() {
-        ee.emit('writecomplete', { total: total});
+        });
       });
-
+    }, function() {
+      // repeat until finished
+      return finished;
+    }, function() {
+      ee.emit('writecomplete', {total: total});
     });
-  
+  });
+
   return ee;
 };

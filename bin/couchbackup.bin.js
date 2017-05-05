@@ -3,12 +3,11 @@
 // switch on debug messages
 process.env.DEBUG = 'couchbackup';
 
-var config = require('../includes/config.js'),
-  debug = require('debug')('couchbackup'),
-  fs = require('fs'),
-  ws = process.stdout,
-  couchbackup = require('../app.js');
-  
+const config = require('../includes/config.js');
+const fs = require('fs');
+const couchbackup = require('../app.js');
+var ws = process.stdout;
+
 if (config.COUCH_RESUME) {
   if (!config.COUCH_LOG) {
     console.error('ERROR: You must supply a log file name to resume a backup');
@@ -19,7 +18,7 @@ if (config.COUCH_RESUME) {
     console.error('ERROR: To resume a backup, the log file must exist');
     process.exit(1);
   }
-} 
+}
 
 // open output file
 if (config.COUCH_OUTPUT) {
@@ -34,6 +33,3 @@ if (config.COUCH_OUTPUT) {
 couchbackup.backupStream(ws, config, function() {
   process.exit(0);
 });
-
-
- 

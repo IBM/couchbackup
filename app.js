@@ -1,18 +1,18 @@
 
-var backup = require('./includes/backup.js'),
-  restore = require('./includes/restore.js'),
-  debug = require('debug')('couchbackup'),
-  defaults = require('./includes/defaults.js').get(),
-  fs = require('fs');
+var backup = require('./includes/backup.js');
+const restore = require('./includes/restore.js');
+const debug = require('debug')('couchbackup');
+const defaults = require('./includes/defaults.js').get();
+const fs = require('fs');
 
 var mergeDefaults = function(opts, defaults) {
-  for(i in defaults) {
+  for (var i in defaults) {
     if (!opts[i]) {
       opts[i] = defaults[i];
     }
   }
   return opts;
-}
+};
 
 module.exports = {
   backupStream: function(writeStream, opts, callback) {
@@ -30,9 +30,8 @@ module.exports = {
       })
       .on('writecomplete', function(obj) {
         debug('Backup complete - written' + JSON.stringify(obj));
-        callback(null,obj);
+        callback(null, obj);
       });
-    
   },
   restoreStream: function(readStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
@@ -60,7 +59,7 @@ module.exports = {
       }
     );
   },
-  backupFile:  function(filename, opts, callback) {
+  backupFile: function(filename, opts, callback) {
     return this.backupStream(fs.createWriteStream(filename), opts, callback);
   },
   restoreFile: function(filename, opts, callback) {

@@ -1,10 +1,9 @@
-var request = require('request'),
-  fs = require('fs'),
-  liner = require('./liner.js'),
-  change = require('./change.js');
+const request = require('request');
+const fs = require('fs');
+const liner = require('./liner.js');
+const change = require('./change.js');
 
 module.exports = function(url, dbname, log, resume, blocksize, callback) {
-  
   // do nothing if in resume mode
   if (resume) {
     return callback(null, {});
@@ -14,8 +13,8 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
   var buffer = [];
   var batch = 0;
   var doccount = 0;
-  var last_seq = null;
-  var log_stream = fs.createWriteStream(log);
+  var lastSeq = null;
+  var logStream = fs.createWriteStream(log);
   console.error('Streaming changes to disk:');
 
   // send documents ids to the queue in batches of 500 + the last batch
@@ -26,7 +25,7 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
         n = buffer.length;
       }
       var b = { docs: buffer.splice(0, blocksize), batch: batch };
-      log_stream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n')
+      logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
       process.stderr.write('\r batch ' + batch);
       batch++;
     }
@@ -43,7 +42,7 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
         buffer.push(obj);
         processBuffer(false);
       } else if (c.last_seq) {
-        last_seq = c.last_seq;
+        lastSeq = c.last_seq;
       }
     }
   };
@@ -54,13 +53,13 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
     .pipe(change(onChange))
     .on('finish', function() {
       processBuffer(true);
-      log_stream.write(':changes_complete ' + last_seq + '\n');
-      log_stream.end();
+      logStream.write(':changes_complete ' + lastSeq + '\n');
+      logStream.end();
       console.error('');
       if (doccount === 0) {
-        callback('zero documents found - nothing to do', null);
+        callback(new Error('zero documents found - nothing to do'), null);
       } else {
         callback(null, {batches: batch, docs: doccount});
       }
-    });;
+    });
 };
