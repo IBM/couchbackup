@@ -7,7 +7,7 @@ const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
 // process data in batches
-var processBatches = function(dburl, parallelism, log, batches, ee, start, grandtotal, callback) {
+var processBatches = function(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -18,7 +18,7 @@ var processBatches = function(dburl, parallelism, log, batches, ee, start, grand
 
     // do the /db/_bulk_get request
     var r = {
-      url: dburl + '/_bulk_get',
+      url: dbUrl + '/_bulk_get',
       qs: { revs: true }, // gets previous revision tokens too
       method: 'post',
       json: true,
@@ -61,19 +61,17 @@ var processBatches = function(dburl, parallelism, log, batches, ee, start, grand
 };
 
 // backup function
-module.exports = function(url, dbname, blocksize, parallelism, log, resume, output) {
+module.exports = function(dbUrl, blocksize, parallelism, log, resume, output) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
-  url = url.replace(/\/$/, '');
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
-  const dburl = url + '/' + dbname;
   const maxbatches = 50;
   var total = 0;
 
   // read the changes feed and write it to our log file
-  spoolchanges(url, dbname, log, resume, blocksize, function(err, data) {
+  spoolchanges(dbUrl, log, resume, blocksize, function(err, data) {
     // no point continuing if we have no docs
     if (err) {
       return ee.emit('writeerror', err);
@@ -102,7 +100,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
         // fetch the batch data from file
         logfilegetbatches(log, batchestofetch, function(err, batches) {
           // process them in parallelised queue
-          processBatches(dburl, parallelism, log, batches, ee, start, total, function(err, data) {
+          processBatches(dbUrl, parallelism, log, batches, ee, start, total, function(err, data) {
             total = data.total;
             done();
           });

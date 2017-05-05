@@ -3,7 +3,7 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 
-module.exports = function(url, dbname, log, resume, blocksize, callback) {
+module.exports = function(dbUrl, log, resume, blocksize, callback) {
   // do nothing if in resume mode
   if (resume) {
     return callback(null, {});
@@ -44,7 +44,7 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
   };
 
   // stream the changes feed to disk
-  request(url + '/' + encodeURIComponent(dbname) + '/_changes?seq_interval=10000')
+  request(dbUrl + '/_changes?seq_interval=10000')
     .pipe(liner())
     .pipe(change(onChange))
     .on('finish', function() {

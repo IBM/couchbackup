@@ -1,23 +1,19 @@
-const url = require('url');
-
 const request = require('request');
 const debug = require('debug')('couchbackup');
 
-module.exports = function(url, dbname, buffersize, parallelism, readstream, callback) {
-  const couchDbUrl = databaseUrl(url, dbname);
-
-  exists(couchDbUrl, function(err, exists) {
+module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) {
+  exists(dbUrl, function(err, exists) {
     if (err || !exists) {
-      var e = new Error(`Database ${couchDbUrl} does not exist. ` +
+      var e = new Error(`Database ${dbUrl} does not exist. ` +
         'Create the target database before restoring.');
       e.name = 'RestoreDatabaseNotFound';
       callback(e, null);
     }
 
-    debug(`Starting restore to ${couchDbUrl}`);
+    debug(`Starting restore to ${dbUrl}`);
 
     var liner = require('../includes/liner.js');
-    var writer = require('../includes/writer.js')(couchDbUrl, buffersize, parallelism);
+    var writer = require('../includes/writer.js')(dbUrl, buffersize, parallelism);
 
     // pipe the input to the output, via transformation functions
     readstream.pipe(liner())        // transform the input stream into per-line
@@ -32,9 +28,9 @@ module.exports = function(url, dbname, buffersize, parallelism, readstream, call
   @param {string} couchDbUrl - Database URL
   @param {function(err, exists)} callback - exists is true if database exists
 */
-function exists(couchDbUrl, callback) {
+function exists(dbUrl, callback) {
   var r = {
-    url: couchDbUrl,
+    url: dbUrl,
     method: 'HEAD',
     json: true
   };
@@ -49,19 +45,4 @@ function exists(couchDbUrl, callback) {
     }
     callback(null, true);
   });
-}
-
-/*
-  Combine a base URL and a database name, ensuring at least single slash
-  between root and database name. This allows users to have Couch behind
-  proxies that mount Couch's / endpoint at some other mount point.
-  @param {string} root - root URL
-  @param {string} databaseName - database name
-  @return concatenated URL.
-*/
-function databaseUrl(root, databaseName) {
-  if (!root.endsWith('/')) {
-    root = root + '/';
-  }
-  return url.resolve(root, databaseName);
 }
