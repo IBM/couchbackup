@@ -20,10 +20,6 @@ module.exports = function(url, dbname, log, resume, blocksize, callback) {
   // send documents ids to the queue in batches of 500 + the last batch
   var processBuffer = function(lastOne) {
     if (buffer.length >= blocksize || lastOne) {
-      var n = blocksize;
-      if (lastOne) {
-        n = buffer.length;
-      }
       var b = { docs: buffer.splice(0, blocksize), batch: batch };
       logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
       process.stderr.write('\r batch ' + batch);
