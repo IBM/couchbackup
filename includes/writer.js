@@ -2,7 +2,7 @@ var async = require('async'),
     request = require('request'),
     stream = require('stream');
 
-module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
+module.exports = function(couch_db_url, buffer_size, parallelism) {
   
   var buffer = [ ],
     written = 0,
@@ -15,7 +15,7 @@ module.exports = function(couch_url, couch_database, buffer_size, parallelism) {
      payload.new_edits = false;
    }
    var r = {
-     url: couch_url + '/' + couch_database + '/_bulk_docs',
+     url: couch_db_url + '/_bulk_docs',
      method: 'post',
      json: true,
      body: payload
