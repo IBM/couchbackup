@@ -1,16 +1,16 @@
+/* global describe afterEach it */
 
 var assert = require('assert');
-var argvstub = process.argv.slice(0,2);
+var argvstub = process.argv.slice(0, 2);
 var clone = function(x) {
   return JSON.parse(JSON.stringify(x));
 };
 
 describe('Default parameters', function() {
-  
   afterEach(function() {
     delete require.cache[require.resolve('../includes/config.js')];
   });
-  
+
   it('respects the COUCH_URL env variable', function(done) {
     process.env.COUCH_URL = 'http://x:y@myurl.com';
     var config = require('../includes/config.js');
@@ -74,7 +74,7 @@ describe('Default parameters', function() {
     assert.equal(config.COUCH_MODE, 'shallow');
     done();
   });
- 
+
   it('respects the --url command-line parameter', function(done) {
     process.argv = clone(argvstub);
     var url = 'https://a:b@myurl.com';
@@ -141,6 +141,4 @@ describe('Default parameters', function() {
     assert.equal(config.COUCH_MODE, 'shallow');
     done();
   });
- 
-  
 });
