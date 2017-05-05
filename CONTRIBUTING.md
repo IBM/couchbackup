@@ -38,6 +38,12 @@ npm install
 ./bin/couchbackup.bin.js
 ```
 
+## Code Style
+
+This project uses [semi-standard](https://github.com/Flet/semistandard).
+If you `npm install`, you'll get a local [eslint](http://eslint.org/)
+configured with our settings which your editor will hopefully pick up.
+
 ## Testing
 
 ### Adding tests

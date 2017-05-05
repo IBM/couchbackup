@@ -1,0 +1,10 @@
+{
+    "extends": "semistandard",
+    "plugins": [
+        "standard",
+        "promise"
+    ],
+    "rules": {
+        "space-before-function-paren": ["error", "never"]
+    }
+}

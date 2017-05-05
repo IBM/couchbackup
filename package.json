@@ -25,6 +25,11 @@
     "couchrestore": "bin/couchrestore.bin.js"
   },
   "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-plugin-standard": "*",
+    "eslint-plugin-react": "*",
+    "eslint-config-standard": "*",
+    "eslint-config-semistandard": "*",
     "mocha": "^3.2.0"
   },
   "scripts": {
