@@ -20,7 +20,7 @@ module.exports = function(url, dbname, buffersize, parallelism, readstream, call
     var writer = require('../includes/writer.js')(couchDbUrl, buffersize, parallelism);
 
     // pipe the input to the output, via transformation functions
-    readstream.pipe(liner())        // transform the input stream into per-line 
+    readstream.pipe(liner())        // transform the input stream into per-line
       .pipe(writer); // transform the data
 
     callback(null, writer);

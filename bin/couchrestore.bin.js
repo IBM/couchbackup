@@ -2,10 +2,10 @@
 const debug = require('debug')('couchbackup');
 
 // switch on debug messages
-process.env.DEBUG = "couchbackup";
+process.env.DEBUG = 'couchbackup';
 
-var config = require('../includes/config.js'),
-  couchbackup = require('../app.js');
+const config = require('../includes/config.js');
+const couchbackup = require('../app.js');
 
 // restore from stdin
 couchbackup.restoreStream(process.stdin, config, function(err, data) {

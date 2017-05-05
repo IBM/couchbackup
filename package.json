@@ -33,6 +33,6 @@
     "mocha": "^3.2.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "eslint . && mocha"
   }
 }

@@ -3,7 +3,7 @@ var argv = require('minimist')(process.argv.slice(2));
 var path = require('path');
 
 // if we have a custom CouchDB url
-if( typeof process.env.COUCH_URL !== 'undefined') {
+if (typeof process.env.COUCH_URL !== 'undefined') {
   theconfig.COUCH_URL = process.env.COUCH_URL;
 }
 
@@ -69,8 +69,8 @@ if (argv.mode && argv.mode === 'shallow') {
 }
 
 console.error('******************');
-console.error(' COUCHBACKUP/RESTORE - configuration')
+console.error(' COUCHBACKUP/RESTORE - configuration');
 console.error('  ', JSON.stringify(theconfig, null, ' ').replace(/\/\/.+@/g, '//****:****@'));
-console.error('******************')
+console.error('******************');
 
 module.exports = theconfig;
