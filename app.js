@@ -4,6 +4,7 @@ const restore = require('./includes/restore.js');
 const debug = require('debug')('couchbackup');
 const defaults = require('./includes/defaults.js').get();
 const fs = require('fs');
+const url = require('url');
 
 var mergeDefaults = function(opts, defaults) {
   for (var i in defaults) {
@@ -20,8 +21,14 @@ module.exports = {
     if (opts.COUCH_MODE === 'shallow') {
       backup = require('./includes/shallowbackup.js');
     }
-    return backup(opts.COUCH_URL, opts.COUCH_DATABASE, opts.COUCH_BUFFER_SIZE, opts.COUCH_PARALLELISM, opts.COUCH_LOG, opts.COUCH_RESUME, opts.OUTPUT)
-      .on('written', function(obj) {
+    return backup(
+      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
+      opts.COUCH_BUFFER_SIZE,
+      opts.COUCH_PARALLELISM,
+      opts.COUCH_LOG,
+      opts.COUCH_RESUME,
+      opts.OUTPUT
+      ).on('written', function(obj) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         writeStream.write(JSON.stringify(obj.data) + '\n');
       })
@@ -36,8 +43,7 @@ module.exports = {
   restoreStream: function(readStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
     return restore(
-      opts.COUCH_URL,
-      opts.COUCH_DATABASE,
+      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
       opts.COUCH_BUFFER_SIZE,
       opts.COUCH_PARALLELISM,
       readStream,
@@ -66,3 +72,18 @@ module.exports = {
     return this.restoreStream(fs.createReadStream(filename), opts, callback);
   }
 };
+
+/*
+  Combine a base URL and a database name, ensuring at least single slash
+  between root and database name. This allows users to have Couch behind
+  proxies that mount Couch's / endpoint at some other mount point.
+  @param {string} root - root URL
+  @param {string} databaseName - database name
+  @return concatenated URL.
+*/
+function databaseUrl(root, databaseName) {
+  if (!root.endsWith('/')) {
+    root = root + '/';
+  }
+  return url.resolve(root, encodeURIComponent(databaseName));
+}
