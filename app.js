@@ -33,10 +33,10 @@ module.exports = {
         writeStream.write(JSON.stringify(obj.data) + '\n');
       })
       .on('writeerror', function(obj) {
-        debug('Error' + JSON.stringify(obj));
+        debug('Error ' + JSON.stringify(obj));
       })
       .on('writecomplete', function(obj) {
-        debug('Backup complete - written' + JSON.stringify(obj));
+        debug('Backup complete - written ' + JSON.stringify(obj));
         callback(null, obj);
       });
   },
