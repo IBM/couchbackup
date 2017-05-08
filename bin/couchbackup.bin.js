@@ -5,19 +5,18 @@
 process.env.DEBUG = 'couchbackup';
 
 const config = require('../includes/config.js');
+const error = require('../includes/error.js');
 const fs = require('fs');
 const couchbackup = require('../app.js');
 var ws = process.stdout;
 
 if (config.COUCH_RESUME) {
   if (!config.COUCH_LOG) {
-    console.error('ERROR: You must supply a log file name to resume a backup');
-    process.exit(1);
+    error.terminationCallback(new error.BackupError('NoLogFileName', 'ERROR: You must supply a log file name to resume a backup'));
   }
 
   if (!fs.existsSync(config.COUCH_LOG)) {
-    console.error('ERROR: To resume a backup, the log file must exist');
-    process.exit(1);
+    error.terminationCallback(new error.BackupError('LogDoesNotExist', 'ERROR: To resume a backup, the log file must exist'));
   }
 }
 
@@ -31,6 +30,4 @@ if (config.COUCH_OUTPUT) {
 }
 
 // backup to stdout or supplied file
-couchbackup.backupStream(ws, config, function() {
-  process.exit(0);
-});
+couchbackup.backupStream(ws, config, error.terminationCallback);

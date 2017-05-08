@@ -70,7 +70,16 @@ module.exports = {
       })
       .on('writecomplete', function(obj) {
         debug('Backup complete - written ' + JSON.stringify(obj));
-        callback(null, obj);
+        if (targetStream === process.stdout) {
+          // stdout cannot emit a finish event so just callback.
+          if (callback) callback(null, obj);
+        } else {
+          // If we're writing to a file, end the writes and do the callback
+          // when the finish event is emitted.
+          targetStream.end('', '', function() {
+            if (callback) callback(null, obj);
+          });
+        }
       });
   },
 
