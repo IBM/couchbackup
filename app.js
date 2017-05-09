@@ -1,4 +1,10 @@
 
+/**
+ * CouchBackup module.
+ * @module couchbackup
+ * @see module:couchbackup
+ */
+
 var backup = require('./includes/backup.js');
 const restore = require('./includes/restore.js');
 const debug = require('debug')('couchbackup');
@@ -16,6 +22,21 @@ var mergeDefaults = function(opts, defaults) {
 };
 
 module.exports = {
+
+  /**
+   * Backup to a stream.
+   *
+   * @param {stream.Writable} writeStream - Stream to write content to.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Source CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Source database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
+   * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
+   * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
+   * @param {function} callback - Called on completion.
+   */
   backupStream: function(writeStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
     if (opts.COUCH_MODE === 'shallow') {
@@ -40,6 +61,18 @@ module.exports = {
         callback(null, obj);
       });
   },
+
+    /**
+   * Restore from a stream.
+   *
+   * @param {stream.Readable} readStream - Stream to restore from.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Target CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Target database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {function} callback - Called on completion.
+   */
   restoreStream: function(readStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
     return restore(
@@ -65,22 +98,51 @@ module.exports = {
       }
     );
   },
+
+  /**
+   * Backup to a file.
+   *
+   * @param {string} filename - File to write backup to.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Source CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Source database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
+   * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
+   * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
+   * @param {function} callback - Called on completion.
+   */
   backupFile: function(filename, opts, callback) {
     return this.backupStream(fs.createWriteStream(filename), opts, callback);
   },
+
+  /**
+   * Restore from a file.
+   *
+   * @param {string} filename - File path to restore from.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Target CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Target database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {function} callback - Called on completion.
+   */
   restoreFile: function(filename, opts, callback) {
     return this.restoreStream(fs.createReadStream(filename), opts, callback);
   }
 };
 
-/*
-  Combine a base URL and a database name, ensuring at least single slash
-  between root and database name. This allows users to have Couch behind
-  proxies that mount Couch's / endpoint at some other mount point.
-  @param {string} root - root URL
-  @param {string} databaseName - database name
-  @return concatenated URL.
-*/
+/**
+ * Combine a base URL and a database name, ensuring at least single slash
+ * between root and database name. This allows users to have Couch behind
+ * proxies that mount Couch's / endpoint at some other mount point.
+ * @param {string} root - root URL
+ * @param {string} databaseName - database name
+ * @return concatenated URL.
+ *
+ * @private
+ */
 function databaseUrl(root, databaseName) {
   if (!root.endsWith('/')) {
     root = root + '/';
