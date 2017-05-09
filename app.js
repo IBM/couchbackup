@@ -5,8 +5,9 @@
  * @see module:couchbackup
  */
 
-var backup = require('./includes/backup.js');
-const restore = require('./includes/restore.js');
+const restoreInternal = require('./includes/restore.js');
+const backupShallow = require('./includes/shallowbackup.js');
+const backupFull = require('./includes/backup.js');
 const debug = require('debug')('couchbackup');
 const defaults = require('./includes/defaults.js').get();
 const fs = require('fs');
@@ -39,10 +40,15 @@ module.exports = {
    */
   backupStream: function(writeStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
+
+    var backupFunction = null;
     if (opts.COUCH_MODE === 'shallow') {
-      backup = require('./includes/shallowbackup.js');
+      backupFunction = backupShallow;
+    } else {
+      backupFunction = backupFull;
     }
-    return backup(
+
+    return backupFunction(
       databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
       opts.COUCH_BUFFER_SIZE,
       opts.COUCH_PARALLELISM,
@@ -74,7 +80,7 @@ module.exports = {
    */
   restoreStream: function(readStream, opts, callback) {
     opts = mergeDefaults(opts, defaults);
-    return restore(
+    return restoreInternal(
       databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
       opts.COUCH_BUFFER_SIZE,
       opts.COUCH_PARALLELISM,
