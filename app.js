@@ -43,7 +43,7 @@ module.exports = {
    * @param {string} [opts.log] - Log file name. Default uses a temporary file.
    * @param {boolean} [opts.resume] - Whether to resume from existing log.
    * @param {string} [opts.mode=full] - Use `full` or `shallow` mode.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   backup: function(srcUrl, targetStream, opts, callback) {
     if (typeof callback === 'undefined' && typeof opts === 'function') {
@@ -81,7 +81,7 @@ module.exports = {
    * @param {object} opts - Restore options.
    * @param {number} opts.parallelism - Number of parallel HTTP requests to use. Default 5.
    * @param {number} opts.bufferSize - Number of documents per batch request. Default 500.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {
     if (typeof callback === 'undefined' && typeof opts === 'function') {
@@ -131,7 +131,7 @@ module.exports = {
    * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
    * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
    * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   backupStream: function(writeStream, opts, callback) {
     opts = Object.assign({}, defaults.legacyDefaults(), opts);
@@ -165,7 +165,7 @@ module.exports = {
    * @param {string} [opts.COUCH_DATABASE] - Target database name.
    * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
    * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   restoreStream: function(readStream, opts, callback) {
     opts = Object.assign({}, defaults.legacyDefaults(), opts);
@@ -199,7 +199,7 @@ module.exports = {
    * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
    * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
    * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   backupFile: function(filename, opts, callback) {
     return this.backupStream(fs.createWriteStream(filename), opts, callback);
@@ -217,7 +217,7 @@ module.exports = {
    * @param {string} [opts.COUCH_DATABASE] - Target database name.
    * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
    * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
-   * @param {function} callback - Called on completion.
+   * @param {backupRestoreCallback} callback - Called on completion.
    */
   restoreFile: function(filename, opts, callback) {
     return this.restoreStream(fs.createReadStream(filename), opts, callback);
@@ -240,3 +240,10 @@ function databaseUrl(root, databaseName) {
   }
   return url.resolve(root, encodeURIComponent(databaseName));
 }
+
+/**
+ * Backup/restore callback
+ * @callback backupRestoreCallback
+ * @param {Error} err - Error object if operation failed.
+ * @param {object} data - summary data for backup/restore
+ */
