@@ -9,54 +9,60 @@ const restoreInternal = require('./includes/restore.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
 const debug = require('debug')('couchbackup');
-const defaults = require('./includes/defaults.js').get();
+const defaults = require('./includes/defaults.js');
 const fs = require('fs');
 const url = require('url');
 
-var mergeDefaults = function(opts, defaults) {
-  for (var i in defaults) {
-    if (!opts[i]) {
-      opts[i] = defaults[i];
-    }
+/**
+ * Copy an attribute between objects if it is defined on the source,
+ * overwriting any existing property on the target.
+ *
+ * @param {object} src - source object.
+ * @param {string} srcProperty - source property name.
+ * @param {object} target - target object.
+ * @param {string} targetProperty - target property name.
+ *
+ * @private
+ */
+function copyIfDefined(src, srcProperty, target, targetProperty) {
+  if (typeof src[srcProperty] !== 'undefined') {
+    target[targetProperty] = src[srcProperty];
   }
-  return opts;
-};
+}
 
 module.exports = {
 
   /**
-   * Backup to a stream.
+   * Backup a Cloudant database to a stream.
    *
-   * @param {stream.Writable} writeStream - Stream to write content to.
+   * @param {string} srcUrl - URL of database to backup.
+   * @param {stream.Writable} targetStream - Stream to write content to.
    * @param {object} opts - Backup options.
-   * @param {string} [opts.COUCH_URL] - Source CouchDB/Cloudant instance URL.
-   * @param {string} [opts.COUCH_DATABASE] - Source database name.
-   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
-   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
-   * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
-   * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
-   * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
+   * @param {number} [opts.parallelism=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.bufferSize=500] - Number of documents per batch request.
+   * @param {string} [opts.log] - Log file name. Default uses a temporary file.
+   * @param {boolean} [opts.resume] - Whether to resume from existing log.
+   * @param {string} [opts.mode=full] - Use `full` or `shallow` mode.
    * @param {function} callback - Called on completion.
    */
-  backupStream: function(writeStream, opts, callback) {
-    opts = mergeDefaults(opts, defaults);
+  backup: function(srcUrl, targetStream, opts, callback) {
+    if (typeof callback === 'undefined' && typeof opts === 'function') {
+      callback = opts;
+      opts = {};
+    }
+    opts = Object.assign({}, defaults.get(), opts);
 
-    var backupFunction = null;
-    if (opts.COUCH_MODE === 'shallow') {
-      backupFunction = backupShallow;
-    } else {
-      backupFunction = backupFull;
+    var backup = null;
+    if (opts.mode === 'shallow') {
+      backup = backupShallow;
+    } else {  // full mode
+      backup = backupFull;
     }
 
-    return backupFunction(
-      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
-      opts.COUCH_BUFFER_SIZE,
-      opts.COUCH_PARALLELISM,
-      opts.COUCH_LOG,
-      opts.COUCH_RESUME
-      ).on('written', function(obj) {
+    return backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
+      .on('written', function(obj) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        writeStream.write(JSON.stringify(obj.data) + '\n');
+        targetStream.write(JSON.stringify(obj.data) + '\n');
       })
       .on('writeerror', function(obj) {
         debug('Error' + JSON.stringify(obj));
@@ -67,24 +73,28 @@ module.exports = {
       });
   },
 
-    /**
-   * Restore from a stream.
+  /**
+   * Restore a backup from a stream.
    *
-   * @param {stream.Readable} readStream - Stream to restore from.
-   * @param {object} opts - Backup options.
-   * @param {string} [opts.COUCH_URL] - Target CouchDB/Cloudant instance URL.
-   * @param {string} [opts.COUCH_DATABASE] - Target database name.
-   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
-   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {stream.Readable} srcStream - Stream containing backed up data.
+   * @param {string} targetUrl - Target database.
+   * @param {object} opts - Restore options.
+   * @param {number} opts.parallelism - Number of parallel HTTP requests to use. Default 5.
+   * @param {number} opts.bufferSize - Number of documents per batch request. Default 500.
    * @param {function} callback - Called on completion.
    */
-  restoreStream: function(readStream, opts, callback) {
-    opts = mergeDefaults(opts, defaults);
+  restore: function(srcStream, targetUrl, opts, callback) {
+    if (typeof callback === 'undefined' && typeof opts === 'function') {
+      callback = opts;
+      opts = {};
+    }
+    opts = Object.assign({}, defaults.get(), opts);
+
     return restoreInternal(
-      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
-      opts.COUCH_BUFFER_SIZE,
-      opts.COUCH_PARALLELISM,
-      readStream,
+      targetUrl,
+      opts.bufferSize,
+      opts.parallelism,
+      srcStream,
       function(err, writer) {
         if (err) {
           callback(err, null);
@@ -104,8 +114,81 @@ module.exports = {
     );
   },
 
+  /* DEPRECATED METHODS *****************************************/
+
+  /**
+   * Backup to a stream.
+   *
+   * @deprecated
+   * @see backup
+   *
+   * @param {stream.Writable} writeStream - Stream to write content to.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Source CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Source database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {string} [opts.COUCH_LOG] - Log file name. Default uses a temporary file.
+   * @param {boolean} [opts.COUCH_RESUME] - Whether to resume from existing log.
+   * @param {string} [opts.COUCH_MODE=full] - Use `full` or `shallow` mode.
+   * @param {function} callback - Called on completion.
+   */
+  backupStream: function(writeStream, opts, callback) {
+    opts = Object.assign({}, defaults.legacyDefaults(), opts);
+
+    // copyIfDefined ensures we don't overwrite defaults for
+    // new methods with `undefined`.
+    var newOpts = {};
+    copyIfDefined(opts, 'COUCH_BUFFER_SIZE', newOpts, 'bufferSize');
+    copyIfDefined(opts, 'COUCH_PARALLELISM', newOpts, 'parallelism');
+    copyIfDefined(opts, 'COUCH_LOG', newOpts, 'log');
+    copyIfDefined(opts, 'COUCH_RESUME', newOpts, 'bufferesumerSize');
+    copyIfDefined(opts, 'COUCH_MODE', newOpts, 'mode');
+
+    return this.backup(
+      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
+      writeStream,
+      newOpts,
+      callback
+    );
+  },
+
+  /**
+   * Restore from a stream.
+   *
+   * @deprecated
+   * @see restore
+   *
+   * @param {stream.Readable} readStream - Stream to restore from.
+   * @param {object} opts - Backup options.
+   * @param {string} [opts.COUCH_URL] - Target CouchDB/Cloudant instance URL.
+   * @param {string} [opts.COUCH_DATABASE] - Target database name.
+   * @param {number} [opts.COUCH_PARALLELISM=5] - Number of parallel HTTP requests to use.
+   * @param {number} [opts.COUCH_BUFFER_SIZE=500] - Number of documents per batch request.
+   * @param {function} callback - Called on completion.
+   */
+  restoreStream: function(readStream, opts, callback) {
+    opts = Object.assign({}, defaults.legacyDefaults(), opts);
+
+    // copyIfDefined ensures we don't overwrite defaults for
+    // new methods with `undefined`.
+    var newOpts = {};
+    copyIfDefined(opts, 'COUCH_BUFFER_SIZE', newOpts, 'bufferSize');
+    copyIfDefined(opts, 'COUCH_PARALLELISM', newOpts, 'parallelism');
+
+    return this.restore(
+      readStream,
+      databaseUrl(opts.COUCH_URL, opts.COUCH_DATABASE),
+      newOpts,
+      callback
+    );
+  },
+
   /**
    * Backup to a file.
+   *
+   * @deprecated
+   * @see backup
    *
    * @param {string} filename - File to write backup to.
    * @param {object} opts - Backup options.
@@ -124,6 +207,9 @@ module.exports = {
 
   /**
    * Restore from a file.
+   *
+   * @deprecated
+   * @see restore
    *
    * @param {string} filename - File path to restore from.
    * @param {object} opts - Backup options.
