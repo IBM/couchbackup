@@ -3,14 +3,14 @@
 [![Build Status](https://travis-ci.org/glynnbird/couchbackup.svg?branch=master)](https://travis-ci.org/glynnbird/couchbackup)
 
 ```
- _____                  _    ______            _                
-/  __ \                | |   | ___ \          | |               
-| /  \/ ___  _   _  ___| |__ | |_/ / __ _  ___| | ___   _ _ __  
+ _____                  _    ______            _
+/  __ \                | |   | ___ \          | |
+| /  \/ ___  _   _  ___| |__ | |_/ / __ _  ___| | ___   _ _ __
 | |    / _ \| | | |/ __| '_ \| ___ \/ _` |/ __| |/ / | | | '_ \
 | \__/\ (_) | |_| | (__| | | | |_/ / (_| | (__|   <| |_| | |_) |
  \____/\___/ \__,_|\___|_| |_\____/ \__,_|\___|_|\_\\__,_| .__/
-                                                         | |    
-                                                         |_|    
+                                                         | |
+                                                         |_|
 ```
 
 CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed up to a text file.
