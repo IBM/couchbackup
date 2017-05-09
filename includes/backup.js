@@ -61,7 +61,7 @@ var processBatches = function(dbUrl, parallelism, log, batches, ee, start, grand
 };
 
 // backup function
-module.exports = function(dbUrl, blocksize, parallelism, log, resume, output) {
+module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
