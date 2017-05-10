@@ -4,6 +4,7 @@ const async = require('async');
 const events = require('events');
 const request = require('request');
 const fs = require('fs');
+const error = require('./error.js');
 const spoolchanges = require('./spoolchanges.js');
 const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
@@ -83,7 +84,10 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
     async.doUntil(function(done) {
       logfilesummary(log, function(err, summary) {
         if (!summary.changesComplete) {
-          ee.emit('error', new Error('WARNING: Changes did not finish spooling'));
+          ee.emit('error', new error.BackupError(
+            'IncompleteChangesInLogFile',
+            'WARNING: Changes did not finish spooling'
+           ));
         }
         if (Object.keys(summary.batches).length === 0) {
           finished = true;
