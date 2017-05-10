@@ -3,14 +3,14 @@
 [![Build Status](https://travis-ci.org/glynnbird/couchbackup.svg?branch=master)](https://travis-ci.org/glynnbird/couchbackup)
 
 ```
- _____                  _    ______            _                
-/  __ \                | |   | ___ \          | |               
-| /  \/ ___  _   _  ___| |__ | |_/ / __ _  ___| | ___   _ _ __  
+ _____                  _    ______            _
+/  __ \                | |   | ___ \          | |
+| /  \/ ___  _   _  ___| |__ | |_/ / __ _  ___| | ___   _ _ __
 | |    / _ \| | | |/ __| '_ \| ___ \/ _` |/ __| |/ / | | | '_ \
 | \__/\ (_) | |_| | (__| | | | |_/ / (_| | (__|   <| |_| | |_) |
  \____/\___/ \__,_|\___|_| |_\____/ \__,_|\___|_|\_\\__,_| .__/
-                                                         | |    
-                                                         |_|    
+                                                         | |
+                                                         |_|
 ```
 
 CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed up to a text file.
@@ -193,51 +193,134 @@ details them.
 
 ## Using programmatically
 
-You can now use `couchbackup` programatically. First install the `couchbackup` into your project
-with `npm install --save couchbackup`. Then you can import the library into your code:
-
-
-```js
-  var couchbackup = require('couchbackup');
-```
-
-Define some options, using an object that contains attributes with the same names as the environment
-variables used to configure the command-line utilities:
+You can use `couchbackup` programatically. First install
+`couchbackup` into your project with `npm install --save couchbackup`.
+Then you can import the library into your code:
 
 ```js
-var opts = {
-  "COUCH_URL": "http://127.0.0.1:5984",
-  "COUCH_DATABASE": "mydb",
-}
+  const couchbackup = require('couchbackup');
 ```
 
-The you can backup data to a stream:
+The library exports two main functions:
 
+1. `backup` - backup from a database to a writable stream.
+2. `restore` - restore from a readable stream to a database.
 
-```js
-couchbackup.backupStream(process.stdout, opts, function() {
-  // done!
-});
+### Backup
+
+The `backup` function takes a source database URL, a stream to write to,
+backup options and a callback for completion.
+
+```javascript
+backup: function(srcUrl, targetStream, opts, callback) { /* ... */ }
 ```
 
-or to a file
+The `opts` dictionary can contain values which map to a subset of the
+environment variables defined above. Those related to the source and
+target locations are not required.
 
-```js
-couchbackup.backupFile("backup.txt", opts, function() {
-  // done!
-});
+* `parallelism`: see `COUCH_PARALLELISM`.
+* `bufferSize`: see `COUCH_BUFFER_SIZE`.
+* `log`: see `COUCH_LOG`.
+* `resume`: see `COUCH_RESUME`.
+* `mode`: see `COUCH_MODE`.
+
+The callback has the standard `err, data` parameters and is called when
+the backup completes or fails.
+
+The `backup` function returns an event emitter. You can subscribe to:
+
+* `written` - when a group of documents is backed up.
+* `writecomplete` - emitted once when all documents are backed up.
+* `writeerror` - emitted when something goes wrong for a single batch.
+
+Backup data to a stream:
+
+```javascript
+couchbackup.backup(
+  'https://examples.cloudant.com/animaldb',
+  process.stdout,
+  {parallelism: 2},
+  function(err, data) {
+    if (err) {
+      console.error("Failed! " + err);
+    } else {
+      console.error("Success! " + data);
+    }
+  });
 ```
 
-Similarly, you can restore from a stream:
+Or to a file:
 
-```js
-couchbackup.restoreStream(process.stdin, opts, function() {
-  // done!
-});
+```javascript
+couchbackup.backup(
+  'https://examples.cloudant.com/animaldb',
+  fs.createWriteStream(filename),
+  {parallelism: 2},
+  function(err, data) {
+    if (err) {
+      console.error("Failed! " + err);
+    } else {
+      console.error("Success! " + data);
+    }
+  });
 ```
 
-The `couchbackup` functions emit events:
+### Restore
 
-* `written` - when a group of documents is backuped up or restored
-* `writecomplete` - emitted once when all documents are backed up or restored
-* `writeerror` - emitted when something goes wrong
+The `restore` function takes a readable stream containing the data emitted
+by the `backup` function. It uploads that to a Cloudant database, which
+should be a **new** database.
+
+```javascript
+restore: function(srcStream, targetUrl, opts, callback) { /* ... */ }
+```
+
+The `opts` dictionary can contain values which map to a subset of the
+environment variables defined above. Those related to the source and
+target locations are not required.
+
+* `parallelism`: see `COUCH_PARALLELISM`.
+* `bufferSize`: see `COUCH_BUFFER_SIZE`.
+
+The callback has the standard `err, data` parameters and is called when
+the restore completes or fails.
+
+The `restore` function returns an event emitter. You can subscribe to:
+
+* `written` - when a group of documents is restored.
+* `writecomplete` - emitted once when all documents are restored.
+* `writeerror` - emitted when something goes wrong for a single batch.
+
+
+Restore data from a stream:
+
+```javascript
+couchbackup.restore(
+  process.stdin,
+  'https://examples.cloudant.com/new-animaldb',
+  {parallelism: 2},
+  function(err, data) {
+    if (err) {
+      console.error("Failed! " + err);
+    } else {
+      console.error("Success! " + data);
+    }
+  });
+```
+
+Or from a file:
+
+```javascript
+couchbackup.restore(
+  fs.createReadStream(filename),
+  'https://examples.cloudant.com/new-animaldb',
+  {parallelism: 2},
+  function(err, data) {
+    if (err) {
+      console.error("Failed! " + err);
+    } else {
+      console.error("Success! " + data);
+    }
+  });
+```
