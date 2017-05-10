@@ -7,6 +7,7 @@ process.env.DEBUG = 'couchbackup';
 const config = require('../includes/config.js');
 const error = require('../includes/error.js');
 const fs = require('fs');
+const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 var ws = process.stdout;
 
@@ -29,5 +30,18 @@ if (config.COUCH_OUTPUT) {
   ws = fs.createWriteStream(config.COUCH_OUTPUT, { flags: flags });
 }
 
-// backup to stdout or supplied file
-couchbackup.backupStream(ws, config, error.terminationCallback);
+// copyIfDefined ensures we don't overwrite defaults for
+// new methods with `undefined`.
+var opts = {};
+cliutils.copyIfDefined(config, 'COUCH_BUFFER_SIZE', opts, 'bufferSize');
+cliutils.copyIfDefined(config, 'COUCH_PARALLELISM', opts, 'parallelism');
+cliutils.copyIfDefined(config, 'COUCH_LOG', opts, 'log');
+cliutils.copyIfDefined(config, 'COUCH_RESUME', opts, 'bufferesumerSize');
+cliutils.copyIfDefined(config, 'COUCH_MODE', opts, 'mode');
+
+return couchbackup.backup(
+  cliutils.databaseUrl(config.COUCH_URL, config.COUCH_DATABASE),
+  ws,
+  opts,
+  error.terminationCallback
+);
