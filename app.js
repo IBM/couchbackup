@@ -11,6 +11,7 @@ const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
 const debug = require('debug')('couchbackup');
 const defaults = require('./includes/defaults.js');
+const events = require('events');
 const fs = require('fs');
 const url = require('url');
 
@@ -60,27 +61,36 @@ module.exports = {
       backup = backupFull;
     }
 
-    return backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
+    const ee = new events.EventEmitter();
+
+    backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('written', function(obj) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         targetStream.write(JSON.stringify(obj.data) + '\n');
+        ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
       })
       .on('writeerror', function(obj) {
         debug('Error ' + JSON.stringify(obj));
+        ee.emit('error', obj);
       })
       .on('writecomplete', function(obj) {
         debug('Backup complete - written ' + JSON.stringify(obj));
+        const summary = {total: obj.total};
         if (targetStream === process.stdout) {
           // stdout cannot emit a finish event so just callback.
-          if (callback) callback(null, obj);
+          ee.emit('finished', summary);
+          if (callback) callback(null, summary);
         } else {
           // If we're writing to a file, end the writes and do the callback
           // when the finish event is emitted.
           targetStream.end('', '', function() {
-            if (callback) callback(null, obj);
+            ee.emit('finished', summary);
+            if (callback) callback(null, summary);
           });
         }
       });
+
+    return ee;
   },
 
   /**
@@ -100,7 +110,9 @@ module.exports = {
     }
     opts = Object.assign({}, defaults.get(), opts);
 
-    return restoreInternal(
+    const ee = new events.EventEmitter();
+
+    restoreInternal(
       targetUrl,
       opts.bufferSize,
       opts.parallelism,
@@ -112,16 +124,21 @@ module.exports = {
 
         writer.on('written', function(obj) {
           debug(' written ', obj.total);
+          ee.emit('restored', {documents: obj.documents, total: obj.total});
         })
         .on('writeerror', function(e) {
           debug(' error', e);
+          ee.emit('error', e);
         })
         .on('writecomplete', function(obj) {
           debug('restore complete');
+          ee.emit('finished', {total: obj.total});
           callback(null, obj);
         });
       }
     );
+
+    return ee;
   },
 
   /* DEPRECATED METHODS *****************************************/
