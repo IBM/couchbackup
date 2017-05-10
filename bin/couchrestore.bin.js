@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+'use strict';
+
 const debug = require('debug')('couchbackup');
 
 // switch on debug messages

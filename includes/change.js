@@ -1,3 +1,5 @@
+'use strict';
+
 // stolen from http://strongloop.com/strongblog/practical-examples-of-the-new-node-js-streams-api/
 var stream = require('stream');
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+'use strict';
 
 // switch on debug messages
 process.env.DEBUG = 'couchbackup';

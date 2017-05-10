@@ -1,3 +1,5 @@
+'use strict';
+
 var theconfig = require('./defaults.js').legacyDefaults();
 var argv = require('minimist')(process.argv.slice(2));
 var path = require('path');

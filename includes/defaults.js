@@ -1,3 +1,5 @@
+'use strict';
+
 var tmp = require('tmp');
 
 var get = function() {

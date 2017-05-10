@@ -1,4 +1,5 @@
 /* global describe it */
+'use strict';
 
 var assert = require('assert');
 var logfilesummary = require('../includes/logfilesummary.js');
