@@ -1,3 +1,5 @@
+'use strict';
+
 const async = require('async');
 const events = require('events');
 const request = require('request');

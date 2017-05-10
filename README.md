@@ -185,6 +185,8 @@ details them.
 ### CouchBackup
 
 * `1`: generic error (sorry if you see this one).
+* `20`: resume was specified without a log file
+* `21`: the resume log file does not exist
 
 ### CouchRestore
 

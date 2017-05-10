@@ -1,4 +1,5 @@
 /* global describe it */
+'use strict';
 
 const assert = require('assert');
 const spawnSync = require('child_process').spawnSync;

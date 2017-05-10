@@ -1,4 +1,5 @@
 /* global describe afterEach it */
+'use strict';
 
 var assert = require('assert');
 var argvstub = process.argv.slice(0, 2);

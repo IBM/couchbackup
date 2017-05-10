@@ -1,11 +1,15 @@
 {
-    "extends": "semistandard",
-    "plugins": [
-        "standard",
-        "promise"
-    ],
-    "rules": {
-        "space-before-function-paren": ["error", "never"],
-        "handle-callback-err": "off"
-    }
+  "parserOptions": {
+    "sourceType": "script"
+  },
+  "extends": "semistandard",
+  "plugins": [
+    "standard",
+    "promise"
+  ],
+  "rules": {
+    "space-before-function-paren": ["error", "never"],
+    "handle-callback-err": "off",
+    "strict": ["error", "global"]
+  }
 }
