@@ -64,16 +64,16 @@ module.exports = {
     const ee = new events.EventEmitter();
 
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
-      .on('written', function(obj) {
+      .on('received', function(obj) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         targetStream.write(JSON.stringify(obj.data) + '\n');
         ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
       })
-      .on('writeerror', function(obj) {
+      .on('error', function(obj) {
         debug('Error ' + JSON.stringify(obj));
         ee.emit('error', obj);
       })
-      .on('writecomplete', function(obj) {
+      .on('finished', function(obj) {
         debug('Backup complete - written ' + JSON.stringify(obj));
         const summary = {total: obj.total};
         if (targetStream === process.stdout) {
@@ -122,15 +122,15 @@ module.exports = {
           callback(err, null);
         }
 
-        writer.on('written', function(obj) {
-          debug(' written ', obj.total);
+        writer.on('restored', function(obj) {
+          debug(' restored ', obj.total);
           ee.emit('restored', {documents: obj.documents, total: obj.total});
         })
-        .on('writeerror', function(e) {
+        .on('error', function(e) {
           debug(' error', e);
           ee.emit('error', e);
         })
-        .on('writecomplete', function(obj) {
+        .on('finished', function(obj) {
           debug('restore complete');
           ee.emit('finished', {total: obj.total});
           callback(null, obj);

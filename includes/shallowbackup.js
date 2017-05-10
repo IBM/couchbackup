@@ -28,7 +28,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
     };
     request(r, function(err, res, data) {
       if (err) {
-        ee.emit('writeerror', err);
+        ee.emit('error', err);
         return callback(null, null);
       }
 
@@ -46,7 +46,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
 
       total += docs.length;
       var t = (new Date().getTime() - start) / 1000;
-      ee.emit('written', {length: docs.length, batch: batch++, time: t, total: total, data: docs});
+      ee.emit('received', {length: docs.length, batch: batch++, time: t, total: total, data: docs});
       callback(null);
     });
   },
@@ -54,7 +54,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
     return (startdocid == null);
   },
   function(err) {
-    ee.emit('writecomplete', {total: total, err: err});
+    ee.emit('finished', {total: total, err: err});
   });
 
   return ee;

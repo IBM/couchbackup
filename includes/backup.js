@@ -40,14 +40,14 @@ var processBatches = function(dbUrl, parallelism, log, batches, ee, start, grand
         });
         total += output.length;
         var t = (new Date().getTime() - start) / 1000;
-        ee.emit('written', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
+        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
         if (log) {
           fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
         } else {
           done();
         }
       } else {
-        ee.emit('writeerror', err);
+        ee.emit('error', err);
         done();
       }
     });
@@ -76,14 +76,14 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   spoolchanges(dbUrl, log, resume, blocksize, function(err, data) {
     // no point continuing if we have no docs
     if (err) {
-      return ee.emit('writeerror', err);
+      return ee.emit('error', err);
     }
 
     var finished = false;
     async.doUntil(function(done) {
       logfilesummary(log, function(err, summary) {
         if (!summary.changesComplete) {
-          ee.emit('writeerror', 'WARNING: Changes did not finish spooling');
+          ee.emit('error', new Error('WARNING: Changes did not finish spooling'));
         }
         if (Object.keys(summary.batches).length === 0) {
           finished = true;
@@ -112,7 +112,7 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
       // repeat until finished
       return finished;
     }, function() {
-      ee.emit('writecomplete', {total: total});
+      ee.emit('finished', {total: total});
     });
   });
 
