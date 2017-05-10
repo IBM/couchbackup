@@ -24,10 +24,10 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
 
     request(r, function(err, res, data) {
       if (err) {
-        writer.emit('writeerror', err);
+        writer.emit('error', err);
       } else {
         written += payload.docs.length;
-        writer.emit('written', {documents: payload.docs.length, total: written});
+        writer.emit('restored', {documents: payload.docs.length, total: written});
       }
       cb();
     });
@@ -59,7 +59,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
 
         function() {
           if (flush) {
-            writer.emit('writecomplete', { total: written });
+            writer.emit('finished', { total: written });
           }
           callback();
         });

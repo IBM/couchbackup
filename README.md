@@ -232,9 +232,9 @@ the backup completes or fails.
 
 The `backup` function returns an event emitter. You can subscribe to:
 
-* `written` - when a group of documents is backed up.
-* `writecomplete` - emitted once when all documents are backed up.
-* `writeerror` - emitted when something goes wrong for a single batch.
+* `written` - when a batch of documents has been written to backup stream.
+* `finished` - emitted once when all documents are backed up.
+* `error` - emitted when something goes wrong for a single batch.
 
 Backup data to a stream:
 
@@ -290,9 +290,9 @@ the restore completes or fails.
 
 The `restore` function returns an event emitter. You can subscribe to:
 
-* `written` - when a group of documents is restored.
-* `writecomplete` - emitted once when all documents are restored.
-* `writeerror` - emitted when something goes wrong for a single batch.
+* `restored` - when a batch of documents is restored.
+* `finished` - emitted once when all documents are restored.
+* `error` - emitted when something goes wrong for a single batch.
 
 
 Restore data from a stream:
