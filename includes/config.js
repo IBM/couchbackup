@@ -49,8 +49,8 @@ if (argv.url) {
 if (argv.db) {
   theconfig.COUCH_DATABASE = argv.db;
 }
-if (argv.buffer) {
-  theconfig.COUCH_BUFFER_SIZE = parseInt(argv.buffer);
+if (argv['buffer-size']) {
+  theconfig.COUCH_BUFFER_SIZE = parseInt(argv['buffer-size']);
 }
 if (argv.parallelism) {
   theconfig.COUCH_PARALLELISM = parseInt(argv.parallelism);

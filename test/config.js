@@ -95,9 +95,9 @@ describe('Default parameters', function() {
     done();
   });
 
-  it('respects the --buffer command-line parameter', function(done) {
+  it('respects the --buffer-size command-line parameter', function(done) {
     process.argv = clone(argvstub);
-    process.argv.push('--buffer', '250');
+    process.argv.push('--buffer-size', '250');
     var config = require('../includes/config.js');
     assert.equal(typeof config.COUCH_BUFFER_SIZE, 'number');
     assert.equal(config.COUCH_BUFFER_SIZE, 250);

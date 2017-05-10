@@ -171,7 +171,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `--url` - same as `COUCH_URL` environment variable
 * `--db` - same as `COUCH_DATABASE`
 * `--parallelism` - same as `COUCH_PARALLELISM`
-* `--buffer` - same as `COUCH_BUFFER_SIZE`
+* `--buffer-size` - same as `COUCH_BUFFER_SIZE`
 * `--log` - same as `COUCH_LOG`
 * `--resume` - same as `COUCH_RESUME`
 * `--output` - same as `COUCH_OUTPUT`
