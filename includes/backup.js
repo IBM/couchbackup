@@ -9,73 +9,6 @@ const spoolchanges = require('./spoolchanges.js');
 const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
-/**
- * Process a set of download batches.
- *
- * @param {any} dbUrl - URL of database
- * @param {any} parallelism - number of concurrent requests to make
- * @param {any} log - log file to drive downloads from
- * @param {any} batches - batches to download
- * @param {any} ee - event emitter for progress. This funciton emits
- *  received and error events.
- * @param {any} start - time backup started, to report deltas
- * @param {any} grandtotal - count of documents downloaded prior to this set
- *  of batches
- * @param {any} callback - completion callback, (err, {total: number}).
- */
-function processBatches(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
-  var total = grandtotal;
-
-  // queue to process the fetch requests in an orderly fashion using _bulk_get
-  var q = async.queue(function(payload, done) {
-    var output = [];
-    var thisBatch = payload.batch;
-    delete payload.batch;
-
-    // do the /db/_bulk_get request
-    var r = {
-      url: dbUrl + '/_bulk_get',
-      qs: { revs: true }, // gets previous revision tokens too
-      method: 'post',
-      json: true,
-      body: payload
-    };
-    request(r, function(err, res, data) {
-      if (!err && data && data.results) {
-        // create an output array with the docs returned
-        data.results.forEach(function(d) {
-          if (d.docs) {
-            d.docs.forEach(function(doc) {
-              if (doc.ok) {
-                output.push(doc.ok);
-              }
-            });
-          }
-        });
-        total += output.length;
-        var t = (new Date().getTime() - start) / 1000;
-        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
-        if (log) {
-          fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
-        } else {
-          done();
-        }
-      } else {
-        ee.emit('error', err);
-        done();
-      }
-    });
-  }, parallelism);
-
-  for (var i in batches) {
-    q.push(batches[i]);
-  }
-
-  q.drain = function() {
-    callback(null, {total: total});
-  };
-}
-
 // backup function
 module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (typeof blocksize === 'string') {
@@ -147,6 +80,74 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
 
   return ee;
 };
+
+/**
+ * Download a set of batches retrieved from a log file. When a download is
+ * complete, add a line to the logfile indicating such.
+ *
+ * @param {any} dbUrl - URL of database
+ * @param {any} parallelism - number of concurrent requests to make
+ * @param {any} log - log file to drive downloads from
+ * @param {any} batches - batches to download
+ * @param {any} ee - event emitter for progress. This funciton emits
+ *  received and error events.
+ * @param {any} start - time backup started, to report deltas
+ * @param {any} grandtotal - count of documents downloaded prior to this set
+ *  of batches
+ * @param {any} callback - completion callback, (err, {total: number}).
+ */
+function processBatches(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
+  var total = grandtotal;
+
+  // queue to process the fetch requests in an orderly fashion using _bulk_get
+  var q = async.queue(function(payload, done) {
+    var output = [];
+    var thisBatch = payload.batch;
+    delete payload.batch;
+
+    // do the /db/_bulk_get request
+    var r = {
+      url: dbUrl + '/_bulk_get',
+      qs: { revs: true }, // gets previous revision tokens too
+      method: 'post',
+      json: true,
+      body: payload
+    };
+    request(r, function(err, res, data) {
+      if (!err && data && data.results) {
+        // create an output array with the docs returned
+        data.results.forEach(function(d) {
+          if (d.docs) {
+            d.docs.forEach(function(doc) {
+              if (doc.ok) {
+                output.push(doc.ok);
+              }
+            });
+          }
+        });
+        total += output.length;
+        var t = (new Date().getTime() - start) / 1000;
+        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
+        if (log) {
+          fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
+        } else {
+          done();
+        }
+      } else {
+        ee.emit('error', err);
+        done();
+      }
+    });
+  }, parallelism);
+
+  for (var i in batches) {
+    q.push(batches[i]);
+  }
+
+  q.drain = function() {
+    callback(null, {total: total});
+  };
+}
 
 /**
  * Returns first N properties on an object.
