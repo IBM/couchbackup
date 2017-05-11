@@ -53,20 +53,11 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
   // Generate a set of batches (up to batchesPerDownloadSession) to download from the
   // log file and download them. Set noRemainingBatches to `true` for last batch.
   var downloadSingleBatchSet = function downloadSingleBatchSet(done) {
-    logfilesummary(log, function processSummary(err, summary) {
-      if (!summary.changesComplete) {
-        ee.emit('error', new error.BackupError(
-          'IncompleteChangesInLogFile',
-          'WARNING: Changes did not finish spooling'
-          ));
-      }
-      if (Object.keys(summary.batches).length === 0) {
+    readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, function(err, batchSetIds) {
+      if (batchSetIds.length === 0) {
         noRemainingBatches = true;
         return done();
       }
-
-      // batch IDs are the property names of summary.batches
-      var batchesToFetch = getPropertyNames(summary.batches, batchesPerDownloadSession);
 
       // Fetch the doc IDs for the batches in the current set to
       // download and download them.
@@ -78,7 +69,7 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
         // process them in parallelised queue
         processBatchSet(dbUrl, parallelism, log, batches, ee, startTime, total, batchSetComplete);
       };
-      logfilegetbatches(log, batchesToFetch, processRetrievedBatches);
+      logfilegetbatches(log, batchSetIds, processRetrievedBatches);
     });
   };
 
@@ -90,6 +81,32 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
   };
 
   async.doUntil(downloadSingleBatchSet, isFinished, onComplete);
+}
+
+/**
+ * Return a set of uncompleted download batch IDs from the log file.
+ *
+ * @param {string} log - log file path
+ * @param {number} batchesPerDownloadSession - maximum IDs to return
+ * @param {any} ee - emit `error` event if log file invalid
+ * @param {function} callback - sign (err, batchSetIds array)
+ */
+function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, callback) {
+  logfilesummary(log, function processSummary(err, summary) {
+    if (!summary.changesComplete) {
+      ee.emit('error', new error.BackupError(
+        'IncompleteChangesInLogFile',
+        'WARNING: Changes did not finish spooling'
+        ));
+    }
+    if (Object.keys(summary.batches).length === 0) {
+      return callback(null, []);
+    }
+
+    // batch IDs are the property names of summary.batches
+    var batchSetIds = getPropertyNames(summary.batches, batchesPerDownloadSession);
+    callback(null, batchSetIds);
+  });
 }
 
 /**
