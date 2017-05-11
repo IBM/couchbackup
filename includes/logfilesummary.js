@@ -41,6 +41,15 @@ var onLine = function(onCommand, getDocs) {
   return change;
 };
 
+/**
+ * Generate a list of remaining batches from a download file.
+ *
+ * @param {string} log - log file name
+ * @param {function} callback - callback with err, {changesComplete: N, batches: N}.
+ *  changesComplete signifies whether the log file appeared to
+ *  have completed reading the changes feed (contains :changes_complete).
+ *  batches are remaining batch IDs for download.
+ */
 module.exports = function(log, callback) {
   // our sense of state
   var state = {
