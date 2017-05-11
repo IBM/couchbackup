@@ -10,7 +10,7 @@ const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
 // process data in batches
-var processBatches = function(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
+function processBatches(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -73,8 +73,7 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   const maxbatches = 50;
   var total = 0;
 
-  // read the changes feed and write it to our log file
-  spoolchanges(dbUrl, log, resume, blocksize, function(err, data) {
+  function readFromLogFile(err, data) {
     // no point continuing if we have no docs
     if (err) {
       return ee.emit('error', err);
@@ -118,7 +117,15 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
     }, function() {
       ee.emit('finished', {total: total});
     });
-  });
+  }
+
+  // If resuming, pick up from existing log file from previous run. Otherwise,
+  // create new log file and process from that.
+  if (resume) {
+    readFromLogFile(null, {});
+  } else {
+    spoolchanges(dbUrl, log, blocksize, readFromLogFile);
+  }
 
   return ee;
 };

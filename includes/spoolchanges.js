@@ -5,12 +5,16 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 
-module.exports = function(dbUrl, log, resume, blocksize, callback) {
-  // do nothing if in resume mode
-  if (resume) {
-    return callback(null, {});
-  }
-
+/**
+ * Write log file for all changes from a database, ready for downloading
+ * in batches.
+ *
+ * @param {string} dbUrl - URL of database
+ * @param {string} log - path to log file to use
+ * @param {number} blocksize - the number of changes per batch/log line
+ * @param {function} callback - called when log is completed.
+ */
+module.exports = function(dbUrl, log, blocksize, callback) {
   // list of document ids to process
   var buffer = [];
   var batch = 0;
