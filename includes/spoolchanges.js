@@ -12,7 +12,9 @@ const change = require('./change.js');
  * @param {string} dbUrl - URL of database
  * @param {string} log - path to log file to use
  * @param {number} blocksize - the number of changes per batch/log line
- * @param {function} callback - called when log is completed.
+ * @param {function} callback - called when log is completed. Signature is
+ *  (err, {batches: batch, docs: doccount}), where batches is the total number
+ *  of batches and doccount is total number of changes found.
  */
 module.exports = function(dbUrl, log, blocksize, callback) {
   // list of document ids to process

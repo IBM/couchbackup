@@ -16,70 +16,81 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   }
   const ee = new events.EventEmitter();
   const start = new Date().getTime();  // backup start time
-  const maxbatches = 50;  // max batches to read from log file for download at a time (prevent OOM)
-  var total = 0;  // running total of documents downloaded so far
-
-  // Reads all remaining batches in the log file and downloads them
-  var downloadRemainingBatches = function downloadRemainingBatches(err, data) {
-    // no point continuing if we have no docs
-    if (err) {
-      return ee.emit('error', err);
-    }
-
-    var noRemainingBatches = false;
-
-    // Generate a set of batches (up to maxbatches) to download from the
-    // log file and download them. Set noRemainingBatches to `true` for last batch.
-    var downloadSingleBatchSet = function downloadSingleBatchSet(done) {
-      logfilesummary(log, function processSummary(err, summary) {
-        if (!summary.changesComplete) {
-          ee.emit('error', new error.BackupError(
-            'IncompleteChangesInLogFile',
-            'WARNING: Changes did not finish spooling'
-           ));
-        }
-        if (Object.keys(summary.batches).length === 0) {
-          noRemainingBatches = true;
-          return done();
-        }
-
-        // batch IDs are the property names of summary.batches
-        var batchesToFetch = getPropertyNames(summary.batches, maxbatches);
-
-        // Fetch the doc IDs for the batches in the current set to
-        // download and download them.
-        var batchSetComplete = function batchSetComplete(err, data) {
-          total = data.total;
-          done();
-        };
-        var processBatchSet = function processBatchSet(err, batches) {
-          // process them in parallelised queue
-          processBatches(dbUrl, parallelism, log, batches, ee, start, total, batchSetComplete);
-        };
-        logfilegetbatches(log, batchesToFetch, processBatchSet);
-      });
-    };
-
-    // Return true if all batches in log file have been downloaded
-    var isFinished = function isFinished() { return noRemainingBatches; };
-
-    var onComplete = function onComplete() {
-      ee.emit('finished', {total: total});
-    };
-
-    async.doUntil(downloadSingleBatchSet, isFinished, onComplete);
-  };
+  const batchesPerDownloadSession = 50;  // max batches to read from log file for download at a time (prevent OOM)
 
   // If resuming, pick up from existing log file from previous run. Otherwise,
   // create new log file and process from that.
   if (resume) {
-    downloadRemainingBatches(null, {});
+    downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
   } else {
-    spoolchanges(dbUrl, log, blocksize, downloadRemainingBatches);
+    spoolchanges(dbUrl, log, blocksize, function logFileGenerated() {
+      downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+    });
   }
 
   return ee;
 };
+
+/**
+ * Download remaining batches in a log file, splitting batches into sets
+ * to avoid enqueueing too many in one go.
+ *
+ * @param {string} log - log file name to maintain download state
+ * @param {string} dbUrl - Source database URL
+ * @param {events.EventEmitter} ee - event emitter to emit received events on
+ * @param {time} start - start time for backup process
+ * @param {number} batchesPerDownloadSession - max batches to enqueue for
+ *  download at a time. As batches contain many doc IDs, this helps avoid
+ *  exhausting memory.
+ * @param {number} parallelism - number of concurrent downloads
+ * @returns function to call do download remaining batches with signature
+ *  (err, {batches: batch, docs: doccount}) {@see spoolchanges}.
+ */
+function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadSession, parallelism) {
+  var total = 0;  // running total of documents downloaded so far
+  var noRemainingBatches = false;
+
+  // Generate a set of batches (up to batchesPerDownloadSession) to download from the
+  // log file and download them. Set noRemainingBatches to `true` for last batch.
+  var downloadSingleBatchSet = function downloadSingleBatchSet(done) {
+    logfilesummary(log, function processSummary(err, summary) {
+      if (!summary.changesComplete) {
+        ee.emit('error', new error.BackupError(
+          'IncompleteChangesInLogFile',
+          'WARNING: Changes did not finish spooling'
+          ));
+      }
+      if (Object.keys(summary.batches).length === 0) {
+        noRemainingBatches = true;
+        return done();
+      }
+
+      // batch IDs are the property names of summary.batches
+      var batchesToFetch = getPropertyNames(summary.batches, batchesPerDownloadSession);
+
+      // Fetch the doc IDs for the batches in the current set to
+      // download and download them.
+      var batchSetComplete = function batchSetComplete(err, data) {
+        total = data.total;
+        done();
+      };
+      var processRetrievedBatches = function processRetrievedBatches(err, batches) {
+        // process them in parallelised queue
+        processBatchSet(dbUrl, parallelism, log, batches, ee, startTime, total, batchSetComplete);
+      };
+      logfilegetbatches(log, batchesToFetch, processRetrievedBatches);
+    });
+  };
+
+  // Return true if all batches in log file have been downloaded
+  var isFinished = function isFinished() { return noRemainingBatches; };
+
+  var onComplete = function onComplete() {
+    ee.emit('finished', {total: total});
+  };
+
+  async.doUntil(downloadSingleBatchSet, isFinished, onComplete);
+}
 
 /**
  * Download a set of batches retrieved from a log file. When a download is
@@ -96,7 +107,7 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
  *  of batches
  * @param {any} callback - completion callback, (err, {total: number}).
  */
-function processBatches(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
+function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
