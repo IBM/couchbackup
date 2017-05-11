@@ -9,7 +9,19 @@ const spoolchanges = require('./spoolchanges.js');
 const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
-// backup function
+/**
+ * Read documents from a database to be backed up.
+ *
+ * @param {string} dbUrl - URL of source database.
+ * @param {number} blocksize - number of documents to download in single request
+ * @param {number} parallelism - number of concurrent downloads
+ * @param {string} log - path to log file to use
+ * @param {boolean} resume - whether to resume from an existing log file
+ * @returns EventEmitter with following events:
+ *  - `received` - called with a block of documents to write to backup
+ *  - `error` - on error
+ *  - `finished` - when backup process is finished (either complete or errored)
+ */
 module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
