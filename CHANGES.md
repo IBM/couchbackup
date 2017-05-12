@@ -10,5 +10,7 @@
 - [DEPRECATED] Previous API functions.
 - [IMPROVED] Existence of the restore destination database is checked before
   starting the restore process.
+- [IMPROVED] Added compression for backup HTTP responses, where supported by the
+  server.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.

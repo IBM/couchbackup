@@ -151,7 +151,8 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
       qs: { revs: true }, // gets previous revision tokens too
       method: 'post',
       json: true,
-      body: payload
+      body: payload,
+      gzip: true
     };
     request(r, function(err, res, data) {
       if (!err && data && data.results) {

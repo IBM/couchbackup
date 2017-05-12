@@ -52,7 +52,12 @@ module.exports = function(dbUrl, log, blocksize, callback) {
   };
 
   // stream the changes feed to disk
-  request(dbUrl + '/_changes?seq_interval=10000')
+  var r = {
+    url: dbUrl + '/_changes',
+    qs: { seq_interval: 10000 },
+    gzip: true
+  };
+  request(r)
     .pipe(liner())
     .pipe(change(onChange))
     .on('finish', function() {
