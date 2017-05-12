@@ -168,7 +168,7 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
         });
         total += output.length;
         var t = (new Date().getTime() - start) / 1000;
-        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch});
+        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch}, q);
         if (log) {
           fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
         } else {
