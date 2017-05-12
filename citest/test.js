@@ -88,7 +88,7 @@ afterEach('Delete test database', function(done) {
       this.timeout(60 * 1000);
       testBackupAndRestore(params.useApi, 'animaldb', dbName, done);
     });
-    it('should backup and restore largedb1g', function(done) {
+    it.skip('should backup and restore largedb1g', function(done) {
       // Allow up to 10 m for backup and restore of largedb1g
       this.timeout(10 * 60 * 1000);
       testBackupAndRestore(params.useApi, 'largedb1g', dbName, done);
