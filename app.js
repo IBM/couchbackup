@@ -47,7 +47,9 @@ module.exports = {
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('received', function(obj, q) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        if (!targetStream.write(JSON.stringify(obj.data) + '\n')) {
+        if (!targetStream.write(JSON.stringify(obj.data) + '\n', 'utf8', function() {
+          ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
+        })) {
           // The buffer was full, pause the queue to stop the writes until we
           // get a drain event
           if (!q.isPaused) {
@@ -57,7 +59,6 @@ module.exports = {
             });
           }
         }
-        ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
       })
       .on('error', function(obj) {
         debug('Error ' + JSON.stringify(obj));
