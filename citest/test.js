@@ -41,26 +41,16 @@ afterEach('Delete test database', function(done) {
   describe(`Basic backup and restore ${(params.useApi) ? 'using API' : 'using CLI'}`, function() {
     // Allow up to 40 s to backup and compare (it should be much faster)!
     this.timeout(40 * 1000);
+    const actualBackup = `./${uuid()}_animaldb_actual.json`;
     it('should backup animaldb to a file correctly', function(done) {
       // Create a file and backup to it
-      const output = fs.createWriteStream('animaldb_actual.json');
+      const output = fs.createWriteStream(actualBackup);
       output.on('open', function() {
         testBackup(params.useApi, 'animaldb', output, function(err) {
           if (err) {
             done(err);
           } else {
-            const backupContent = require('./animaldb_actual.json');
-            const expectedContent = require('./animaldb_expected.json');
-            // Array order of the docs is important for equality, but not for backup
-            backupContent.sort(sortByIdThenRev);
-            expectedContent.sort(sortByIdThenRev);
-            // Assert that the backup matches the expected
-            try {
-              assert.deepEqual(backupContent, expectedContent);
-              done();
-            } catch (err) {
-              done(err);
-            }
+            readSortAndDeepEqual(actualBackup, './animaldb_expected.json', done);
           }
         });
       });
@@ -80,6 +70,22 @@ afterEach('Delete test database', function(done) {
         });
       });
     });
+
+    it('should execute a shallow mode backup successfully', function(done) {
+      // Allow 30 s
+      this.timeout(30 * 1000);
+      const actualBackup = `./${uuid()}_animaldb_actual_shallow.json`;
+      const output = fs.createWriteStream(actualBackup);
+      output.on('open', function() {
+        testBackup(params.useApi, 'animaldb', output, function(err) {
+          if (err) {
+            done(err);
+          } else {
+            readSortAndDeepEqual(actualBackup, './animaldb_expected_shallow.json', done);
+          }
+        }, {mode: 'shallow'});
+      });
+    });
   });
 
   describe(`End to end backup and restore ${(params.useApi) ? 'using API' : 'using CLI'}`, function() {
@@ -96,9 +102,9 @@ afterEach('Delete test database', function(done) {
   });
 });
 
-function testBackup(useApi, databaseName, outputStream, callback) {
+function testBackup(useApi, databaseName, outputStream, callback, opts) {
   if (useApi) {
-    app.backup(dbUrl(process.env.COUCH_URL, databaseName), outputStream, null, function(err, data) {
+    app.backup(dbUrl(process.env.COUCH_URL, databaseName), outputStream, opts, function(err, data) {
       if (err) {
         callback(err);
       } else {
@@ -107,8 +113,15 @@ function testBackup(useApi, databaseName, outputStream, callback) {
       }
     });
   } else {
+    // Set up default args
+    const args = ['../bin/couchbackup.bin.js', '--db', databaseName];
+    if (opts && opts.mode) {
+      args.push('--mode');
+      args.push(opts.mode);
+    }
+
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const backup = spawn('node', ['../bin/couchbackup.bin.js', '--db', databaseName], {'stdio': ['ignore', 'pipe', 'inherit']});
+    const backup = spawn('node', args, {'stdio': ['ignore', 'pipe', 'inherit']});
     // Pipe the stdout to the supplied outputStream
     backup.stdout.pipe(outputStream);
     backup.on('exit', function(code) {
@@ -193,4 +206,19 @@ function sortByIdThenRev(o1, o2) {
   if (o1._rev < o2._rev) return -1;
   if (o1._rev > o2._rev) return 1;
   return 0;
+}
+
+function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) {
+  const backupContent = require(actualContentPath);
+  const expectedContent = require(expectedContentPath);
+  // Array order of the docs is important for equality, but not for backup
+  backupContent.sort(sortByIdThenRev);
+  expectedContent.sort(sortByIdThenRev);
+  // Assert that the backup matches the expected
+  try {
+    assert.deepEqual(backupContent, expectedContent);
+    callback();
+  } catch (err) {
+    callback(err);
+  }
 }
