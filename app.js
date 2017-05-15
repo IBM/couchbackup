@@ -44,8 +44,14 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
+    const batchWriteEventEmitter = new events.EventEmitter();
+    // Array containing true at index 0, each received batch pushes a false on
+    // the end, which is popped when that content is flushed. If a pop returns
+    // the true from the zero index then all the batches have been written.
+    const allBatchesWritten = [true];
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('received', function(obj, q) {
+        allBatchesWritten.push(false);
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         if (!targetStream.write(JSON.stringify(obj.data) + '\n', 'utf8', function() {
           ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
@@ -59,6 +65,7 @@ module.exports = {
             });
           }
         }
+        batchWriteEventEmitter.emit('flushed', allBatchesWritten.pop());
       })
       .on('error', function(obj) {
         debug('Error ' + JSON.stringify(obj));
@@ -68,9 +75,14 @@ module.exports = {
         debug('Backup complete - written ' + JSON.stringify(obj));
         const summary = {total: obj.total};
         if (targetStream === process.stdout) {
-          // stdout cannot emit a finish event so just callback.
-          ee.emit('finished', summary);
-          if (callback) callback(null, summary);
+          // stdout cannot emit a finish event so wait for a flushed event
+          // that indicates all content was flushed
+          batchWriteEventEmitter.on('flushed', function(arg) {
+            if (arg) {
+              ee.emit('finished', summary);
+              if (callback) callback(null, summary);
+            }
+          });
         } else {
           // If we're writing to a file, end the writes and do the callback
           // when the finish event is emitted.
