@@ -24,7 +24,8 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
       url: url + '/' + dbname + '/_all_docs',
       method: 'get',
       qs: opts,
-      json: true
+      json: true,
+      gzip: true
     };
     request(r, function(err, res, data) {
       if (err) {
