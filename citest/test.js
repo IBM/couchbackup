@@ -229,3 +229,47 @@ describe('Resume tests', function() {
     u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
   });
 });
+
+describe('Event tests', function() {
+  it('should get a finished event when using stdout', function(done) {
+    u.timeoutFilter(this, 40);
+    // Use the API so we can get events
+    const params = {useApi: true};
+    const backup = u.testBackup(params, 'animaldb', process.stdout, function(err) {
+      if (err) {
+        done(err);
+      }
+    });
+    backup.on('finished', function() {
+      try {
+        // Test will time out if the finished event is not emitted
+        done();
+      } catch (err) {
+        done(err);
+      }
+    });
+  });
+  it('should get a finished event when using file output', function(done) {
+    u.timeoutFilter(this, 40);
+    // Use the API so we can get events
+    const params = {useApi: true};
+    const actualBackup = `./${this.fileName}`;
+    // Create a file and backup to it
+    const output = fs.createWriteStream(actualBackup);
+    output.on('open', function() {
+      const backup = u.testBackup(params, 'animaldb', output, function(err) {
+        if (err) {
+          done(err);
+        }
+      });
+      backup.on('finished', function() {
+        try {
+          // Test will time out if the finished event is not emitted
+          done();
+        } catch (err) {
+          done(err);
+        }
+      });
+    });
+  });
+});

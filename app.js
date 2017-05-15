@@ -94,19 +94,20 @@ module.exports = {
         ee.emit('error', obj);
       })
       .on('finished', function(obj) {
-        debug('Backup complete - written ' + JSON.stringify(obj));
-        const summary = {total: obj.total};
-        if (targetStream === process.stdout) {
-          // stdout cannot emit a finish event so just callback.
+        function emitFinished() {
+          debug('Backup complete - written ' + JSON.stringify(obj));
+          const summary = {total: obj.total};
           ee.emit('finished', summary);
           if (callback) callback(null, summary);
+        }
+        if (targetStream === process.stdout) {
+          // stdout cannot emit a finish event so use a final write + callback
+          targetStream.write('', 'utf8', emitFinished);
         } else {
-          // If we're writing to a file, end the writes and do the callback
-          // when the finish event is emitted.
-          targetStream.end('', '', function() {
-            ee.emit('finished', summary);
-            if (callback) callback(null, summary);
-          });
+          // If we're writing to a file, end the writes and register the
+          // emitFinished function for a callback when the file stream's finish
+          // event is emitted.
+          targetStream.end('', 'utf8', emitFinished);
         }
       });
 
