@@ -64,7 +64,7 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
 
   // Generate a set of batches (up to batchesPerDownloadSession) to download from the
   // log file and download them. Set noRemainingBatches to `true` for last batch.
-  var downloadSingleBatchSet = function downloadSingleBatchSet(done) {
+  function downloadSingleBatchSet(done) {
     readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, function(err, batchSetIds) {
       if (batchSetIds.length === 0) {
         noRemainingBatches = true;
@@ -73,24 +73,24 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
 
       // Fetch the doc IDs for the batches in the current set to
       // download and download them.
-      var batchSetComplete = function batchSetComplete(err, data) {
+      function batchSetComplete(err, data) {
         total = data.total;
         done();
-      };
-      var processRetrievedBatches = function processRetrievedBatches(err, batches) {
+      }
+      function processRetrievedBatches(err, batches) {
         // process them in parallelised queue
         processBatchSet(dbUrl, parallelism, log, batches, ee, startTime, total, batchSetComplete);
-      };
+      }
       logfilegetbatches(log, batchSetIds, processRetrievedBatches);
     });
-  };
+  }
 
   // Return true if all batches in log file have been downloaded
-  var isFinished = function isFinished() { return noRemainingBatches; };
+  function isFinished() { return noRemainingBatches; }
 
-  var onComplete = function onComplete() {
+  function onComplete() {
     ee.emit('finished', {total: total});
-  };
+  }
 
   async.doUntil(downloadSingleBatchSet, isFinished, onComplete);
 }
