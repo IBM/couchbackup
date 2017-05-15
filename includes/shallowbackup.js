@@ -3,7 +3,7 @@
 const async = require('async');
 const request = require('request');
 
-module.exports = function(url, dbname, blocksize, parallelism, log, resume, output) {
+module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
@@ -21,7 +21,7 @@ module.exports = function(url, dbname, blocksize, parallelism, log, resume, outp
       opts.startkey_docid = startdocid;
     }
     var r = {
-      url: url + '/' + dbname + '/_all_docs',
+      url: dbUrl + '/_all_docs',
       method: 'get',
       qs: opts,
       json: true,
