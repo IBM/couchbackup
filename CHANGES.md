@@ -14,3 +14,5 @@
   server.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
+- [FIXED] An issue where back pressure on the output stream was ignored
+  potentially resulting in the backup process running out of memory.
