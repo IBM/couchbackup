@@ -9,6 +9,7 @@ const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const stream = require('stream');
 const uuid = require('uuid/v4');
 const fs = require('fs');
+const zlib = require('zlib');
 
 beforeEach('Create test database', function(done) {
   // Allow 10 seconds to create the DB
@@ -53,8 +54,26 @@ function params(params, o) {
 }
 
 function testBackup(params, databaseName, outputStream, callback) {
+  var backupStream = outputStream;
+
+  // Pipe via compression if requested
+  if (params.compression) {
+    if (params.useApi) {
+      // If use API use the Node zlib stream
+      const zlib = require('zlib');
+      backupStream = zlib.createGzip();
+      backupStream.pipe(outputStream);
+    } else {
+      // Spawn process for gzip
+      const gzip = spawn('gzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
+      // Pipe the streams as needed
+      gzip.stdout.pipe(outputStream);
+      backupStream = gzip.stdin;
+    }
+  }
+
   if (params.useApi) {
-    app.backup(dbUrl(process.env.COUCH_URL, databaseName), outputStream, params.opts, function(err, data) {
+    app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, function(err, data) {
       if (err) {
         callback(err);
       } else {
@@ -73,7 +92,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
     const backup = spawn('node', args, {'stdio': ['ignore', 'pipe', 'inherit']});
     // Pipe the stdout to the supplied outputStream
-    backup.stdout.pipe(outputStream);
+    backup.stdout.pipe(backupStream);
     backup.on('exit', function(code) {
       try {
         assert.equal(code, 0, 'The backup should exit normally.');
@@ -89,8 +108,25 @@ function testBackup(params, databaseName, outputStream, callback) {
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
+  var restoreStream = inputStream;
+
+  // Pipe via decompression if requested
+  if (params.compression) {
+    if (params.useApi) {
+      // If use API use the Node zlib stream
+      restoreStream = zlib.createGunzip();
+      inputStream.pipe(restoreStream);
+    } else {
+      // Spawn process for gunzip
+      const gunzip = spawn('gunzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
+      // Pipe the streams as needed
+      inputStream.pipe(gunzip.stdin);
+      restoreStream = gunzip.stdout;
+    }
+  }
+
   if (params.useApi) {
-    app.restore(inputStream, dbUrl(process.env.COUCH_URL, databaseName), null, function(err, data) {
+    app.restore(restoreStream, dbUrl(process.env.COUCH_URL, databaseName), null, function(err, data) {
       if (err) {
         callback(err);
       } else {
@@ -102,7 +138,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
     const restore = spawn('node', ['../bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
-    inputStream.pipe(restore.stdin);
+    restoreStream.pipe(restore.stdin);
     restore.on('exit', function(code) {
       try {
         assert.equal(code, 0, 'The restore should exit normally.');
@@ -213,12 +249,30 @@ function timeoutFilter(context, timeout) {
   }
 }
 
+function assertGzipFile(path, callback) {
+  try {
+    // 1f 8b is the gzip magic number
+    const expectedBytes = Buffer.from([0x1f, 0x8b]);
+    const buffer = Buffer.alloc(2);
+    const fd = fs.openSync(path, 'r');
+    // Read the first two bytes
+    fs.readSync(fd, buffer, 0, 2, 0);
+    fs.closeSync(fd);
+    // Assert the magic number corresponds to gz extension
+    assert.deepEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
+    callback();
+  } catch (err) {
+    callback(err);
+  }
+}
+
 module.exports = {
   scenario: scenario,
   p: params,
   timeoutFilter: timeoutFilter,
   dbCompare: dbCompare,
   readSortAndDeepEqual: readSortAndDeepEqual,
+  assertGzipFile: assertGzipFile,
   testBackup: testBackup,
   testRestore: testRestore,
   testBackupAndRestore: testBackupAndRestore,
