@@ -11,7 +11,7 @@ def setupNodeAndTest(version) {
               "NVM_DIR=${env.HOME}/.nvm",
               "DBCOMPARE_VERSION=1.0.0",
               "DBCOMPARE_NAME=DatabaseCompare",
-              "TEST_LIMIT=600"]) {
+              "TEST_LIMIT=900"]) {
                 try {
                     // Run in a single sh to preserve nvm Node version
                     // Load NVM
