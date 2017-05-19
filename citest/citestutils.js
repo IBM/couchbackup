@@ -316,7 +316,6 @@ module.exports = {
   assertGzipFile: assertGzipFile,
   testBackup: testBackup,
   testRestore: testRestore,
-  testBackupAndRestore: testBackupAndRestore,
   testDirectBackupAndRestore: testDirectBackupAndRestore,
   testBackupAndRestoreViaFile: testBackupAndRestoreViaFile
 };
