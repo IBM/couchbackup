@@ -15,6 +15,7 @@
 /* global describe it */
 'use strict';
 
+const assert = require('assert');
 const fs = require('fs');
 const u = require('./citestutils.js');
 
@@ -162,5 +163,69 @@ const u = require('./citestutils.js');
       params.compression = true;
       u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName, done);
     });
+  });
+  describe(u.scenario('Resume tests', params), function() {
+    it('should create a log file', function(done) {
+      // Allow up to 90 s for this test
+      u.timeoutFilter(this, 60);
+
+      const actualBackup = `./${this.fileName}`;
+      const logFile = `./${this.fileName}` + '.log';
+      // Use abort parameter to terminate the backup a given number of ms after
+      // the first data write to the output file.
+      const p = u.p(params, {opts: {log: logFile}});
+      u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
+        if (err) {
+          done(err);
+        } else {
+          // Assert the log file exists
+          try {
+            assert.ok(fs.existsSync(logFile), 'The log file should exist.');
+            done();
+          } catch (err) {
+            done(err);
+          }
+        }
+      });
+    });
+  });
+});
+
+describe('Resume tests', function() {
+  // Currently cannot abort API backups, when we do this test should be run for
+  // both API and CLI
+  it('should correctly backup and restore backup10m', function(done) {
+    // Allow up to 90 s for this test
+    u.timeoutFilter(this, 90);
+
+    const actualBackup = `./${this.fileName}`;
+    const logFile = `./${this.fileName}` + '.log';
+    // Use abort parameter to terminate the backup a given number of ms after
+    // the first data write to the output file.
+    const p = u.p(params, {abort: true}, {opts: {log: logFile}});
+    const restoreDb = this.dbName;
+    // Set the database doc count as fewer than this should be written during
+    // resumed backup.
+    p.exclusiveMaxExpected = 5096;
+
+    u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
+  });
+  // Note --output is only valid for CLI usage, this test should only run for CLI
+  const params = {useApi: false};
+  it('should correctly backup and restore backup10m using --output', function(done) {
+    // Allow up to 90 s for this test
+    u.timeoutFilter(this, 90);
+
+    const actualBackup = `./${this.fileName}`;
+    const logFile = `./${this.fileName}` + '.log';
+    // Use abort parameter to terminate the backup a given number of ms after
+    // the first data write to the output file.
+    const p = u.p(params, {abort: true}, {opts: {output: actualBackup, log: logFile}});
+    const restoreDb = this.dbName;
+    // Set the database doc count as fewer than this should be written during
+    // resumed backup.
+    p.exclusiveMaxExpected = 5096;
+
+    u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
   });
 });

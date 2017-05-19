@@ -24,6 +24,7 @@ const stream = require('stream');
 const uuid = require('uuid/v4');
 const fs = require('fs');
 const zlib = require('zlib');
+const Tail = require('tail').Tail;
 
 beforeEach('Create test database', function(done) {
   // Allow 10 seconds to create the DB
@@ -41,13 +42,12 @@ beforeEach('Create test database', function(done) {
 });
 
 afterEach('Delete test database', function(done) {
-  console.log('After each tearing down');
   // Allow 10 seconds to delete the DB
   this.timeout(10 * 1000);
   teardown(this.fileName, this.dbName, done);
 });
 
-function teardown(fileName, dbName, callback) {
+function deleteIfExists(fileName) {
   fs.unlink(fileName, function(err) {
     if (err) {
       if (err.code !== 'ENOENT') {
@@ -55,6 +55,11 @@ function teardown(fileName, dbName, callback) {
       }
     }
   });
+}
+
+function teardown(fileName, dbName, callback) {
+  deleteIfExists(fileName);
+  deleteIfExists(`${fileName}.log`);
   cloudant.db.destroy(dbName, function(err) {
     if (err) {
       callback(err);
@@ -68,12 +73,18 @@ function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
 }
 
-function params(params, o) {
-  return Object.assign({}, params, o);
+function params() {
+  const p = {};
+  for (var i = 0; i < arguments.length; i++) {
+    Object.assign(p, arguments[i]);
+  }
+  return p;
 }
 
+// Returns the event emitter for API calls, or the child process for CLI calls
 function testBackup(params, databaseName, outputStream, callback) {
   var gzip;
+  var backup;
   var backupStream = outputStream;
 
   // Pipe via compression if requested
@@ -96,8 +107,15 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   }
 
+  if (params.abort) {
+    // Create the log file for abort tests so we can tail it, other tests assert
+    // the log file is usually created normally by the backup process.
+    const f = fs.openSync(params.opts.log, 'w');
+    fs.closeSync(f);
+  }
+
   if (params.useApi) {
-    app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, function(err, data) {
+    backup = app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, function(err, data) {
       if (err) {
         callback(err);
       } else {
@@ -106,20 +124,51 @@ function testBackup(params, databaseName, outputStream, callback) {
       }
     });
   } else {
+    // Default to pipe, but will use 'inherit' if using --output (see params.opts.output)
+    var destination = 'pipe';
+
     // Set up default args
     const args = ['../bin/couchbackup.bin.js', '--db', databaseName];
-    if (params.opts && params.opts.mode) {
-      args.push('--mode');
-      args.push(params.opts.mode);
+    if (params.opts) {
+      if (params.opts.mode) {
+        args.push('--mode');
+        args.push(params.opts.mode);
+      }
+      if (params.opts.output) {
+        args.push('--output');
+        args.push(params.opts.output);
+        destination = 'inherit';
+      }
+      if (params.opts.log) {
+        args.push('--log');
+        args.push(params.opts.log);
+      }
+      if (params.opts.resume) {
+        args.push('--resume');
+        args.push(params.opts.resume);
+      }
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const backup = spawn('node', args, {'stdio': ['ignore', 'pipe', 'inherit']});
+    backup = spawn('node', args, {'stdio': ['ignore', destination, 'pipe']});
     // Pipe the stdout to the supplied outputStream
-    backup.stdout.pipe(backupStream);
-    backup.on('exit', function(code) {
+    if (destination === 'pipe') {
+      backup.stdout.pipe(backupStream);
+    }
+    // Forward the spawned process stderr (we don't use inherit because we want
+    // to access this stream directly as well)
+    backup.stderr.on('data', function(data) {
+      console.error(`${data}`);
+    });
+
+    backup.on('exit', function(code, signal) {
       try {
-        assert.equal(code, 0, 'The backup should exit normally.');
+        if (params.abort) {
+          // Assert that the process was aborted as expected
+          assert.equal(signal, 'SIGTERM', `The backup should terminate.`);
+        } else {
+          assert.equal(code, 0, `The backup should exit normally, got exit code ${code}.`);
+        }
       } catch (err) {
         callback(err);
       }
@@ -138,6 +187,34 @@ function testBackup(params, databaseName, outputStream, callback) {
       });
     }
   }
+  if (params.abort) {
+    // Use tail to watch the log file for a batch to be completed then abort
+    const tail = new Tail(params.opts.log);
+    tail.on('line', function(data) {
+      let matches = data.match(/:d batch\d+/);
+      if (matches !== null) {
+        // Turn off the tail.
+        tail.unwatch();
+        // Abort the backup
+        backupAbort(params.useApi, backup);
+      }
+    });
+    tail.on('error', function(err) {
+      callback(err);
+    });
+  }
+  return backup;
+}
+
+function backupAbort(usingApi, backup) {
+  setImmediate(function() {
+    if (usingApi) {
+      // Currently no way to abort an API backup
+      console.error('UNSUPPORTED: cannot abort API backups at this time.');
+    } else {
+      backup.kill();
+    }
+  });
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
@@ -174,7 +251,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     restoreStream.pipe(restore.stdin);
     restore.on('exit', function(code) {
       try {
-        assert.equal(code, 0, 'The restore should exit normally.');
+        assert.equal(code, 0, `The restore should exit normally, got exit code ${code}`);
         callback();
       } catch (err) {
         callback(err);
@@ -188,22 +265,42 @@ function testRestore(params, inputStream, databaseName, callback) {
 
 // Serial backup and restore via a file on disk
 function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callback) {
-  const output = fs.createWriteStream(backupFile);
+  testBackupToFile(params, srcDb, backupFile, function(err) {
+    if (err) {
+      callback(err);
+    } else {
+      testRestoreFromFile(params, backupFile, targetDb, function(err) {
+        dbCompare(srcDb, targetDb, callback);
+      });
+    }
+  });
+}
+
+function testBackupToFile(params, srcDb, backupFile, callback, processCallback) {
+  // Open the file for appending if this is a resume
+  const output = fs.createWriteStream(backupFile, {flags: (params.opts && params.opts.resume) ? 'a' : 'w'});
   output.on('open', function() {
-    testBackup(params, srcDb, output, function(err) {
+    const backupProcess = testBackup(params, srcDb, output, function(err) {
       if (err) {
         callback(err);
       } else {
-        const input = fs.createReadStream(backupFile);
-        input.on('open', function() {
-          testRestore(params, input, targetDb, function(err) {
-            if (err) {
-              callback(err);
-            } else {
-              dbCompare(srcDb, targetDb, callback);
-            }
-          });
-        });
+        callback();
+      }
+    });
+    if (processCallback) {
+      processCallback(backupProcess);
+    }
+  });
+}
+
+function testRestoreFromFile(params, backupFile, targetDb, callback) {
+  const input = fs.createReadStream(backupFile);
+  input.on('open', function() {
+    testRestore(params, input, targetDb, function(err) {
+      if (err) {
+        callback(err);
+      } else {
+        callback();
       }
     });
   });
@@ -230,12 +327,82 @@ function testBackupAndRestore(params, srcDb, backupStream, restoreStream, target
   });
 }
 
+function assertResumedBackup(params, resumedBackup, restoreCallback) {
+  // Validate that the resume backup didn't need to write all the docs
+  if (params.useApi) {
+    resumedBackup.once('finished', function(summary) {
+      assertWrittenFewerThan(summary, params.exclusiveMaxExpected, restoreCallback);
+    });
+  } else {
+    // For the CLI case we need to see the output because we don't have
+    // the finished event.
+    const listener = function(data) {
+      let matches = data.toString().match(/.*Backup complete - written ({"total":\d+}).*/);
+      if (matches !== null) {
+        assertWrittenFewerThan(JSON.parse(matches[1]), params.exclusiveMaxExpected, restoreCallback);
+        resumedBackup.stderr.removeListener('data', listener);
+      }
+    };
+    resumedBackup.stderr.on('data', listener);
+  }
+}
+
+function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callback) {
+  const restore = function(err) {
+    if (err) {
+      callback(err);
+    } else {
+      testRestoreFromFile(params, backupFile, targetDb, function(err) {
+        if (err) {
+          callback(err);
+        } else {
+          dbCompare(srcDb, targetDb, callback);
+        }
+      });
+    }
+  };
+
+  const resume = function(err) {
+    if (err) {
+      callback(err);
+    }
+    // Remove the abort parameter and add the resume parameter
+    delete params.abort;
+    params.opts.resume = true;
+
+    // Resume backup and restore to validate it was successful.
+    if (params.opts && params.opts.output) {
+      const resumedBackup = testBackup(params, srcDb, null, function(err) {
+        if (err) {
+          callback(err);
+        }
+      });
+      assertResumedBackup(params, resumedBackup, restore);
+    } else {
+      testBackupToFile(params, srcDb, backupFile, function(err) {
+        if (err) {
+          callback(err);
+        }
+      },
+      function(backupProcess) {
+        assertResumedBackup(params, backupProcess, restore);
+      });
+    }
+  };
+
+  if (params.opts && params.opts.output) {
+    testBackup(params, srcDb, null, resume);
+  } else {
+    testBackupToFile(params, srcDb, backupFile, resume);
+  }
+}
+
 function dbCompare(db1Name, db2Name, callback) {
   const comparison = spawn(`./${process.env.DBCOMPARE_NAME}-${process.env.DBCOMPARE_VERSION}/bin/${process.env.DBCOMPARE_NAME}`,
     [process.env.COUCH_URL, db1Name, process.env.COUCH_URL, db2Name], {'stdio': 'inherit'});
   comparison.on('exit', function(code) {
     try {
-      assert.equal(code, 0, 'The database comparison should succeed.');
+      assert.equal(code, 0, `The database comparison should succeed, got exit code ${code}`);
       callback();
     } catch (err) {
       callback(err);
@@ -307,6 +474,15 @@ function assertGzipFile(path, callback) {
   }
 }
 
+function assertWrittenFewerThan(summary, number, callback) {
+  try {
+    assert(summary.total < number && summary.total > 0, `Saw ${summary.total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
+    callback();
+  } catch (err) {
+    callback(err);
+  }
+}
+
 module.exports = {
   scenario: scenario,
   p: params,
@@ -317,5 +493,8 @@ module.exports = {
   testBackup: testBackup,
   testRestore: testRestore,
   testDirectBackupAndRestore: testDirectBackupAndRestore,
-  testBackupAndRestoreViaFile: testBackupAndRestoreViaFile
+  testBackupToFile: testBackupToFile,
+  testRestoreFromFile: testRestoreFromFile,
+  testBackupAndRestoreViaFile: testBackupAndRestoreViaFile,
+  testBackupAbortResumeRestore: testBackupAbortResumeRestore
 };
