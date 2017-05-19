@@ -27,23 +27,28 @@ beforeEach('Create test database', function(done) {
 });
 
 afterEach('Delete test database', function(done) {
+  console.log('After each tearing down');
   // Allow 10 seconds to delete the DB
   this.timeout(10 * 1000);
-  fs.unlink(this.fileName, function(err) {
+  teardown(this.fileName, this.dbName, done);
+});
+
+function teardown(fileName, dbName, callback) {
+  fs.unlink(fileName, function(err) {
     if (err) {
       if (err.code !== 'ENOENT') {
         console.error(`${err.code} ${err.message}`);
       }
     }
   });
-  cloudant.db.destroy(this.dbName, function(err) {
+  cloudant.db.destroy(dbName, function(err) {
     if (err) {
-      done(err);
+      callback(err);
     } else {
-      done();
+      callback();
     }
   });
-});
+}
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -244,7 +249,15 @@ function timeoutFilter(context, timeout) {
     // Set the mocha timeout
     context.timeout(timeout * 1000);
   } else {
-    // Skip the test if it is expected to run for longer than the limit
+    // Workaround https://github.com/mochajs/mocha/issues/2546 by tearing down
+    // since the afterEach will not be called.
+    teardown(context.fileName, context.dbName, function(err) {
+      if (err) {
+        // Log if there was an error deleting
+        console.error(err);
+      }
+    });
+    // Now skip the test as it is expected to run for longer than the limit
     context.skip();
   }
 }
