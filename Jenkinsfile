@@ -7,7 +7,11 @@ def setupNodeAndTest(version) {
         // run tests using creds
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'],
                          [$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW']]) {
-            withEnv(["COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com", "NVM_DIR=${env.HOME}/.nvm", "DBCOMPARE_VERSION=1.0.0", "DBCOMPARE_NAME=DatabaseCompare"]) {
+            withEnv(["COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
+              "NVM_DIR=${env.HOME}/.nvm",
+              "DBCOMPARE_VERSION=1.0.0",
+              "DBCOMPARE_NAME=DatabaseCompare",
+              "TEST_LIMIT=900"]) {
                 try {
                     // Run in a single sh to preserve nvm Node version
                     // Load NVM

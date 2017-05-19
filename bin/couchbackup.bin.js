@@ -36,7 +36,7 @@ var opts = {};
 cliutils.copyIfDefined(config, 'COUCH_BUFFER_SIZE', opts, 'bufferSize');
 cliutils.copyIfDefined(config, 'COUCH_PARALLELISM', opts, 'parallelism');
 cliutils.copyIfDefined(config, 'COUCH_LOG', opts, 'log');
-cliutils.copyIfDefined(config, 'COUCH_RESUME', opts, 'bufferesumerSize');
+cliutils.copyIfDefined(config, 'COUCH_RESUME', opts, 'resume');
 cliutils.copyIfDefined(config, 'COUCH_MODE', opts, 'mode');
 
 return couchbackup.backup(
