@@ -2,7 +2,7 @@
 
 const async = require('async');
 const events = require('events');
-const request = require('request');
+const request = require('./request.js');
 const fs = require('fs');
 const error = require('./error.js');
 const spoolchanges = require('./spoolchanges.js');

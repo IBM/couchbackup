@@ -1,7 +1,7 @@
 'use strict';
 
 const async = require('async');
-const request = require('request');
+const request = require('./request.js');
 
 module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (typeof blocksize === 'string') {

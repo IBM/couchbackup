@@ -1,7 +1,7 @@
 'use strict';
 
 const async = require('async');
-const request = require('request');
+const request = require('./request.js');
 const stream = require('stream');
 
 module.exports = function(couchDbUrl, bufferSize, parallelism) {
