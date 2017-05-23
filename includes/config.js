@@ -14,7 +14,6 @@
 'use strict';
 
 var theconfig = require('./defaults.js').legacyDefaults();
-var argv = require('minimist')(process.argv.slice(2));
 var path = require('path');
 
 // if we have a custom CouchDB url
@@ -56,36 +55,5 @@ if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
 if (typeof process.env.COUCH_MODE !== 'undefined' && process.env.COUCH_MODE === 'shallow') {
   theconfig.COUCH_MODE = 'shallow';
 }
-
-// override with command-line parameters
-if (argv.url) {
-  theconfig.COUCH_URL = argv.url;
-}
-if (argv.db) {
-  theconfig.COUCH_DATABASE = argv.db;
-}
-if (argv['buffer-size']) {
-  theconfig.COUCH_BUFFER_SIZE = parseInt(argv['buffer-size']);
-}
-if (argv.parallelism) {
-  theconfig.COUCH_PARALLELISM = parseInt(argv.parallelism);
-}
-if (argv.log) {
-  theconfig.COUCH_LOG = path.normalize(argv.log);
-}
-if (argv.resume && argv.resume === 'true') {
-  theconfig.COUCH_RESUME = true;
-}
-if (argv.output) {
-  theconfig.COUCH_OUTPUT = path.normalize(argv.output);
-}
-if (argv.mode && argv.mode === 'shallow') {
-  theconfig.COUCH_MODE = 'shallow';
-}
-
-console.error('******************');
-console.error(' COUCHBACKUP/RESTORE - configuration');
-console.error('  ', JSON.stringify(theconfig, null, ' ').replace(/\/\/.+@/g, '//****:****@'));
-console.error('******************');
 
 module.exports = theconfig;
