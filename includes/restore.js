@@ -33,10 +33,10 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) 
 function exists(dbUrl, callback) {
   var r = {
     url: dbUrl,
-    method: 'HEAD',
-    json: true
+    method: 'HEAD'
   };
-  request(r, function(err, res) {
+  const client = request.client(dbUrl, 1);
+  client(r, function(err, res) {
     if (err) {
       debug(err);
       callback(err, false);
