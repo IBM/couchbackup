@@ -13,47 +13,82 @@
 // limitations under the License.
 'use strict';
 
-var theconfig = require('./defaults.js').legacyDefaults();
 var path = require('path');
+var tmp = require('tmp');
 
-// if we have a custom CouchDB url
-if (typeof process.env.COUCH_URL !== 'undefined') {
-  theconfig.COUCH_URL = process.env.COUCH_URL;
+/**
+  Return API default settings.
+*/
+function apiDefaults() {
+  return {
+    parallelism: 5,
+    bufferSize: 500,
+    log: tmp.fileSync().name,
+    resume: false,
+    mode: 'full'
+  };
 }
 
-// if we have a specified databases
-if (typeof process.env.COUCH_DATABASE !== 'undefined') {
-  theconfig.COUCH_DATABASE = process.env.COUCH_DATABASE;
+/**
+  Return CLI default settings.
+*/
+function cliDefaults() {
+  var defaults = apiDefaults();
+
+  // add additional legacy settings
+  defaults.db = 'test';
+  defaults.url = 'http://localhost:5984';
+
+  return defaults;
 }
 
-// if we have a specified buffer size
-if (typeof process.env.COUCH_BUFFER_SIZE !== 'undefined') {
-  theconfig.COUCH_BUFFER_SIZE = parseInt(process.env.COUCH_BUFFER_SIZE);
+/**
+  Override settings **in-place** with environment variables.
+*/
+function applyEnvironmentVariables(opts) {
+  // if we have a custom CouchDB url
+  if (typeof process.env.COUCH_URL !== 'undefined') {
+    opts.url = process.env.COUCH_URL;
+  }
+
+  // if we have a specified databases
+  if (typeof process.env.COUCH_DATABASE !== 'undefined') {
+    opts.db = process.env.COUCH_DATABASE;
+  }
+
+  // if we have a specified buffer size
+  if (typeof process.env.COUCH_BUFFER_SIZE !== 'undefined') {
+    opts.bufferSize = parseInt(process.env.COUCH_BUFFER_SIZE);
+  }
+
+  // if we have a specified parallelism
+  if (typeof process.env.COUCH_PARALLELISM !== 'undefined') {
+    opts.parallelism = parseInt(process.env.COUCH_PARALLELISM);
+  }
+
+  // if we have a specified log file
+  if (typeof process.env.COUCH_LOG !== 'undefined') {
+    opts.log = path.normalize(process.env.COUCH_LOG);
+  }
+
+  // if we are instructed to resume
+  if (typeof process.env.COUCH_RESUME !== 'undefined' && process.env.COUCH_RESUME === 'true') {
+    opts.resume = true;
+  }
+
+  // if we are given an output filename
+  if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
+    opts.output = path.normalize(process.env.COUCH_OUTPUT);
+  }
+
+  // if we only want a shallow copy
+  if (typeof process.env.COUCH_MODE !== 'undefined' && process.env.COUCH_MODE === 'shallow') {
+    opts.mode = 'shallow';
+  }
 }
 
-// if we have a specified parallelism
-if (typeof process.env.COUCH_PARALLELISM !== 'undefined') {
-  theconfig.COUCH_PARALLELISM = parseInt(process.env.COUCH_PARALLELISM);
-}
-
-// if we have a specified log file
-if (typeof process.env.COUCH_LOG !== 'undefined') {
-  theconfig.COUCH_LOG = path.normalize(process.env.COUCH_LOG);
-}
-
-// if we are instructed to resume
-if (typeof process.env.COUCH_RESUME !== 'undefined' && process.env.COUCH_RESUME === 'true') {
-  theconfig.COUCH_RESUME = true;
-}
-
-// if we are given an output filename
-if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
-  theconfig.COUCH_OUTPUT = path.normalize(process.env.COUCH_OUTPUT);
-}
-
-// if we only want a shallow copy
-if (typeof process.env.COUCH_MODE !== 'undefined' && process.env.COUCH_MODE === 'shallow') {
-  theconfig.COUCH_MODE = 'shallow';
-}
-
-module.exports = theconfig;
+module.exports = {
+  apiDefaults: apiDefaults,
+  cliDefaults: cliDefaults,
+  applyEnvironmentVariables: applyEnvironmentVariables
+};

@@ -41,19 +41,14 @@ module.exports = {
   },
 
   /**
-   * Copy an attribute between objects if it is defined on the source,
-   * overwriting any existing property on the target.
+   * Generate CLI argument usage text.
    *
-   * @param {object} src - source object.
-   * @param {string} srcProperty - source property name.
-   * @param {object} target - target object.
-   * @param {string} targetProperty - target property name.
+   * @param {string} description - argument description.
+   * @param {string} defaultValue - default argument value.
    *
    * @private
    */
-  copyIfDefined: function copyIfDefined(src, srcProperty, target, targetProperty) {
-    if (typeof src[srcProperty] !== 'undefined') {
-      target[targetProperty] = src[srcProperty];
-    }
+  getUsage: function getUsage(description, defaultValue) {
+    return description + ' (default: ' + defaultValue + ')';
   }
 };
