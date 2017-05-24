@@ -1,6 +1,6 @@
 'use strict';
 
-const request = require('request');
+const request = require('./request.js');
 const debug = require('debug')('couchbackup');
 
 module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) {

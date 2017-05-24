@@ -1,6 +1,6 @@
 'use strict';
 
-const request = require('request');
+const request = require('./request.js');
 const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
