@@ -44,6 +44,13 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
+    // If resuming write a newline as it's possible one would be missing from
+    // an interruption of the previous backup. If the backup was clean this
+    // will cause an empty line that will be gracefully handled by the restore.
+    if (opts.resume) {
+      targetStream.write('\n');
+    }
+
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('received', function(obj, q, logCompletedBatch) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);

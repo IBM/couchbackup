@@ -73,23 +73,28 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
   // take an object
   writer._transform = function(obj, encoding, done) {
     linenumber++;
-    var arr = [];
-    try {
-      arr = JSON.parse(obj);
-    } catch (e) {
-      console.error('ERROR on line', linenumber, ': cannot parse as JSON');
-    }
-    if (typeof arr === 'object' && arr.length > 0) {
-      for (var i in arr) {
-        buffer.push(arr[i]);
-      }
-      // optionally write to the buffer
-      this.pause();
-      processBuffer(false, function() {
+    if (obj !== '') {
+      try {
+        var arr = JSON.parse(obj);
+        if (typeof arr === 'object' && arr.length > 0) {
+          for (var i in arr) {
+            buffer.push(arr[i]);
+          }
+          // optionally write to the buffer
+          this.pause();
+          processBuffer(false, function() {
+            done();
+          });
+        } else {
+          console.error('ERROR on line', linenumber, ': not an array');
+          done();
+        }
+      } catch (e) {
+        console.error('ERROR on line', linenumber, ': cannot parse as JSON');
+        // Could be an incomplete write that was subsequently resumed
         done();
-      });
+      }
     } else {
-      console.error('ERROR on line', linenumber, ': not an array');
       done();
     }
   };

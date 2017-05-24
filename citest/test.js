@@ -39,6 +39,38 @@ const u = require('./citestutils.js');
       });
     });
 
+    it('should restore corrupted animaldb to a database correctly', function(done) {
+      // Allow up to 60 s to restore and compare (again it should be faster)!
+      u.timeoutFilter(this, 60);
+      const input = fs.createReadStream('animaldb_corrupted.json');
+      const dbName = this.dbName;
+      input.on('open', function() {
+        u.testRestore(params, input, dbName, function(err) {
+          if (err) {
+            done(err);
+          } else {
+            u.dbCompare('animaldb', dbName, done);
+          }
+        });
+      });
+    });
+
+    it('should restore resumed animaldb with blank line to a database correctly', function(done) {
+      // Allow up to 60 s to restore and compare (again it should be faster)!
+      u.timeoutFilter(this, 60);
+      const input = fs.createReadStream('animaldb_resumed_blank.json');
+      const dbName = this.dbName;
+      input.on('open', function() {
+        u.testRestore(params, input, dbName, function(err) {
+          if (err) {
+            done(err);
+          } else {
+            u.dbCompare('animaldb', dbName, done);
+          }
+        });
+      });
+    });
+
     it('should execute a shallow mode backup successfully', function(done) {
       // Allow 30 s
       u.timeoutFilter(this, 30);

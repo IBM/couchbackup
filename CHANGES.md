@@ -13,10 +13,12 @@
 - [IMPROVED] Added compression for backup HTTP responses, where supported by the
   server.
 - [IMPROVED] Added HTTP persistent connection pools corresponding to the backup
-  parallelism.  
+  parallelism.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored
   potentially resulting in the backup process running out of memory.
 - [FIXED] An issue where the log entry could be written for a batch before the
   batch was written to the backup file.
+- [FIXED] An issue where a restore of a resumed backup might not complete due to
+  incomplete JSON entries in the backup file.
