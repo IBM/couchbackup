@@ -59,6 +59,7 @@ function params(params, o) {
 }
 
 function testBackup(params, databaseName, outputStream, callback) {
+  var gzip;
   var backupStream = outputStream;
 
   // Pipe via compression if requested
@@ -70,10 +71,14 @@ function testBackup(params, databaseName, outputStream, callback) {
       backupStream.pipe(outputStream);
     } else {
       // Spawn process for gzip
-      const gzip = spawn('gzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
+      gzip = spawn('gzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
       // Pipe the streams as needed
       gzip.stdout.pipe(outputStream);
       backupStream = gzip.stdin;
+      // register an error handler
+      gzip.on('error', function(err) {
+        callback(err);
+      });
     }
   }
 
@@ -101,7 +106,6 @@ function testBackup(params, databaseName, outputStream, callback) {
     backup.on('exit', function(code) {
       try {
         assert.equal(code, 0, 'The backup should exit normally.');
-        callback();
       } catch (err) {
         callback(err);
       }
@@ -109,6 +113,16 @@ function testBackup(params, databaseName, outputStream, callback) {
     backup.on('error', function(err) {
       callback(err);
     });
+    // Call done when the last child process exits - could be gzip or backup
+    if (gzip) {
+      gzip.on('exit', function(code) {
+        callback();
+      });
+    } else {
+      backup.on('exit', function(code) {
+        callback();
+      });
+    }
   }
 }
 
