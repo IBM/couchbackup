@@ -145,6 +145,14 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
     var thisBatch = payload.batch;
     delete payload.batch;
 
+    function logCompletedBatch(batch) {
+      if (log) {
+        fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
+      } else {
+        done();
+      }
+    }
+
     // do the /db/_bulk_get request
     var r = {
       url: dbUrl + '/_bulk_get',
@@ -168,12 +176,7 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
         });
         total += output.length;
         var t = (new Date().getTime() - start) / 1000;
-        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch}, q);
-        if (log) {
-          fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
-        } else {
-          done();
-        }
+        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch}, q, logCompletedBatch);
       } else {
         ee.emit('error', err);
         done();

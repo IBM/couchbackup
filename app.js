@@ -45,19 +45,29 @@ module.exports = {
     const ee = new events.EventEmitter();
 
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
-      .on('received', function(obj, q) {
+      .on('received', function(obj, q, logCompletedBatch) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        if (!targetStream.write(JSON.stringify(obj.data) + '\n')) {
+        // Callback to emit the written event when the content is flushed
+        function writeFlushed() {
+          ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
+          if (logCompletedBatch) {
+            logCompletedBatch(obj.batch);
+          }
+        }
+        // Write the received content to the targetStream
+        const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
+          'utf8',
+          writeFlushed);
+        if (!continueWriting) {
           // The buffer was full, pause the queue to stop the writes until we
           // get a drain event
-          if (!q.isPaused) {
+          if (q && !q.isPaused) {
             q.pause();
             targetStream.once('drain', function() {
               q.resume();
             });
           }
         }
-        ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
       })
       .on('error', function(obj) {
         debug('Error ' + JSON.stringify(obj));

@@ -16,3 +16,5 @@
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored
   potentially resulting in the backup process running out of memory.
+- [FIXED] An issue where the log entry could be written for a batch before the
+  batch was written to the backup file.
