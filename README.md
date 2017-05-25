@@ -208,6 +208,11 @@ The library exports two main functions:
 1. `backup` - backup from a database to a writable stream.
 2. `restore` - restore from a readable stream to a database.
 
+### Examples
+
+See [the examples folder](./examples) for example scripts showing how to
+use the library.
+
 ### Backup
 
 The `backup` function takes a source database URL, a stream to write to,
