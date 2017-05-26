@@ -4,6 +4,7 @@ const async = require('async');
 const request = require('./request.js');
 
 module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
+  const client = request.client(dbUrl, parallelism);
   if (typeof blocksize === 'string') {
     blocksize = parseInt(blocksize);
   }
@@ -23,11 +24,9 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
     var r = {
       url: dbUrl + '/_all_docs',
       method: 'get',
-      qs: opts,
-      json: true,
-      gzip: true
+      qs: opts
     };
-    request(r, function(err, res, data) {
+    client(r, function(err, res, data) {
       if (err) {
         ee.emit('error', err);
         return callback(null, null);

@@ -137,6 +137,7 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, callback
  * @param {any} callback - completion callback, (err, {total: number}).
  */
 function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
+  const client = request.client(dbUrl, parallelism);
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -158,11 +159,9 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
       url: dbUrl + '/_bulk_get',
       qs: { revs: true }, // gets previous revision tokens too
       method: 'post',
-      json: true,
-      body: payload,
-      gzip: true
+      body: payload
     };
-    request(r, function(err, res, data) {
+    client(r, function(err, res, data) {
       if (!err && data && data.results) {
         // create an output array with the docs returned
         data.results.forEach(function(d) {

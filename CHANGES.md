@@ -12,6 +12,8 @@
   starting the restore process.
 - [IMPROVED] Added compression for backup HTTP responses, where supported by the
   server.
+- [IMPROVED] Added HTTP persistent connection pools corresponding to the backup
+  parallelism.  
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored

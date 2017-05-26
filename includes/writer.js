@@ -5,6 +5,7 @@ const request = require('./request.js');
 const stream = require('stream');
 
 module.exports = function(couchDbUrl, bufferSize, parallelism) {
+  const client = request.client(couchDbUrl, parallelism);
   var buffer = [];
   var written = 0;
   var linenumber = 0;
@@ -18,11 +19,10 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
     var r = {
       url: couchDbUrl + '/_bulk_docs',
       method: 'post',
-      json: true,
       body: payload
     };
 
-    request(r, function(err, res, data) {
+    client(r, function(err, res, data) {
       if (err) {
         writer.emit('error', err);
       } else {

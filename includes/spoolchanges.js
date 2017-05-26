@@ -17,6 +17,8 @@ const change = require('./change.js');
  *  of batches and doccount is total number of changes found.
  */
 module.exports = function(dbUrl, log, blocksize, callback) {
+  const client = request.client(dbUrl, 1);
+
   // list of document ids to process
   var buffer = [];
   var batch = 0;
@@ -54,10 +56,9 @@ module.exports = function(dbUrl, log, blocksize, callback) {
   // stream the changes feed to disk
   var r = {
     url: dbUrl + '/_changes',
-    qs: { seq_interval: 10000 },
-    gzip: true
+    qs: { seq_interval: 10000 }
   };
-  request(r)
+  client(r)
     .pipe(liner())
     .pipe(change(onChange))
     .on('finish', function() {
