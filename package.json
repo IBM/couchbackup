@@ -2,6 +2,7 @@
   "name": "couchbackup",
   "version": "2.0.0-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
+  "homepage" : "https://github.com/cloudant/couchbackup",
   "repository": "https://github.com/cloudant/couchbackup.git",
   "keywords": [
     "CouchDB",
@@ -10,8 +11,14 @@
     "backup",
     "command-line"
   ],
-  "author": "Glynn Bird",
+  "bugs": {
+    "url": "https://github.com/cloudant/couchbackup/issues",
+    "email": "support@cloudant.com"
+  },
   "license": "Apache-2.0",
+  "engines" : {
+    "node" : ">=4.8.1"
+  },
   "dependencies": {
     "async": "2.3.0",
     "debug": "2.6.3",
@@ -33,6 +40,7 @@
     "eslint-plugin-react": "^7.0.0",
     "eslint-config-standard": "^10.2.1",
     "eslint-config-semistandard": "^11.0.0",
+    "eslint-plugin-header": "^1.0.0",
     "jsdoc": "^3.4.3",
     "mocha": "^3.2.0",
     "cloudant": "^1.7.1",
