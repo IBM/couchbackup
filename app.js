@@ -23,7 +23,7 @@ const restoreInternal = require('./includes/restore.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
 const debug = require('debug')('couchbackup');
-const defaults = require('./includes/defaults.js');
+const defaults = require('./includes/config.js').apiDefaults();
 const events = require('events');
 
 module.exports = {
@@ -46,7 +46,7 @@ module.exports = {
       callback = opts;
       opts = {};
     }
-    opts = Object.assign({}, defaults.get(), opts);
+    opts = Object.assign({}, defaults, opts);
 
     var backup = null;
     if (opts.mode === 'shallow') {
@@ -128,7 +128,7 @@ module.exports = {
       callback = opts;
       opts = {};
     }
-    opts = Object.assign({}, defaults.get(), opts);
+    opts = Object.assign({}, defaults, opts);
 
     const ee = new events.EventEmitter();
 
