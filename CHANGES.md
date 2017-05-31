@@ -22,3 +22,4 @@
   batch was written to the backup file.
 - [FIXED] An issue where a restore of a resumed backup might not complete due to
   incomplete JSON entries in the backup file.
+- [FIXED] An issue where an empty batch could be written to the backup file.

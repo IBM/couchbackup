@@ -24,12 +24,12 @@ const change = require('./change.js');
  *
  * @param {string} dbUrl - URL of database
  * @param {string} log - path to log file to use
- * @param {number} blocksize - the number of changes per batch/log line
+ * @param {number} bufferSize - the number of changes per batch/log line
  * @param {function} callback - called when log is completed. Signature is
  *  (err, {batches: batch, docs: doccount}), where batches is the total number
  *  of batches and doccount is total number of changes found.
  */
-module.exports = function(dbUrl, log, blocksize, callback) {
+module.exports = function(dbUrl, log, bufferSize, callback) {
   const client = request.client(dbUrl, 1);
 
   // list of document ids to process
@@ -40,10 +40,10 @@ module.exports = function(dbUrl, log, blocksize, callback) {
   var logStream = fs.createWriteStream(log);
   console.error('Streaming changes to disk:');
 
-  // send documents ids to the queue in batches of 500 + the last batch
+  // send documents ids to the queue in batches of bufferSize + the last batch
   var processBuffer = function(lastOne) {
-    if (buffer.length >= blocksize || lastOne) {
-      var b = { docs: buffer.splice(0, blocksize), batch: batch };
+    if (buffer.length >= bufferSize || (lastOne && buffer.length > 0)) {
+      var b = { docs: buffer.splice(0, bufferSize), batch: batch };
       logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
       process.stderr.write('\r batch ' + batch);
       batch++;
