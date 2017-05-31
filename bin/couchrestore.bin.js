@@ -18,6 +18,8 @@ const error = require('../includes/error.js');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
+const debug = require('debug')('couchrestore');
+debug.enabled = true;
 
 var program = parser.parseRestoreArgs();
 var databaseUrl = cliutils.databaseUrl(program.url, program.db);
@@ -37,4 +39,10 @@ return couchbackup.restore(
   databaseUrl,
   opts,
   error.terminationCallback
-);
+).on('restored', function(obj) {
+  debug('restored', obj.total);
+}).on('error', function(e) {
+  debug('ERROR', e);
+}).on('finished', function(obj) {
+  debug('finished', obj);
+});

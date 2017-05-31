@@ -14,14 +14,13 @@
 // limitations under the License.
 'use strict';
 
-// switch on debug messages
-process.env.DEBUG = 'couchbackup';
-
 const error = require('../includes/error.js');
 const fs = require('fs');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
+const debug = require('debug')('couchbackup');
+debug.enabled = true;
 
 var program = parser.parseBackupArgs();
 
@@ -56,4 +55,10 @@ return couchbackup.backup(
   ws,
   opts,
   error.terminationCallback
-);
+).on('written', function(obj) {
+  debug('written', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+}).on('error', function(e) {
+  debug('ERROR', e);
+}).on('finished', function(obj) {
+  debug('finished', obj);
+});

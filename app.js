@@ -22,7 +22,6 @@
 const restoreInternal = require('./includes/restore.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
-const debug = require('debug')('couchbackup');
 const defaults = require('./includes/config.js').apiDefaults();
 const events = require('events');
 
@@ -66,7 +65,6 @@ module.exports = {
 
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('received', function(obj, q, logCompletedBatch) {
-        debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         // Callback to emit the written event when the content is flushed
         function writeFlushed() {
           ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
@@ -90,11 +88,9 @@ module.exports = {
         }
       })
       .on('error', function(obj) {
-        debug('Error ' + JSON.stringify(obj));
         ee.emit('error', obj);
       })
       .on('finished', function(obj) {
-        debug('Backup complete - written ' + JSON.stringify(obj));
         const summary = {total: obj.total};
         if (targetStream === process.stdout) {
           // stdout cannot emit a finish event so just callback.
@@ -143,15 +139,12 @@ module.exports = {
         }
 
         writer.on('restored', function(obj) {
-          debug(' restored ', obj.total);
           ee.emit('restored', {documents: obj.documents, total: obj.total});
         })
         .on('error', function(e) {
-          debug(' error', e);
           ee.emit('error', e);
         })
         .on('finished', function(obj) {
-          debug('restore complete');
           ee.emit('finished', {total: obj.total});
           callback(null, obj);
         });
