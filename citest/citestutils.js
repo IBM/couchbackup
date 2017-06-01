@@ -335,15 +335,15 @@ function assertResumedBackup(params, resumedBackup, restoreCallback) {
   // Validate that the resume backup didn't need to write all the docs
   if (params.useApi) {
     resumedBackup.once('finished', function(summary) {
-      assertWrittenFewerThan(summary, params.exclusiveMaxExpected, restoreCallback);
+      assertWrittenFewerThan(summary.total, params.exclusiveMaxExpected, restoreCallback);
     });
   } else {
     // For the CLI case we need to see the output because we don't have
     // the finished event.
     const listener = function(data) {
-      let matches = data.toString().match(/.*Backup complete - written ({"total":\d+}).*/);
+      let matches = data.toString().match(/.*finished { total: (\d+) }.*/);
       if (matches !== null) {
-        assertWrittenFewerThan(JSON.parse(matches[1]), params.exclusiveMaxExpected, restoreCallback);
+        assertWrittenFewerThan(matches[1], params.exclusiveMaxExpected, restoreCallback);
         resumedBackup.stderr.removeListener('data', listener);
       }
     };
@@ -478,9 +478,9 @@ function assertGzipFile(path, callback) {
   }
 }
 
-function assertWrittenFewerThan(summary, number, callback) {
+function assertWrittenFewerThan(total, number, callback) {
   try {
-    assert(summary.total < number && summary.total > 0, `Saw ${summary.total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
+    assert(total < number && total > 0, `Saw ${total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
     callback();
   } catch (err) {
     callback(err);
