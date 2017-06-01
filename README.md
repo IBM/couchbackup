@@ -165,6 +165,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
 * `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
+* `DEBUG` - if set to `couchbackup`, debug messages will be sent to `stderr` during a backup or restore process
 
 ### Command-line paramters
 

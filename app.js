@@ -22,9 +22,9 @@
 const restoreInternal = require('./includes/restore.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
-const debug = require('debug')('couchbackup');
 const defaults = require('./includes/config.js').apiDefaults();
 const events = require('events');
+const debug = require('debug')('couchbackup:app');
 
 module.exports = {
 

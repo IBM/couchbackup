@@ -14,7 +14,6 @@
 'use strict';
 
 const request = require('./request.js');
-const debug = require('debug')('couchbackup');
 
 module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) {
   exists(dbUrl, function(err, exists) {
@@ -24,8 +23,6 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) 
       e.name = 'RestoreDatabaseNotFound';
       callback(e, null);
     }
-
-    debug(`Starting restore to ${dbUrl}`);
 
     var liner = require('../includes/liner.js');
     var writer = require('../includes/writer.js')(dbUrl, buffersize, parallelism);
@@ -51,7 +48,6 @@ function exists(dbUrl, callback) {
   const client = request.client(dbUrl, 1);
   client(r, function(err, res) {
     if (err) {
-      debug(err);
       callback(err, false);
       return;
     }
