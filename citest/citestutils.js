@@ -147,6 +147,10 @@ function testBackup(params, databaseName, outputStream, callback) {
         args.push('--resume');
         args.push(params.opts.resume);
       }
+      if (params.opts.bufferSize) {
+        args.push('--buffer-size');
+        args.push(params.opts.bufferSize);
+      }
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x

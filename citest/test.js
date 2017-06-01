@@ -189,6 +189,55 @@ const u = require('./citestutils.js');
       });
     });
   });
+
+  describe(u.scenario('Buffer size tests', params), function() {
+    it('should backup/restore animaldb with the same buffer size', function(done) {
+      // Allow up to 60 s for backup and restore of animaldb
+      u.timeoutFilter(this, 60);
+      const actualBackup = `./${this.fileName}`;
+      const logFile = `./${this.fileName}` + '.log';
+      const p = u.p(params, {opts: {log: logFile, bufferSize: 1}});
+      u.testBackupAndRestoreViaFile(p, 'animaldb', actualBackup, this.dbName, done);
+    });
+    it('should backup/restore animaldb with backup buffer > restore buffer', function(done) {
+      // Allow up to 60 s for backup and restore of animaldb
+      u.timeoutFilter(this, 60);
+      const actualBackup = `./${this.fileName}`;
+      const logFile = `./${this.fileName}` + '.log';
+      const dbName = this.dbName;
+      const p = u.p(params, {opts: {log: logFile, bufferSize: 2}}); // backup
+      const q = u.p(params, {opts: {bufferSize: 1}}); // restore
+      u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
+        if (err) {
+          done(err);
+        } else {
+          // restore
+          u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
+            u.dbCompare('animaldb', dbName, done);
+          });
+        }
+      });
+    });
+    it('should backup/restore animaldb with backup buffer < restore buffer', function(done) {
+      // Allow up to 60 s for backup and restore of animaldb
+      u.timeoutFilter(this, 60);
+      const actualBackup = `./${this.fileName}`;
+      const logFile = `./${this.fileName}` + '.log';
+      const dbName = this.dbName;
+      const p = u.p(params, {opts: {log: logFile, bufferSize: 1}}); // backup
+      const q = u.p(params, {opts: {bufferSize: 2}}); // restore
+      u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
+        if (err) {
+          done(err);
+        } else {
+          // restore
+          u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
+            u.dbCompare('animaldb', dbName, done);
+          });
+        }
+      });
+    });
+  });
 });
 
 describe('Resume tests', function() {
