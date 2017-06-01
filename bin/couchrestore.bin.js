@@ -18,7 +18,7 @@ const error = require('../includes/error.js');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
-const debug = require('debug')('couchrestore');
+const debug = require('debug')('couchbackup:restore');
 debug.enabled = true;
 
 var program = parser.parseRestoreArgs();

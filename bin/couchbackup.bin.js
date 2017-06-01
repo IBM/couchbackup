@@ -19,7 +19,7 @@ const fs = require('fs');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
-const debug = require('debug')('couchbackup');
+const debug = require('debug')('couchbackup:backup');
 debug.enabled = true;
 
 var program = parser.parseBackupArgs();
