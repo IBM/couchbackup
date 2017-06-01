@@ -124,7 +124,7 @@ cat animaldb.tar.gz | gunzip | couchdbrestore --db animaldb2
 
 ## What's in a backup file?
 
-A backup file is a text file where each line contains a JSON encoded array of up to 500 objects e.g.
+A backup file is a text file where each line contains a JSON encoded array of up to `buffer-size` objects e.g.
 
 ```js
     [{"a":1},{"a":2}...]
