@@ -24,6 +24,7 @@ module.exports = {
     if (err) {
       process.on('uncaughtException', function(err) {
         var exitCode = {
+          'InvalidOption': 2,
           'RestoreDatabaseNotFound': 10,
           'NoLogFileName': 20,
           'LogDoesNotExist': 21

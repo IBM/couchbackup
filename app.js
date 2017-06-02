@@ -25,6 +25,56 @@ const backupFull = require('./includes/backup.js');
 const defaults = require('./includes/config.js').apiDefaults();
 const events = require('events');
 const debug = require('debug')('couchbackup:app');
+const error = require('./includes/error.js');
+
+/**
+ * Test for a positive, safe integer.
+ *
+ * @param {object} x - Object under test.
+ */
+function isSafePositiveInteger(x) {
+  // https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
+  const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER || 9007199254740991;
+  // Is it a number?
+  return Object.prototype.toString.call(x) === '[object Number]' &&
+    // Is it an integer?
+    x % 1 === 0 &&
+    // Is it positive?
+    x > 0 &&
+    // Is it less than the maximum safe integer?
+    x <= MAX_SAFE_INTEGER;
+}
+
+/**
+ * Validate arguments.
+ *
+ * @param {object} url - URL of database.
+ * @param {object} opts - Options.
+ * @param {function} cb - Callback to be called on error.
+ */
+function validateArgs(url, opts, cb) {
+  if (typeof url !== 'string') {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid URL, must be type string'), null);
+  }
+  if (opts && typeof opts.bufferSize !== 'undefined' && !isSafePositiveInteger(opts.bufferSize)) {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+  }
+  if (opts && typeof opts.log !== 'undefined' && typeof opts.log !== 'string') {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid log option, must be type string'), null);
+  }
+  if (opts && typeof opts.mode !== 'undefined' && ['full', 'shallow'].indexOf(opts.mode) === -1) {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid mode option, must be either "full" or "shallow"'), null);
+  }
+  if (opts && typeof opts.output !== 'undefined' && typeof opts.output !== 'string') {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid output option, must be type string'), null);
+  }
+  if (opts && typeof opts.parallelism !== 'undefined' && !isSafePositiveInteger(opts.parallelism)) {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+  }
+  if (opts && typeof opts.resume !== 'undefined' && typeof opts.resume !== 'boolean') {
+    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid resume option, must be type boolean'), null);
+  }
+}
 
 module.exports = {
 
@@ -46,6 +96,7 @@ module.exports = {
       callback = opts;
       opts = {};
     }
+    validateArgs(srcUrl, opts, callback);
     opts = Object.assign({}, defaults, opts);
 
     var backup = null;
@@ -129,6 +180,7 @@ module.exports = {
       callback = opts;
       opts = {};
     }
+    validateArgs(targetUrl, opts, callback);
     opts = Object.assign({}, defaults, opts);
 
     const ee = new events.EventEmitter();

@@ -41,7 +41,7 @@ function parseBackupArgs() {
             path.normalize, defaults.log)
     .option('-m, --mode <mode>',
             cliutils.getUsage('"shallow" if only a superficial backup is done (ignoring conflicts and revision tokens), else "full" for complete backup', defaults.mode),
-            defaults.mode)
+            (mode) => { return mode.toLowerCase(); }, defaults.mode)
     .option('-o, --output <file>',
             cliutils.getUsage('file name to store the backup data', 'stdout'),
             path.normalize, defaults.output)
