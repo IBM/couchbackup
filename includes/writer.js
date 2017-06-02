@@ -23,7 +23,10 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
   var written = 0;
   var linenumber = 0;
 
-  // process the writes in bulk as a queue
+  // this is the queue of chunks that are written to the database
+  // the queue's payload will be an array of documents to be written,
+  // the size of the array will be bufferSize. The variable parallelism
+  // determines how many HTTP requests will occur at any one time.
   var q = async.queue(function(payload, cb) {
     // if we are restoring known revisions, we need to supply new_edits=false
     if (payload.docs && payload.docs[0] && payload.docs[0]._rev) {
@@ -46,18 +49,29 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
     });
   }, parallelism);
 
-  // write the contents of the buffer to CouchDB in blocks of 500
+  // write the contents of the buffer to CouchDB in blocks of bufferSize
   var processBuffer = function(flush, callback) {
     if (flush || buffer.length >= bufferSize) {
-      var toSend = buffer.splice(0, buffer.length);
-      buffer = [];
-      q.push({docs: toSend});
+      // work through the buffer to break off bufferSize chunks
+      // and feed the chunks to the queue
+      do {
+        // split the buffer into bufferSize chunks
+        var toSend = buffer.splice(0, bufferSize);
 
-      // wait until the buffer size falls to a reasonable level
+        // and add the chunk to the queue
+        q.push({docs: toSend});
+      } while (buffer.length >= bufferSize);
+
+      // send any leftover documents to the queue
+      if (flush && buffer.length > 0) {
+        q.push({docs: buffer});
+      }
+
+      // wait until the queue size falls to a reasonable level
       async.until(
 
         // wait until the queue length drops to twice the paralellism
-        // or until empty
+        // or until empty on the last write
         function() {
           if (flush) {
             return q.idle() && q.length() === 0;
@@ -67,13 +81,14 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
         },
 
         function(cb) {
-          setTimeout(cb, 100);
+          setTimeout(cb, 20);
         },
 
         function() {
           if (flush) {
             writer.emit('finished', { total: written });
           }
+          // callback when we're happy with the queue size
           callback();
         });
     } else {
@@ -85,16 +100,28 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
 
   // take an object
   writer._transform = function(obj, encoding, done) {
+    // each obj that arrives here is a line from the backup file
+    // it should contain an array of objects. The length of the array
+    // depends on the bufferSize at backup time.
     linenumber++;
     if (obj !== '') {
+      // see if it parses as JSON
       try {
         var arr = JSON.parse(obj);
+
+        // if it's an array with a length
         if (typeof arr === 'object' && arr.length > 0) {
-          for (var i in arr) {
-            buffer.push(arr[i]);
-          }
-          // optionally write to the buffer
+          // push each document into a buffer
+          buffer = buffer.concat(arr);
+
+          // pause the stream
+          // it's likely that the speed with which data can be read from disk
+          // may exceed the rate it can be written to CouchDB. To prevent
+          // the whole file being buffered in memory, we pause the stream here.
+          // it is resumed, when processBuffer calls back and we call done()
           this.pause();
+
+          // break the buffer in to bufferSize chunks to be written to the database
           processBuffer(false, function() {
             done();
           });
