@@ -403,7 +403,7 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 
 function dbCompare(db1Name, db2Name, callback) {
   const comparison = spawn(`./${process.env.DBCOMPARE_NAME}-${process.env.DBCOMPARE_VERSION}/bin/${process.env.DBCOMPARE_NAME}`,
-    [process.env.COUCH_URL, db1Name, process.env.COUCH_URL, db2Name], {'stdio': 'inherit'});
+    [process.env.COUCH_URL_COMPARE, db1Name, process.env.COUCH_URL_COMPARE, db2Name], {'stdio': 'inherit'});
   comparison.on('exit', function(code) {
     try {
       assert.equal(code, 0, `The database comparison should succeed, got exit code ${code}`);
