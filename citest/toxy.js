@@ -123,6 +123,7 @@ poisons.forEach(function(poison) {
       proxy.close();
     });
 
+    delete require.cache[require.resolve('./test.js')];
     require('./test.js');
   });
 });

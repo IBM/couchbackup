@@ -17,6 +17,8 @@
 
 const assert = require('assert');
 const fs = require('fs');
+
+delete require.cache[require.resolve('./citestutils.js')];
 const u = require('./citestutils.js');
 
 [{useApi: true}, {useApi: false}].forEach(function(params) {
