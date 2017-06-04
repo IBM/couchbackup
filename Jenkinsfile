@@ -14,29 +14,31 @@
 // limitations under the License.
 
 def getEnv(envName) {
-    // Base environment variables
-    def envVars = [
-      "COUCH_URL_COMPARE=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
-      "DBCOMPARE_NAME=DatabaseCompare",
-      "DBCOMPARE_VERSION=1.0.0",
-      "NVM_DIR=${env.HOME}/.nvm",
-      "TEST_LIMIT=900"
-    ]
+  // Base environment variables
+  def envVars = [
+    "COUCH_URL_COMPARE=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
+    "DBCOMPARE_NAME=DatabaseCompare",
+    "DBCOMPARE_VERSION=1.0.0",
+    "NVM_DIR=${env.HOME}/.nvm"
+  ]
 
-    // Add test suite specific environment variables
-    switch(envName) {
-      case 'test-default':
-        envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-        break
-      case 'toxy-default':
-        envVars.add("COUCH_URL=http://localhost:3000") // proxy
-        envVars.add("TEST_PROXY_BACKEND=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-        break
-      default:
-        error("Unknown test suite environment ${envName}")
-    }
+  // Add test suite specific environment variables
+  switch(envName) {
+  case 'test-default':
+    envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+    envVars.add("TEST_TIMEOUT_LIMIT=900")
+    break
+  case 'toxy-default':
+    envVars.add("COUCH_URL=http://localhost:3000") // proxy
+    envVars.add("TEST_PROXY_BACKEND=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+    envVars.add("TEST_TIMEOUT_LIMIT=3600") // 1hr
+    envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
+    break
+  default:
+    error("Unknown test suite environment ${envName}")
+  }
 
-    return envVars
+  return envVars
 }
 
 def setupNodeAndTest(version, testSuite='test', envName='default') {

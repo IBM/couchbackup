@@ -442,8 +442,11 @@ function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) 
 
 function timeoutFilter(context, timeout) {
   // Default to a limit of 1 minute for tests
-  const limit = (typeof process.env.TEST_LIMIT !== 'undefined') ? parseInt(process.env.TEST_LIMIT) : 60;
+  const limit = (typeof process.env.TEST_TIMEOUT_LIMIT !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_LIMIT) : 60;
   timeout = (!timeout) ? 60 : timeout;
+  // Increase timeout using TEST_TIMEOUT_MULTIPLIER
+  const multiplier = (typeof process.env.TEST_TIMEOUT_MULTIPLIER !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_MULTIPLIER) : 1;
+  timeout *= multiplier;
   if (timeout <= limit) {
     // Set the mocha timeout
     context.timeout(timeout * 1000);
