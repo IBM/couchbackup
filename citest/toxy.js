@@ -33,35 +33,19 @@ function setupProxy(poison) {
         .forward(process.env.TEST_PROXY_BACKEND)
         .all('/*');
       break;
-    case 'abort':
-      // https://github.com/h2non/toxy#abort-connection
-      proxy
-        .forward(process.env.TEST_PROXY_BACKEND)
-        .poison(tpoisons.abort())
-        .withRule(trules.timeThreshold({ duration: 1000, threshold: 5000 }))
-        .all('/*');
-      break;
     case 'bandwidth-limit':
       // https://github.com/h2non/toxy#bandwidth
       proxy
         .forward(process.env.TEST_PROXY_BACKEND)
-        .poison(tpoisons.bandwidth({ bps: 2048 }))
+        .poison(tpoisons.bandwidth({ bps: 256 * 1024 })) // 256 kB/s
         .all('/*');
       break;
     case 'latency':
       // https://github.com/h2non/toxy#latency
       proxy
         .forward(process.env.TEST_PROXY_BACKEND)
-        .poison(tpoisons.latency({ max: 20000, min: 100 }))
+        .poison(tpoisons.latency({ max: 10000, min: 100 }))
         .withRule(trules.probability(50))
-        .all('/*');
-      break;
-    case 'rate-limit':
-      // https://github.com/h2non/toxy#rate-limit
-      proxy
-        .forward(process.env.TEST_PROXY_BACKEND)
-        .poison(tpoisons.rateLimit({ limit: 5, threshold: 1000 }))
-        .withRule(trules.probability(90))
         .all('/*');
       break;
     case 'slow-read':
@@ -69,19 +53,7 @@ function setupProxy(poison) {
       proxy
         .forward(process.env.TEST_PROXY_BACKEND)
         .poison(tpoisons.slowRead({ bps: 1024, threshold: 100 }))
-        .withRule(trules.probability(90))
-        .all('/*');
-      break;
-    case 'unexpected-errors':
-      // https://github.com/h2non/toxy#inject-response
-      proxy
-        .forward(process.env.TEST_PROXY_BACKEND)
-        .poison(tpoisons.inject({
-          code: 503,
-          body: '{"error": "toxy injected error"}',
-          headers: { 'Content-Type': 'application/json' }
-        }))
-        .withRule(trules.probability(90))
+        .withRule(trules.probability(50))
         .all('/*');
       break;
     default:
@@ -92,17 +64,10 @@ function setupProxy(poison) {
 }
 
 const poisons = [
-  'normal'
-  //
-  //  FIXME: Fix unreliable network tests
-  //         [https://github.com/cloudant/couchbackup/issues/79]
-  //
-  //  'abort',
-  //  'bandwidth-limit',
-  //  'latency',
-  //  'rate-limit',
-  //  'slow-read',
-  //  'unexpected-errors'
+  'normal',
+  'bandwidth-limit',
+  'latency',
+  'slow-read'
 ];
 
 poisons.forEach(function(poison) {
