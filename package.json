@@ -46,7 +46,8 @@
     "toxy": "^0.3.12",
     "cloudant": "^1.7.1",
     "uuid": "^3.0.1",
-    "tail": "^1.2.1"
+    "tail": "^1.2.1",
+    "rewire": "^2.4.20"
   },
   "scripts": {
     "test": "eslint --ignore-path .gitignore . && mocha"
