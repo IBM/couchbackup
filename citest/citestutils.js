@@ -17,7 +17,7 @@
 
 const assert = require('assert');
 const spawn = require('child_process').spawn;
-const cloudant = require('cloudant')({url: process.env.COUCH_URL});
+const cloudant = require('cloudant')({url: process.env.COUCH_URL_COMPARE});
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const stream = require('stream');
