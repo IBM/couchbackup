@@ -108,6 +108,13 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
+    // if there is an error writing to the stream, call the completion
+    // callback with the error set
+    targetStream.on('error', function(obj) {
+      debug('Error ' + JSON.stringify(obj));
+      if (callback) callback(obj, null);
+    });
+
     // If resuming write a newline as it's possible one would be missing from
     // an interruption of the previous backup. If the backup was clean this
     // will cause an empty line that will be gracefully handled by the restore.

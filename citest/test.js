@@ -322,3 +322,26 @@ describe('Event tests', function() {
     });
   });
 });
+
+describe('Write error tests', function() {
+  it('calls callback with error set when stream is not writeable', function(done) {
+    u.timeoutFilter(this, 10);
+    const dirname = fs.mkdtempSync('test_backup');
+    // make temp dir not writeable
+    fs.chmodSync(dirname, 0);
+    const filename = dirname + '/test.backup';
+    const backupStream = fs.createWriteStream(filename, {flags:'w'});
+    const params = {useApi: true};
+    // try to do backup and check err was set in callback
+    const backup = u.testBackup(params, 'animaldb', backupStream, function(err) {
+      // error should have been set
+      assert.ok(err != null);
+      // cleanup temp dir
+      fs.chmodSync(dirname, 0x1B6); // 666 in octal
+      fs.rmdirSync(dirname);
+      done();
+    });
+  });
+});
+
+
