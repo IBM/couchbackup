@@ -40,8 +40,8 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
       qs: opts
     };
     client(r, function(err, res, data) {
-      if (err) {
-        ee.emit('error', err);
+      if (err || !data.rows) {
+        ee.emit('error', err || data);
         return callback(null, null);
       }
 
