@@ -336,6 +336,7 @@ describe('Write error tests', function() {
     const backup = u.testBackup(params, 'animaldb', backupStream, function(err) {
       // error should have been set
       assert.ok(err != null);
+      assert.equal(err.code, 'EACCES');
       // cleanup temp dir
       fs.chmodSync(dirname, 0x1B6); // 666 in octal
       fs.rmdirSync(dirname);
