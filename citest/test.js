@@ -330,10 +330,10 @@ describe('Write error tests', function() {
     // make temp dir not writeable
     fs.chmodSync(dirname, 0);
     const filename = dirname + '/test.backup';
-    const backupStream = fs.createWriteStream(filename, {flags:'w'});
+    const backupStream = fs.createWriteStream(filename, {flags: 'w'});
     const params = {useApi: true};
     // try to do backup and check err was set in callback
-    const backup = u.testBackup(params, 'animaldb', backupStream, function(err) {
+    u.testBackup(params, 'animaldb', backupStream, function(err) {
       // error should have been set
       assert.ok(err != null);
       assert.equal(err.code, 'EACCES');
@@ -344,5 +344,3 @@ describe('Write error tests', function() {
     });
   });
 });
-
-
