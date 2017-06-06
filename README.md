@@ -178,22 +178,6 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `--output` - same as `COUCH_OUTPUT`
 * `--mode` - same as `COUCH_MODE`
 
-## Exit Codes
-
-On error, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
-details them.
-
-### CouchBackup
-
-* `1`: generic error (sorry if you see this one).
-* `20`: resume was specified without a log file
-* `21`: the resume log file does not exist
-
-### CouchRestore
-
-* `1`: generic error.
-* `10`: restore target database does not exist.
-
 ## Using programmatically
 
 You can use `couchbackup` programatically. First install
@@ -332,3 +316,27 @@ couchbackup.restore(
     }
   });
 ```
+
+## Error Handling
+
+The `couchbackup` and `couchrestore` processes are designed to be relatively robust over an unreliable network. Work is batched and any failed requests are retried indefinitely. However, certain aspects of the execution will not tolerate failure,
+- Spooling changes from the database changes feed. A failure in the changes request during the backup process will result in process termination.
+- Validating the existence of a target database during the database restore process.
+
+### CLI Exit Codes
+
+On error, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
+details them.
+
+### `couchbackup`
+
+* `1`: unknown CLI option or generic error (sorry if you see this one).
+* `2`: invalid CLI option.
+* `20`: resume was specified without a log file
+* `21`: the resume log file does not exist
+
+### `couchrestore`
+
+* `1`: unknown CLI option or generic error.
+* `2`: invalid CLI option.
+* `10`: restore target database does not exist.
