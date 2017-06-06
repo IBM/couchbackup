@@ -47,7 +47,8 @@ if (program.output) {
   if (program.log && program.resume) {
     flags = 'a';
   }
-  ws = fs.createWriteStream(program.output, { flags: flags });
+  const fd = fs.openSync(program.output, flags);
+  ws = fs.createWriteStream(null, { fd: fd });
 }
 
 return couchbackup.backup(
