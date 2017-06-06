@@ -4,7 +4,6 @@
   "description": "Examples of using CouchBackup as a library",
   "dependencies": {
     "aws-sdk": "^2.39.0",
-    "couchbackup": "^2.0.0",
     "tmp": "^0.0.31",
     "verror": "^1.10.0",
     "yargs": "^7.0.2"
