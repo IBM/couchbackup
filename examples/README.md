@@ -2,7 +2,9 @@
 
 This folder contains Node.js scripts which use the `couchbackup` library.
 
-Use `npm install` in this folder to install the script dependencies.
+Use `npm install ../; npm install` in this folder to install the script
+dependencies. This uses the checked out copy of couchbackup to ensure
+everything is in sync.
 
 Run a script without arguments to receive help.
 
