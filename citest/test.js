@@ -334,13 +334,17 @@ describe('Write error tests', function() {
     const params = {useApi: true};
     // try to do backup and check err was set in callback
     u.testBackup(params, 'animaldb', backupStream, function(err) {
-      // error should have been set
-      assert.ok(err != null);
-      assert.equal(err.code, 'EACCES');
-      // cleanup temp dir
-      fs.chmodSync(dirname, 0x1B6); // 666 in octal
-      fs.rmdirSync(dirname);
-      done();
+      try {
+        // cleanup temp dir
+        fs.chmodSync(dirname, 0x1B6); // 666 in octal
+        fs.rmdirSync(dirname);
+        // error should have been set
+        assert.ok(err != null);
+        assert.equal(err.code, 'EACCES');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 });
