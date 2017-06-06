@@ -24,7 +24,7 @@ const stream = require('stream');
 const url = require('url');
 
 const AWS = require('aws-sdk');
-const couchbackup = require('couchbackup');
+const couchbackup = require('@cloudant/couchbackup');
 const debug = require('debug')('s3-backup');
 const VError = require('verror').VError;
 
