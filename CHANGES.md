@@ -2,6 +2,8 @@
 
 - [NEW] Moved to https://github.com/cloudant/couchbackup repository
 - [NEW] API for using as library is more Node.js like.
+- [NEW] Validate backup/restore options.
+- [NEW] Add User-Agent header to all requests.
 - [BREAKING CHANGE] The --buffer option is now --buffer-size.
 - [BREAKING CHANGE] Removed legacy 1.x API.
 - [BREAKING CHANGE] The `writeerror` event is now just `error`.
@@ -24,3 +26,4 @@
   incomplete JSON entries in the backup file.
 - [FIXED] An issue where an empty batch could be written to the backup file.
 - [FIXED] An issue where the restore-time buffer size was ignored.
+- [FIXED] Ensure body 'rows' key exists before performing shallow backup.
