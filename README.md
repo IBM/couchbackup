@@ -1,6 +1,6 @@
 # CouchBackup
 
-[![Build Status](https://travis-ci.org/glynnbird/couchbackup.svg?branch=master)](https://travis-ci.org/glynnbird/couchbackup)
+[![Build Status](https://travis-ci.org/cloudant/couchbackup.svg?branch=master)](https://travis-ci.org/cloudant/couchbackup)
 
 ```
  _____                  _    ______            _
@@ -26,7 +26,7 @@ It comes with a companion command-line utility that can restore the backed up da
 To install use npm:
 
 ```sh
-npm install -g couchbackup
+npm install -g @cloudant/couchbackup
 ```
 
 The minimum required Node.js version is 4.8.2.
@@ -181,11 +181,11 @@ This tool can be used to script the backup of your databases. Move the backup an
 ## Using programmatically
 
 You can use `couchbackup` programatically. First install
-`couchbackup` into your project with `npm install --save couchbackup`.
+`couchbackup` into your project with `npm install --save @cloudant/couchbackup`.
 Then you can import the library into your code:
 
 ```js
-  const couchbackup = require('couchbackup');
+  const couchbackup = require('@cloudant/couchbackup');
 ```
 
 The library exports two main functions:

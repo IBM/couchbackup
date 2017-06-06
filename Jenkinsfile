@@ -1,3 +1,4 @@
+#!groovy
 // Copyright © 2017 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import groovy.json.JsonSlurper
-
 def getEnv(envName) {
-          // Base environment variables
-          def envVars = [
-            "COUCH_URL_COMPARE=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
-            "DBCOMPARE_NAME=DatabaseCompare",
-            "DBCOMPARE_VERSION=1.0.0",
-            "NVM_DIR=${env.HOME}/.nvm",
-            "TEST_LIMIT=900"
-          ]
+    // Base environment variables
+    def envVars = [
+      "COUCH_URL_COMPARE=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
+      "DBCOMPARE_NAME=DatabaseCompare",
+      "DBCOMPARE_VERSION=1.0.0",
+      "NVM_DIR=${env.HOME}/.nvm",
+      "TEST_LIMIT=900"
+    ]
 
-          // Add test suite specific environment variables
-          switch(envName) {
-            case 'test-default':
-              envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-              break
-            case 'toxy-default':
-              envVars.add("COUCH_URL=http://localhost:3000") // proxy
-              envVars.add("TEST_PROXY_BACKEND=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-              break
-            default:
-              error("Unknown test suite environment ${envName}")
-          }
+    // Add test suite specific environment variables
+    switch(envName) {
+      case 'test-default':
+        envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+        break
+      case 'toxy-default':
+        envVars.add("COUCH_URL=http://localhost:3000") // proxy
+        envVars.add("TEST_PROXY_BACKEND=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+        break
+      default:
+        error("Unknown test suite environment ${envName}")
+    }
 
-          return envVars
+    return envVars
 }
 
 def setupNodeAndTest(version, testSuite='test', envName='default') {
@@ -78,19 +77,20 @@ def setupNodeAndTest(version, testSuite='test', envName='default') {
     }
 }
 
-@NonCPS
-def isReleaseVersion(packageText) {
-  def info = new JsonSlurper().parseText(packageText)
-  !info['version'].toUpperCase(Locale.ENGLISH).contains('SNAPSHOT')
+String getVersionFromPackageJson() {
+  packageInfo = readJSON file: 'package.json'
+  return packageInfo.version
 }
 
-def releaseVersion
+String version = null;
+boolean isReleaseVersion = false;
 
 stage('Build') {
     // Checkout, build
     node {
         checkout scm
-        releaseVersion = isReleaseVersion(readFile('package.json'))
+        version = getVersionFromPackageJson();
+        isReleaseVersion = !version.toUpperCase(Locale.ENGLISH).contains('SNAPSHOT')
         sh 'npm install'
         stash name: 'built'
     }
@@ -103,9 +103,65 @@ stage('QA') {
     Node:{ setupNodeAndTest('node') } // Current
   ]
   // Add unreliable network tests for release builds
-  if (releaseVersion) {
+  if (isReleaseVersion) {
     axes.Network = { setupNodeAndTest('node', 'toxy') }
   }
   // Run the required axes in parallel
   parallel(axes)
+}
+
+// Publish the master branch
+stage('Publish') {
+    if (env.BRANCH_NAME == "master") {
+        node {
+            checkout scm // re-checkout to be able to git tag
+
+            // Upload using the ossrh creds (upload destination logic is in build.gradle)
+            withCredentials([string(credentialsId: 'npm-mail', variable: 'NPM_EMAIL'),
+            usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPM_PASS', usernameVariable: 'NPM_USER')]) {
+                // Actions:
+                // 1. add the build ID to any snapshot version for uniqueness
+                // 2. install login helper
+                // 3. login to npm, using environment variables specified above
+                // 4. publish the build to NPM adding a snapshot tag if pre-release
+                sh """
+                  ${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}
+                  sudo npm install -g npm-cli-login
+                  npm-cli-login
+                  npm publish ${isReleaseVersion ? '' : '--tag snapshot'}
+                """
+            }
+
+            // if it is a release build then do the git tagging
+            if (isReleaseVersion) {
+
+                // Read the CHANGES.md to get the tag message
+                tagMessage = ''
+                for (line in readFile('CHANGES.md').readLines()) {
+                    if (!''.equals(line)) {
+                        // append the line to the tagMessage
+                        tagMessage = "${tagMessage}${line}\n"
+                    } else {
+                        break
+                    }
+                }
+
+                // Use git to tag the release at the version
+                try {
+                    // Awkward workaround until resolution of https://issues.jenkins-ci.org/browse/JENKINS-28335
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
+                        sh "git config user.email \"nomail@hursley.ibm.com\""
+                        sh "git config user.name \"Jenkins CI\""
+                        sh "git config credential.username ${env.GIT_USERNAME}"
+                        sh "git config credential.helper '!echo password=\$GIT_PASSWORD; echo'"
+                        sh "git tag -a ${version} -m '${tagMessage}'"
+                        sh "git push origin ${version}"
+                    }
+                } finally {
+                    sh "git config --unset credential.username"
+                    sh "git config --unset credential.helper"
+                }
+            }
+        }
+    }
 }

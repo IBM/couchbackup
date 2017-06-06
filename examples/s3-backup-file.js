@@ -25,7 +25,7 @@ const fs = require('fs');
 const url = require('url');
 
 const AWS = require('aws-sdk');
-const couchbackup = require('couchbackup');
+const couchbackup = require('@cloudant/couchbackup');
 const debug = require('debug')('s3-backup');
 const tmp = require('tmp');
 const VError = require('verror').VError;
