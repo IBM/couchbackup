@@ -168,8 +168,8 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, shallow) {
  *
  * @param {string} url URL to safen
  */
-function s(url) {
-  var parts = url.parse(url);
+function s(originalUrl) {
+  var parts = url.parse(originalUrl);
   delete parts.auth;
   return url.format(parts);
 }
