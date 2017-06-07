@@ -28,3 +28,5 @@
 - [FIXED] An issue where the restore-time buffer size was ignored.
 - [FIXED] Ensure body 'rows' key exists before performing shallow backup.
 - [FIXED] An issue where write errors were not correctly reported.
+- [FIXED] An issue where couchbackup would attempt to write to an
+  invalid output file.
