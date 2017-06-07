@@ -16,7 +16,7 @@
 def getEnv(envName) {
   // Base environment variables
   def envVars = [
-    "COUCH_URL_COMPARE=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
+    "COUCH_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
     "DBCOMPARE_NAME=DatabaseCompare",
     "DBCOMPARE_VERSION=1.0.0",
     "NVM_DIR=${env.HOME}/.nvm"
@@ -26,12 +26,12 @@ def getEnv(envName) {
   switch(envName) {
   case 'test-default':
     envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-    envVars.add("TEST_TIMEOUT_LIMIT=900")
+    envVars.add("TEST_TIMEOUT_LIMIT_SECS=900")
     break
   case 'toxy-default':
     envVars.add("COUCH_URL=http://localhost:3000") // proxy
-    envVars.add("TEST_PROXY_BACKEND=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-    envVars.add("TEST_TIMEOUT_LIMIT=3600") // 1hr
+    envVars.add("TEST_PROXY_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+    envVars.add("TEST_TIMEOUT_LIMIT_SECS=3600") // 1hr
     envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
     break
   default:

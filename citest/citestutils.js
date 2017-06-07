@@ -17,7 +17,7 @@
 
 const assert = require('assert');
 const spawn = require('child_process').spawn;
-const cloudant = require('cloudant')({url: process.env.COUCH_URL_COMPARE});
+const cloudant = require('cloudant')({url: process.env.COUCH_BACKEND_URL});
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const stream = require('stream');
@@ -403,7 +403,7 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 
 function dbCompare(db1Name, db2Name, callback) {
   const comparison = spawn(`./${process.env.DBCOMPARE_NAME}-${process.env.DBCOMPARE_VERSION}/bin/${process.env.DBCOMPARE_NAME}`,
-    [process.env.COUCH_URL_COMPARE, db1Name, process.env.COUCH_URL_COMPARE, db2Name], {'stdio': 'inherit'});
+    [process.env.COUCH_BACKEND_URL, db1Name, process.env.COUCH_BACKEND_URL, db2Name], {'stdio': 'inherit'});
   comparison.on('exit', function(code) {
     try {
       assert.equal(code, 0, `The database comparison should succeed, got exit code ${code}`);
@@ -442,7 +442,7 @@ function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) 
 
 function timeoutFilter(context, timeout) {
   // Default to a limit of 1 minute for tests
-  const limit = (typeof process.env.TEST_TIMEOUT_LIMIT !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_LIMIT) : 60;
+  const limit = (typeof process.env.TEST_TIMEOUT_LIMIT_SECS !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_LIMIT_SECS) : 60;
   timeout = (!timeout) ? 60 : timeout;
   // Increase timeout using TEST_TIMEOUT_MULTIPLIER
   const multiplier = (typeof process.env.TEST_TIMEOUT_MULTIPLIER !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_MULTIPLIER) : 1;
