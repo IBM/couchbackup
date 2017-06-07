@@ -27,3 +27,4 @@
 - [FIXED] An issue where an empty batch could be written to the backup file.
 - [FIXED] An issue where the restore-time buffer size was ignored.
 - [FIXED] Ensure body 'rows' key exists before performing shallow backup.
+- [FIXED] An issue where write errors were not correctly reported.
