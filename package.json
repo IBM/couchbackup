@@ -1,5 +1,5 @@
 {
-  "name": "couchbackup",
+  "name": "@cloudant/couchbackup",
   "version": "2.0.0-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
   "homepage" : "https://github.com/cloudant/couchbackup",
