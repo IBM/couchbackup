@@ -23,27 +23,27 @@ const trules = toxy.rules;
 
 function setupProxy(poison) {
   var proxy = toxy({
-    auth: url.parse(process.env.TEST_PROXY_BACKEND_URL).auth,
+    auth: url.parse(process.env.COUCH_BACKEND_URL).auth,
     changeOrigin: true
   });
 
   switch (poison) {
     case 'normal':
       proxy
-        .forward(process.env.TEST_PROXY_BACKEND_URL)
+        .forward(process.env.COUCH_BACKEND_URL)
         .all('/*');
       break;
     case 'bandwidth-limit':
       // https://github.com/h2non/toxy#bandwidth
       proxy
-        .forward(process.env.TEST_PROXY_BACKEND_URL)
+        .forward(process.env.COUCH_BACKEND_URL)
         .poison(tpoisons.bandwidth({ bps: 256 * 1024 })) // 256 kB/s
         .all('/*');
       break;
     case 'latency':
       // https://github.com/h2non/toxy#latency
       proxy
-        .forward(process.env.TEST_PROXY_BACKEND_URL)
+        .forward(process.env.COUCH_BACKEND_URL)
         .poison(tpoisons.latency({ max: 10000, min: 100 }))
         .withRule(trules.probability(50))
         .all('/*');
@@ -51,7 +51,7 @@ function setupProxy(poison) {
     case 'slow-read':
       // https://github.com/h2non/toxy#slow-read
       proxy
-        .forward(process.env.TEST_PROXY_BACKEND_URL)
+        .forward(process.env.COUCH_BACKEND_URL)
         .poison(tpoisons.slowRead({ bps: 1024, threshold: 100 }))
         .withRule(trules.probability(50))
         .all('/*');
@@ -79,7 +79,7 @@ poisons.forEach(function(poison) {
       console.log('Using toxy poison ' + poison);
 
       // For these tests COUCH_URL points to the toxy proxy on localhost whereas
-      // TEST_PROXY_BACKEND_URL is the real CouchDb instance.
+      // COUCH_BACKEND_URL is the real CouchDb instance.
 
       proxy.listen(url.parse(process.env.COUCH_URL).port);
     });
