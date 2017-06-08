@@ -16,6 +16,8 @@
   server.
 - [IMPROVED] Added HTTP persistent connection pools corresponding to the backup
   parallelism.
+- [IMPROVED] Better error handling in couchrestore when remote database
+  cannot be written to.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored

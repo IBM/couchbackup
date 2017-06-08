@@ -201,20 +201,22 @@ module.exports = {
         if (err) {
           callback(err, null);
         }
-
-        writer.on('restored', function(obj) {
-          debug(' restored ', obj.total);
-          ee.emit('restored', {documents: obj.documents, total: obj.total});
-        })
-        .on('error', function(e) {
-          debug(' error', e);
-          ee.emit('error', e);
-        })
-        .on('finished', function(obj) {
-          debug('restore complete');
-          ee.emit('finished', {total: obj.total});
-          callback(null, obj);
-        });
+        if (writer != null) {
+          writer.on('restored', function(obj) {
+            debug(' restored ', obj.total);
+            ee.emit('restored', {documents: obj.documents, total: obj.total});
+          })
+          .on('error', function(e) {
+            debug(' error', e);
+            ee.emit('error', e);
+            callback(e, writer);
+          })
+          .on('finished', function(obj) {
+            debug('restore complete');
+            ee.emit('finished', {total: obj.total});
+            callback(null, obj);
+          });
+        }
       }
     );
 

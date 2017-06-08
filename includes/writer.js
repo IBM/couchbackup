@@ -16,6 +16,11 @@
 const async = require('async');
 const request = require('./request.js');
 const stream = require('stream');
+const error = require('./error.js');
+// global flag across all threads to indicate
+// - that we stop processing the queue
+// - that we only emit an error on the first failing thread
+var didError = false;
 
 module.exports = function(couchDbUrl, bufferSize, parallelism) {
   const client = request.client(couchDbUrl, parallelism);
@@ -38,7 +43,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
       body: payload
     };
 
-    client(r, function(err, res, data) {
+    const response = client(r, function(err, res, data) {
       if (err) {
         writer.emit('error', err);
       } else {
@@ -46,6 +51,29 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
         writer.emit('restored', {documents: payload.docs.length, total: written});
       }
       cb();
+    });
+
+    response.on('response', function(resp) {
+      var e = null;
+      switch (resp.statusCode) {
+        // TODO move this to a common file where it can be re-used:
+        // deal with all expected error codes and distinguish between
+        // permanent and transient errors
+        case 401:
+          e = new error.BackupError('Unauthorized', `Database ${couchDbUrl} does not have correct permissions. Check that you have the correct permissions before restoring.`);
+          break;
+        case 403:
+          e = new error.BackupError('Forbidden', `Incorrect credentials for database ${couchDbUrl}. Check that you have the correct username and password or API key before restoring.`);
+          break;
+      }
+      if (e != null) {
+        response.abort();
+        // only emit the first error as there are multiple threads
+        if (!didError) {
+          didError = true;
+          writer.emit('error', e);
+        }
+      }
     });
   }, parallelism);
 
@@ -69,10 +97,13 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
 
       // wait until the queue size falls to a reasonable level
       async.until(
-
         // wait until the queue length drops to twice the paralellism
         // or until empty on the last write
         function() {
+          // if we encountered an error, stop processing the queue
+          if (didError) {
+            return true;
+          }
           if (flush) {
             return q.idle() && q.length() === 0;
           } else {
@@ -85,7 +116,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
         },
 
         function() {
-          if (flush) {
+          if (flush && !didError) {
             writer.emit('finished', { total: written });
           }
           // callback when we're happy with the queue size

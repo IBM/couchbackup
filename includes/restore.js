@@ -17,7 +17,9 @@ const request = require('./request.js');
 
 module.exports = function(dbUrl, buffersize, parallelism, readstream, callback) {
   exists(dbUrl, function(err, exists) {
-    if (err || !exists) {
+    if (err) {
+      callback(err, null);
+    } else if (!exists) {
       var e = new Error(`Database ${dbUrl} does not exist. ` +
         'Create the target database before restoring.');
       e.name = 'RestoreDatabaseNotFound';
@@ -51,9 +53,16 @@ function exists(dbUrl, callback) {
       callback(err, false);
       return;
     }
-    if (res && res.statusCode !== 200) {
-      callback(null, false);
+    if (res) {
+      if (res.statusCode === 200) {
+        callback(null, true);
+      } else if (res.statusCode === 404) {
+        callback(null, false);
+      } else {
+        // generic error code (for now, maybe map HTTP status codes to explanations?)
+        var e = new Error(`HEAD ${dbUrl} returned error code ${res.statusCode}`);
+        callback(e, false);
+      }
     }
-    callback(null, true);
   });
 }
