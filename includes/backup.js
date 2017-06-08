@@ -48,8 +48,12 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   if (resume) {
     downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
   } else {
-    spoolchanges(dbUrl, log, blocksize, function logFileGenerated() {
-      downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+    spoolchanges(dbUrl, log, blocksize, function(err) {
+      if (err) {
+        ee.emit('error', err);
+      } else {
+        downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+      }
     });
   }
 
