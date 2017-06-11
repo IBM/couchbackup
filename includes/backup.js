@@ -23,6 +23,7 @@ const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
 var client;
+var supportsBulkGet;
 
 /**
  * Read documents from a database to be backed up.
@@ -46,22 +47,50 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
 
   client = request.client(dbUrl, parallelism);
 
-  if (resume) {
-    // pick up from existing log file from previous run
-    downloadBatches(log, dbUrl, ee, start, parallelism);
-  } else {
-    // create new log file and process
-    spoolchanges(dbUrl, log, blocksize, function(err) {
-      if (err) {
-        ee.emit('error', err);
-      } else {
+  checkBulkGetSupport(dbUrl, function(err) {
+    if (err) return ee.emit('error', err);
+    if (resume) {
+      // pick up from existing log file from previous run
+      downloadBatches(log, dbUrl, ee, start, parallelism);
+    } else {
+      // create new log file and process
+      spoolchanges(dbUrl, log, blocksize, function logFileGenerated() {
         downloadBatches(log, dbUrl, ee, start, parallelism);
-      }
-    });
-  }
+      });
+    }
+  });
 
   return ee;
 };
+
+/**
+ * Check a database supports /_bulk_get
+ *
+ * @param {string} dbUrl - URL of source database
+ * @param {function} callback - called once check completes
+ */
+function checkBulkGetSupport(dbUrl, callback) {
+  // allow bulk get toggle for testing
+  if (typeof process.env.TEST_SUPPORT_BULK_GET !== 'undefined') {
+    supportsBulkGet = process.env.TEST_SUPPORT_BULK_GET.toLowerCase() === 'true';
+    return callback();
+  }
+  client({url: dbUrl + '/_bulk_get', method: 'get'}, function(err, res, data) {
+    if (err) return callback(err);
+    switch (res.statusCode) {
+      case 404:
+        supportsBulkGet = false;
+        callback();
+        break;
+      case 405:
+        supportsBulkGet = true;
+        callback();
+        break;
+      default:
+        callback(new error.BackupError('BulkGetCheckFailure', 'ERROR: Failed to check if database supports bulk gets'));
+    }
+  });
+}
 
 /**
  * Download batches in a log file.
@@ -146,36 +175,115 @@ function readAllBatchIdsFromLogFile(log, callback) {
  * where total is the number of documents downloaded
  */
 function processBatches(dbUrl, parallelism, log, batches, ee, start, total, callback) {
-  var q = async.queue(function(batch, done) {
-    function doBulkGet(callback) {
-      var r = {
-        url: dbUrl + '/_bulk_get',
-        qs: { revs: true },
-        method: 'post',
-        body: {docs: batch.docs}
+  // fetch docs using the /_bulk_get API
+  function doBulkGet(docs, callback) {
+    docs.forEach(function(doc) {
+      delete doc.deleted;
+      delete doc.rev;
+    });
+
+    var req = {
+      url: dbUrl + '/_bulk_get',
+      qs: { revs: true },
+      method: 'post',
+      body: {docs: docs}
+    };
+
+    var output = [];
+    client(req, function(err, res, data) {
+      if (!err && data && data.results) {
+        data.results.forEach(function(d) {
+          if (d.docs) {
+            d.docs.forEach(function(doc) {
+              if (doc.ok) {
+                output.push(doc.ok);
+              }
+            });
+          }
+        });
+        callback(null, output);
+      } else {
+        callback(err, null);
+      }
+    });
+  }
+
+  // fetch docs seperately (not using the /_bulk_get API)
+  function doGet(docs, callback) {
+    var output = [];
+    var hasErrored = false;
+
+    var getDocQ = async.queue(function(doc, done) {
+      if (!doc || hasErrored) return done();
+
+      var req = {
+        url: dbUrl + '/' + encodeURI(doc.id),
+        qs: { rev: doc.rev, revs: true },
+        method: 'get'
       };
 
-      client(r, function(err, res, data) {
+      var fetchDoc = function(callback) {
+        client(req, function(err, res, data) {
+          if (err) {
+            callback(err);
+          } else if (res.statusCode !== 200) {
+            callback(new error.BackupError('BackupRetrieveError', `ERROR: Failed to get document '${doc.id}' (rev ${doc.rev}) - Status code: ${res.statusCode}`));
+          } else {
+            callback(null, data);
+          }
+        });
+      };
+
+      async.retry(3, fetchDoc, function(err, doc) {
         if (err) {
+          hasErrored = true;
           callback(err);
-        } else if (res.statusCode !== 200) {
-          callback(new error.BackupError('BackupRetrieveError', `ERROR: Failed to get document batch ${batch.batch}, status code ${res.statusCode}`));
-        } else if (!data || !data.results) {
-          callback(new error.BackupError('BackupRetrieveError', `ERROR: Received invalid bulk get response for document batch ${batch.batch}`));
         } else {
-          var output = [];
-          data.results.forEach(function(d) {
-            if (d.docs) {
-              d.docs.forEach(function(doc) {
-                if (doc.ok) {
-                  output.push(doc.ok);
-                }
-              });
-            }
-          });
-          callback(null, output);
+          output = output.concat(doc);
         }
+        done();
       });
+    });
+
+    // get missing revs
+    var revsDiffBody = {};
+    var fakeRevId = ['9999-a'];
+    docs.forEach(function(doc) {
+      revsDiffBody[doc.id] = fakeRevId;
+    });
+
+    var req = { url: dbUrl + '/_revs_diff', body: revsDiffBody, method: 'post' };
+    client(req, function(err, res, data) {
+      if (err) {
+        hasErrored = true;
+        callback(err);
+      } else if (res.statusCode !== 200) {
+        hasErrored = true;
+        callback(new error.BackupError('BackupRetrieveError', `ERROR: Failed to query POST /_revs_diff - Status code: ${res.statusCode}`));
+      } else {
+        for (var docId in res.body) {
+          var possibleAncestors = res.body[docId].possible_ancestors;
+          if (possibleAncestors) {
+            possibleAncestors.forEach(function(rev) {
+              getDocQ.push({id: docId, rev: rev});
+            });
+          }
+        }
+      }
+    });
+
+    getDocQ.drain = function() {
+      if (!hasErrored) callback(null, output);
+    };
+  }
+
+  var q = async.queue(function(batch, done) {
+    function fetchBatch(callback) {
+      if (supportsBulkGet) {
+        doBulkGet(batch.docs, callback);
+      } else {
+        doGet(batch.docs, callback);
+      }
     }
 
     function logCompletedBatch(batch) {
@@ -186,7 +294,7 @@ function processBatches(dbUrl, parallelism, log, batches, ee, start, total, call
       }
     }
 
-    async.retry(3, doBulkGet, function(err, results) {
+    async.retry(3, fetchBatch, function(err, results) {
       if (err) {
         ee.emit('error', err);
         done();
