@@ -26,6 +26,7 @@ module.exports = {
         var exitCode = {
           'InvalidOption': 2,
           'RestoreDatabaseNotFound': 10,
+          'Unauthorized': 11,
           'NoLogFileName': 20,
           'LogDoesNotExist': 21
         }[err.name] || 1;
