@@ -17,6 +17,7 @@ const request = require('./request.js');
 const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
+const error = require('./error.js');
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -25,9 +26,7 @@ const change = require('./change.js');
  * @param {string} dbUrl - URL of database
  * @param {string} log - path to log file to use
  * @param {number} bufferSize - the number of changes per batch/log line
- * @param {function} callback - called when log is completed. Signature is
- *  (err, {batches: batch, docs: doccount}), where batches is the total number
- *  of batches and doccount is total number of changes found.
+ * @param {function(err)} callback - a callback to run on completion
  */
 module.exports = function(dbUrl, log, bufferSize, callback) {
   const client = request.client(dbUrl, 1);
@@ -35,10 +34,8 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
   // list of document ids to process
   var buffer = [];
   var batch = 0;
-  var doccount = 0;
   var lastSeq = null;
   var logStream = fs.createWriteStream(log);
-  console.error('Streaming changes to disk:');
 
   // send documents ids to the queue in batches of bufferSize + the last batch
   var processBuffer = function(lastOne) {
@@ -57,7 +54,6 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
         console.error('error', c);
       } else if (c.changes) {
         var obj = {id: c.id};
-        doccount++;
         buffer.push(obj);
         processBuffer(false);
       } else if (c.last_seq) {
@@ -71,18 +67,28 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
     url: dbUrl + '/_changes',
     qs: { seq_interval: 10000 }
   };
-  client(r)
-    .pipe(liner())
+  var c = client(r);
+  c.end();
+
+  c.on('response', function(resp) {
+    if (resp.statusCode !== 200) {
+      c.abort();
+      callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request failed with status code ${resp.statusCode}`));
+    } else {
+      console.error('Streaming changes to disk:');
+    }
+  }).pipe(liner())
     .pipe(change(onChange))
     .on('finish', function() {
       processBuffer(true);
-      logStream.write(':changes_complete ' + lastSeq + '\n');
-      logStream.end();
       console.error('');
-      if (doccount === 0) {
-        callback(new Error('zero documents found - nothing to do'), null);
+      if (!lastSeq) {
+        logStream.end();
+        callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
       } else {
-        callback(null, {batches: batch, docs: doccount});
+        logStream.write(':changes_complete ' + lastSeq + '\n');
+        logStream.end();
+        callback();
       }
     });
 };

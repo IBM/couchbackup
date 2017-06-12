@@ -110,9 +110,9 @@ module.exports = {
 
     // if there is an error writing to the stream, call the completion
     // callback with the error set
-    targetStream.on('error', function(obj) {
-      debug('Error ' + JSON.stringify(obj));
-      if (callback) callback(obj, null);
+    targetStream.on('error', function(err) {
+      debug('Error ' + JSON.stringify(err));
+      if (callback) callback(err);
     });
 
     // If resuming write a newline as it's possible one would be missing from
@@ -147,9 +147,12 @@ module.exports = {
           }
         }
       })
-      .on('error', function(obj) {
-        debug('Error ' + JSON.stringify(obj));
-        ee.emit('error', obj);
+      .on('error', function(err) {
+        if (error.codes()[err.name]) {
+          return callback(err); // fatal error
+        }
+        debug('Error ' + JSON.stringify(err));
+        ee.emit('error', err);
       })
       .on('finished', function(obj) {
         function emitFinished() {
@@ -206,10 +209,12 @@ module.exports = {
             debug(' restored ', obj.total);
             ee.emit('restored', {documents: obj.documents, total: obj.total});
           })
-          .on('error', function(e) {
-            debug(' error', e);
-            ee.emit('error', e);
-            callback(e, writer);
+          .on('error', function(err) {
+            if (error.codes()[err.name]) {
+              return callback(err); // fatal error
+            }
+            debug('Error ' + JSON.stringify(err));
+            ee.emit('error', err);
           })
           .on('finished', function(obj) {
             debug('restore complete');

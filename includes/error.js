@@ -13,6 +13,18 @@
 // limitations under the License.
 'use strict';
 
+// fatal errors
+const codes = {
+  'InvalidOption': 2,
+  'RestoreDatabaseNotFound': 10,
+  'Unauthorized': 11,
+  'Forbidden': 12,
+  'NoLogFileName': 20,
+  'LogDoesNotExist': 21,
+  'IncompleteChangesInLogFile': 22,
+  'SpoolChangesError': 30
+};
+
 module.exports = {
   BackupError: class BackupError extends Error {
     constructor(name, message) {
@@ -20,18 +32,12 @@ module.exports = {
       this.name = name;
     }
   },
+  codes: function() { return Object.assign({}, codes); },
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
-        var exitCode = {
-          'InvalidOption': 2,
-          'RestoreDatabaseNotFound': 10,
-          'Unauthorized': 11,
-          'NoLogFileName': 20,
-          'LogDoesNotExist': 21
-        }[err.name] || 1;
         console.error(err.message);
-        process.exitCode = exitCode;
+        process.exitCode = codes[err.name] || 1;
       });
       throw err;
     }
