@@ -26,7 +26,7 @@ def getEnv(envName) {
   switch(envName) {
     case 'test-default':
       envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-      envVars.add("TEST_TIMEOUT_LIMIT_SECS=900")
+      envVars.add("TEST_TIMEOUT_LIMIT_SECS=1800")
       break
     case 'toxy-default':
       envVars.add("COUCH_URL=http://localhost:3000") // proxy

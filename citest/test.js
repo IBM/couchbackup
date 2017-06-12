@@ -114,8 +114,10 @@ const u = require('./citestutils.js');
       u.testDirectBackupAndRestore(params, 'animaldb', this.dbName, done);
     });
     it('should backup and restore largedb1g', function(done) {
-      // Allow up to 15 m for backup and restore of largedb1g
-      u.timeoutFilter(this, 15 * 60);
+      // Allow up to 30 m for backup and restore of largedb1g
+      // This is a long time but when many builds run in parallel it can take a
+      // while to get this done.
+      u.timeoutFilter(this, 30 * 60);
       u.testDirectBackupAndRestore(params, 'largedb1g', this.dbName, done);
     });
   });
@@ -159,8 +161,8 @@ const u = require('./citestutils.js');
     });
 
     it('should backup and restore largedb2g via a compressed file', function(done) {
-      // Categorize as a 30 min test so it only gets run with the long run tests
-      u.timeoutFilter(this, 30 * 60);
+      // Categorize as a 60 min test so it only gets run with the long run tests
+      u.timeoutFilter(this, 60 * 60);
       const compressedBackup = `./${this.fileName}`;
       params.compression = true;
       u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName, done);
