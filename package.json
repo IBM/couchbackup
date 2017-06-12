@@ -2,7 +2,7 @@
   "name": "@cloudant/couchbackup",
   "version": "2.0.0-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
-  "homepage" : "https://github.com/cloudant/couchbackup",
+  "homepage": "https://github.com/cloudant/couchbackup",
   "repository": "https://github.com/cloudant/couchbackup.git",
   "keywords": [
     "CouchDB",
@@ -16,8 +16,8 @@
     "email": "support@cloudant.com"
   },
   "license": "Apache-2.0",
-  "engines" : {
-    "node" : ">=4.8.1"
+  "engines": {
+    "node": ">=4.8.2"
   },
   "dependencies": {
     "async": "2.3.0",
