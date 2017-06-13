@@ -165,7 +165,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       console.error(`${data}`);
     });
 
-    backup.on('exit', function(code, signal) {
+    backup.on('close', function(code, signal) {
       try {
         if (params.abort) {
           // Assert that the process was aborted as expected
@@ -182,11 +182,16 @@ function testBackup(params, databaseName, outputStream, callback) {
     });
     // Call done when the last child process exits - could be gzip or backup
     if (gzip) {
-      gzip.on('exit', function(code) {
-        callback();
+      gzip.on('close', function(code) {
+        try {
+          assert.equal(code, 0, `The compression should exit normally, got exit code ${code}.`);
+          callback();
+        } catch (err) {
+          callback(err);
+        }
       });
     } else {
-      backup.on('exit', function(code) {
+      backup.on('close', function(code) {
         callback();
       });
     }
@@ -253,7 +258,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     const restore = spawn('node', ['../bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
-    restore.on('exit', function(code) {
+    restore.on('close', function(code) {
       try {
         assert.equal(code, 0, `The restore should exit normally, got exit code ${code}`);
         callback();
