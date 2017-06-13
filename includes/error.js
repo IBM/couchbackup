@@ -22,7 +22,8 @@ const codes = {
   'NoLogFileName': 20,
   'LogDoesNotExist': 21,
   'IncompleteChangesInLogFile': 22,
-  'SpoolChangesError': 30
+  'SpoolChangesError': 30,
+  'HTTPFatalError': 40
 };
 
 module.exports = {

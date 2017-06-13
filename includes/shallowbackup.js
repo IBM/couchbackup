@@ -36,7 +36,7 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
     }
     var r = {
       url: dbUrl + '/_all_docs',
-      method: 'get',
+      method: 'GET',
       qs: opts
     };
     client(r, function(err, res, data) {

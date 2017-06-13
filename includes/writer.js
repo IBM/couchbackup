@@ -16,7 +16,6 @@
 const async = require('async');
 const request = require('./request.js');
 const stream = require('stream');
-const error = require('./error.js');
 // global flag across all threads to indicate
 // - that we stop processing the queue
 // - that we only emit an error on the first failing thread
@@ -39,7 +38,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
     }
     var r = {
       url: couchDbUrl + '/_bulk_docs',
-      method: 'post',
+      method: 'POST',
       body: payload
     };
 
@@ -54,26 +53,16 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
     });
 
     response.on('response', function(resp) {
-      var e = null;
-      switch (resp.statusCode) {
-        // TODO move this to a common file where it can be re-used:
-        // deal with all expected error codes and distinguish between
-        // permanent and transient errors
-        case 401:
-          e = new error.BackupError('Unauthorized', `Database ${couchDbUrl} does not have correct permissions. Check that you have the correct permissions before restoring.`);
-          break;
-        case 403:
-          e = new error.BackupError('Forbidden', `Incorrect credentials for database ${couchDbUrl}. Check that you have the correct username and password or API key before restoring.`);
-          break;
-      }
-      if (e != null) {
-        response.abort();
-        // only emit the first error as there are multiple threads
-        if (!didError) {
-          didError = true;
-          writer.emit('error', e);
+      request.checkResponseAndCallbackFatalError(resp, function(err) {
+        if (err) {
+          response.abort();
+          // only emit the first error as there are multiple threads
+          if (!didError) {
+            didError = true;
+            writer.emit('error', err);
+          }
         }
-      }
+      });
     });
   }, parallelism);
 
