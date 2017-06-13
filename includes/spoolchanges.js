@@ -18,6 +18,7 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
+const async = require('async');
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -35,7 +36,16 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
   var buffer = [];
   var batch = 0;
   var lastSeq = null;
+
+  // store progress for possible retry
+  var retrySeq = null;
+  var retryBatch;
+  var retryBuffer;
+
   var logStream = fs.createWriteStream(log);
+  logStream.on('error', function(err) {
+    callback(err);
+  });
 
   // send documents ids to the queue in batches of bufferSize + the last batch
   var processBuffer = function(lastOne) {
@@ -56,39 +66,68 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
         var obj = {id: c.id};
         buffer.push(obj);
         processBuffer(false);
+        if (c.seq) {
+          retrySeq = c.seq;
+          retryBatch = batch;
+          retryBuffer = buffer.slice(); // copy buffer
+        }
       } else if (c.last_seq) {
         lastSeq = c.last_seq;
       }
     }
   };
 
-  // stream the changes feed to disk
-  var r = {
-    url: dbUrl + '/_changes',
-    qs: { seq_interval: 10000 }
-  };
-  var c = client(r);
-  c.end();
+  var spoolChanges = function(callback) {
+    // stream the changes feed to disk
+    var r = {
+      url: dbUrl + '/_changes',
+      qs: {
+        // seq_interval is a performance tweak, the feed only supplies a seq on
+        // every N change, otherwise seq: null
+        seq_interval: 10000
+      }
+    };
 
-  c.on('response', function(resp) {
-    if (resp.statusCode !== 200) {
-      c.abort();
-      callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request failed with status code ${resp.statusCode}`));
-    } else {
-      console.error('Streaming changes to disk:');
+    if (retrySeq) {
+      r.qs.since = retrySeq;
+      batch = retryBatch;
+      buffer = retryBuffer;
     }
-  }).pipe(liner())
-    .pipe(change(onChange))
-    .on('finish', function() {
-      processBuffer(true);
-      console.error('');
-      if (!lastSeq) {
-        logStream.end();
-        callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
+
+    var c = client(r);
+    c.end();
+
+    c.on('response', function(resp) {
+      if (resp.statusCode !== 200) {
+        c.abort();
+        callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request failed with status code ${resp.statusCode}`));
       } else {
-        logStream.write(':changes_complete ' + lastSeq + '\n');
-        logStream.end();
-        callback();
+        console.error('Streaming changes to disk:');
+        resp
+          .pipe(liner())
+          .pipe(change(onChange))
+          .on('finish', function() {
+            console.error('');
+            if (!lastSeq) {
+              console.log('no last_seq');
+              callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
+            } else {
+              // FIXME: Issue 101
+              //        https://github.com/cloudant/couchbackup/issues/101
+              //        Validate the last_seq value. Ensure it's not the result of a
+              //        maintenance event.
+              processBuffer(true);
+              logStream.write(':changes_complete ' + lastSeq + '\n');
+              callback();
+            }
+          });
       }
     });
+  };
+
+  // retry changes request up to 5 times on failure
+  async.retry(5, spoolChanges, function(err, result) {
+    logStream.end();
+    callback(err);
+  });
 };

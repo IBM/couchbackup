@@ -28,6 +28,9 @@ def getEnv(envName) {
       envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
       envVars.add("TEST_TIMEOUT_LIMIT_SECS=1800")
       break
+    case 'spoolchanges-default':
+      envVars.add("COUCH_URL=http://localhost:3000") // proxy
+      break
     case 'toxy-default':
       envVars.add("COUCH_URL=http://localhost:3000") // proxy
       envVars.add("TEST_TIMEOUT_LIMIT_SECS=3600") // 1hr
@@ -101,7 +104,8 @@ stage('QA') {
   def axes = [
     Node4x:{ setupNodeAndTest('lts/argon') }, //4.x LTS
     Node6x:{ setupNodeAndTest('lts/boron') }, // 6.x LTS
-    Node:{ setupNodeAndTest('node') } // Current
+    Node:{ setupNodeAndTest('node') }, // Current
+    Changes:{ setupNodeAndTest('node', 'spoolchanges') } // Current
   ]
   // Add unreliable network tests for release builds
   if (isReleaseVersion) {
