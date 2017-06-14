@@ -1,0 +1,29 @@
+# https://docs.npmjs.com/misc/developers#keeping-files-out-of-your-package
+
+# build tool config
+Jenkinsfile
+.travis.yml
+
+# code examples
+examples
+
+# docs
+CONTRIBUTING.md
+
+# github config
+.github
+
+# linters
+.eslintrc*
+
+# npm
+.npmignore
+
+# tests
+citest
+test
+
+# test logs
+backup.txt
+npm-debug.log
+out
