@@ -18,7 +18,7 @@
 var assert = require('assert');
 var applyEnvVars = require('../includes/config.js').applyEnvironmentVariables;
 
-describe('Default parameters', function() {
+describe('#unit Default parameters', function() {
   it('respects the COUCH_URL env variable', function(done) {
     process.env.COUCH_URL = 'http://user:pass@myurl.com';
     var config = {};

@@ -18,7 +18,7 @@
 var assert = require('assert');
 var parser = require('../includes/parser.js');
 
-describe('Default parameters', function() {
+describe('#unit Default parameters', function() {
   before(function() {
     // setup environment variables
     process.env.COUCH_URL = 'http://user:pass@myurl.com';

@@ -18,7 +18,7 @@
 var assert = require('assert');
 var logfilegetbatches = require('../includes/logfilegetbatches.js');
 
-describe('Fetching batches from a log file', function() {
+describe('#unit Fetching batches from a log file', function() {
   it('should fetch multiple batches correctly', function(done) {
     logfilegetbatches('./test/test.log', [1, 4], function(err, data) {
       assert.equal(typeof data, 'object');
