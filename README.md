@@ -1,5 +1,7 @@
 # CouchBackup
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/cloudant/couchbackup.svg)](https://greenkeeper.io/)
+
 [![Build Status](https://travis-ci.org/cloudant/couchbackup.svg?branch=master)](https://travis-ci.org/cloudant/couchbackup)
 
 ```
