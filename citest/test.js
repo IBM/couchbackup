@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global describe it */
+/* global after before describe it */
 'use strict';
 
 const assert = require('assert');
@@ -22,6 +22,33 @@ delete require.cache[require.resolve('./citestutils.js')];
 const u = require('./citestutils.js');
 
 [{useApi: true}, {useApi: false}].forEach(function(params) {
+  describe('Unsupported /_bulk_get endpoint', function() {
+    before(function() {
+      process.env.TEST_SUPPORT_BULK_GET = 'false';
+    });
+
+    after(function() {
+      delete process.env.TEST_SUPPORT_BULK_GET;
+    });
+
+    it('should backup animaldb to a file correctly', function(done) {
+      // Allow up to 60 s to backup and compare
+      u.timeoutFilter(this, 60);
+      const actualBackup = `./${this.fileName}`;
+      // Create a file and backup to it
+      const output = fs.createWriteStream(actualBackup);
+      output.on('open', function() {
+        u.testBackup(params, 'animaldb', output, function(err) {
+          if (err) {
+            done(err);
+          } else {
+            u.readSortAndDeepEqual(actualBackup, './animaldb_expected.json', done);
+          }
+        });
+      });
+    });
+  });
+
   describe(u.scenario('Basic backup and restore', params), function() {
     it('should backup animaldb to a file correctly', function(done) {
       // Allow up to 40 s to backup and compare (it should be much faster)!
