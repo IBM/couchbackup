@@ -22,6 +22,9 @@ const spoolchanges = require('./spoolchanges.js');
 const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
+var client;
+var supportsBulkGet;
+
 /**
  * Read documents from a database to be backed up.
  *
@@ -43,22 +46,56 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   const start = new Date().getTime();  // backup start time
   const batchesPerDownloadSession = 50;  // max batches to read from log file for download at a time (prevent OOM)
 
-  // If resuming, pick up from existing log file from previous run. Otherwise,
-  // create new log file and process from that.
-  if (resume) {
-    downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
-  } else {
-    spoolchanges(dbUrl, log, blocksize, function(err) {
-      if (err) {
-        ee.emit('error', err);
-      } else {
-        downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
-      }
-    });
-  }
+  client = request.client(dbUrl, parallelism);
+
+  checkBulkGetSupport(dbUrl, function(err) {
+    if (err) return ee.emit('error', err);
+    if (resume) {
+      // pick up from existing log file from previous run
+      downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+    } else {
+      // create new log file and process
+      spoolchanges(dbUrl, log, blocksize, function(err) {
+        if (err) {
+          ee.emit('error', err);
+        } else {
+          downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+        }
+      });
+    }
+  });
 
   return ee;
 };
+
+/**
+ * Check a database supports /_bulk_get
+ *
+ * @param {string} dbUrl - URL of source database
+ * @param {function} callback - called once check completes
+ */
+function checkBulkGetSupport(dbUrl, callback) {
+  // allow bulk get toggle for testing
+  if (typeof process.env.TEST_SUPPORT_BULK_GET !== 'undefined') {
+    supportsBulkGet = process.env.TEST_SUPPORT_BULK_GET.toLowerCase() === 'true';
+    return callback();
+  }
+  client({url: dbUrl + '/_bulk_get', method: 'GET'}, function(err, res, data) {
+    if (err) return callback(err);
+    switch (res.statusCode) {
+      case 404:
+        supportsBulkGet = false;
+        callback();
+        break;
+      case 405:
+        supportsBulkGet = true;
+        callback();
+        break;
+      default:
+        callback(new error.BackupError('BulkGetCheckFailure', 'ERROR: Failed to check if database supports bulk gets'));
+    }
+  });
+}
 
 /**
  * Download remaining batches in a log file, splitting batches into sets
@@ -90,8 +127,8 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
 
       // Fetch the doc IDs for the batches in the current set to
       // download and download them.
-      function batchSetComplete(err, data) {
-        total = data.total;
+      function batchSetComplete(err, newTotal) {
+        total = newTotal;
         done();
       }
       function processRetrievedBatches(err, batches) {
@@ -149,38 +186,28 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, callback
  * @param {any} ee - event emitter for progress. This funciton emits
  *  received and error events.
  * @param {any} start - time backup started, to report deltas
- * @param {any} grandtotal - count of documents downloaded prior to this set
+ * @param {any} total - count of documents already downloaded
  *  of batches
- * @param {any} callback - completion callback, (err, {total: number}).
+ * @param {any} callback - completion callback, (err, total).
  */
-function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
-  const client = request.client(dbUrl, parallelism);
-  var total = grandtotal;
-
-  // queue to process the fetch requests in an orderly fashion using _bulk_get
-  var q = async.queue(function(payload, done) {
+function processBatchSet(dbUrl, parallelism, log, batches, ee, start, total, callback) {
+  // fetch docs using the /_bulk_get API
+  function doBulkGet(docs, callback) {
     var output = [];
-    var thisBatch = payload.batch;
-    delete payload.batch;
 
-    function logCompletedBatch(batch) {
-      if (log) {
-        fs.appendFile(log, ':d batch' + thisBatch + '\n', done);
-      } else {
-        done();
-      }
-    }
+    docs.forEach(function(doc) {
+      delete doc.deleted;
+      delete doc.rev;
+    });
 
-    // do the /db/_bulk_get request
-    var r = {
+    var req = {
       url: dbUrl + '/_bulk_get',
-      qs: { revs: true }, // gets previous revision tokens too
-      method: 'post',
-      body: payload
+      qs: { revs: true },
+      method: 'POST',
+      body: {docs: docs}
     };
-    client(r, function(err, res, data) {
+    client(req, function(err, res, data) {
       if (!err && data && data.results) {
-        // create an output array with the docs returned
         data.results.forEach(function(d) {
           if (d.docs) {
             d.docs.forEach(function(doc) {
@@ -190,22 +217,110 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
             });
           }
         });
-        total += output.length;
-        var t = (new Date().getTime() - start) / 1000;
-        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch}, q, logCompletedBatch);
+        callback(null, output);
       } else {
+        callback(err);
+      }
+    });
+  }
+
+  // fetch docs seperately (not using the /_bulk_get API)
+  function doGet(docs, callback) {
+    var output = [];
+    var hasErrored = false;
+
+    var getDocQ = async.queue(function(doc, done) {
+      if (!doc || hasErrored) return done();
+
+      var req = {
+        url: dbUrl + '/' + encodeURI(doc.id),
+        qs: { rev: doc.rev, revs: true },
+        method: 'GET'
+      };
+      client(req, function(err, res, data) {
+        if (err) {
+          hasErrored = true;
+          callback(err);
+        } else if (res.statusCode !== 200) {
+          hasErrored = true;
+          callback(new error.BackupError('BackupRetrieveError', `ERROR: Failed to get document '${doc.id}' (rev ${doc.rev}) - Status code: ${res.statusCode}`));
+        } else {
+          output = output.concat(data);
+        }
+        done();
+      });
+    });
+
+    // get missing revs
+    var revsDiffBody = {};
+    const fakeRevId = ['9999-a'];
+    docs.forEach(function(doc) {
+      revsDiffBody[doc.id] = fakeRevId;
+    });
+
+    var req = {
+      url: dbUrl + '/_revs_diff',
+      body: revsDiffBody,
+      method: 'POST'
+    };
+    client(req, function(err, res, data) {
+      if (err) {
+        hasErrored = true;
+        callback(err);
+      } else if (res.statusCode !== 200) {
+        hasErrored = true;
+        callback(new error.BackupError('BackupRetrieveError', `ERROR: Failed to query POST /_revs_diff - Status code: ${res.statusCode}`));
+      } else {
+        for (var docId in res.body) {
+          var possibleAncestors = res.body[docId].possible_ancestors;
+          if (possibleAncestors) {
+            possibleAncestors.forEach(function(rev) {
+              getDocQ.push({id: docId, rev: rev});
+            });
+          }
+        }
+      }
+    });
+
+    getDocQ.drain = function() {
+      if (!hasErrored) callback(null, output);
+    };
+  }
+
+  const fetchBatch = supportsBulkGet ? doBulkGet : doGet;
+  var q = async.queue(function(batch, done) {
+    fetchBatch(batch.docs, function(err, results) {
+      if (err) {
         ee.emit('error', err);
         done();
+      } else {
+        var docCount = results.length;
+        total += docCount;
+
+        var data = {
+          length: docCount,
+          time: (new Date().getTime() - start) / 1000,
+          total: total,
+          data: results,
+          batch: batch.batch
+        };
+
+        ee.emit('received', data, q, function(batchNo) {
+          // mark batch as complete
+          fs.appendFile(log, ':d batch' + batchNo + '\n', done);
+        });
       }
     });
   }, parallelism);
 
+  // add batches to work queue
   for (var i in batches) {
     q.push(batches[i]);
   }
 
+  // callback with new total once complete
   q.drain = function() {
-    callback(null, {total: total});
+    callback(null, total);
   };
 }
 

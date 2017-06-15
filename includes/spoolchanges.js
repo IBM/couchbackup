@@ -53,7 +53,7 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
       if (c.error) {
         console.error('error', c);
       } else if (c.changes) {
-        var obj = {id: c.id};
+        var obj = {id: c.id, rev: c.changes[0].rev, deleted: c.deleted || false};
         buffer.push(obj);
         processBuffer(false);
       } else if (c.last_seq) {

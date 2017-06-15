@@ -57,7 +57,7 @@ return couchbackup.backup(
   opts,
   error.terminationCallback
 ).on('written', function(obj) {
-  debug('written', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+  debug('written batch:', obj.batch, 'total docs written: ', obj.total, 'time:', obj.time);
 }).on('error', function(e) {
   debug('ERROR', e);
 }).on('finished', function(obj) {
