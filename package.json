@@ -51,5 +51,10 @@
   },
   "scripts": {
     "test": "eslint --ignore-path .gitignore . && mocha"
+  },
+  "greenkeeper": {
+    "ignore": [
+      "eslint"
+    ]
   }
 }
