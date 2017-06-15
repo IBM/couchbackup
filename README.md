@@ -1,8 +1,9 @@
 # CouchBackup
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/cloudant/couchbackup.svg)](https://greenkeeper.io/)
-
+[![npm (scoped)](https://img.shields.io/npm/v/@cloudant/couchbackup.svg?colorB=0000ff)]()
+[![npm (scoped with tag)](https://img.shields.io/npm/v/@cloudant/couchbackup/snapshot.svg?colorB=666699)]()
 [![Build Status](https://travis-ci.org/cloudant/couchbackup.svg?branch=master)](https://travis-ci.org/cloudant/couchbackup)
+[![Greenkeeper badge](https://badges.greenkeeper.io/cloudant/couchbackup.svg)](https://greenkeeper.io/)
 
 ```
  _____                  _    ______            _
