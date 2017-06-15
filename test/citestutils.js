@@ -12,58 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global beforeEach afterEach */
+/* global */
 'use strict';
 
 const assert = require('assert');
 const spawn = require('child_process').spawn;
-const cloudant = require('cloudant')({url: process.env.COUCH_BACKEND_URL});
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const stream = require('stream');
-const uuid = require('uuid/v4');
 const fs = require('fs');
 const zlib = require('zlib');
 const Tail = require('tail').Tail;
-
-beforeEach('Create test database', function(done) {
-  // Allow 10 seconds to create the DB
-  this.timeout(10 * 1000);
-  const unique = uuid();
-  this.fileName = `${unique}`;
-  this.dbName = 'couchbackup_test_' + unique;
-  cloudant.db.create(this.dbName, function(err) {
-    if (err) {
-      done(err);
-    } else {
-      done();
-    }
-  });
-});
-
-afterEach('Delete test database', function(done) {
-  // Allow 10 seconds to delete the DB
-  this.timeout(10 * 1000);
-  deleteIfExists(this.fileName);
-  deleteIfExists(`${this.fileName}.log`);
-  cloudant.db.destroy(this.dbName, function(err) {
-    if (err) {
-      done(err);
-    } else {
-      done();
-    }
-  });
-});
-
-function deleteIfExists(fileName) {
-  fs.unlink(fileName, function(err) {
-    if (err) {
-      if (err.code !== 'ENOENT') {
-        console.error(`${err.code} ${err.message}`);
-      }
-    }
-  });
-}
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -124,7 +83,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     var destination = 'pipe';
 
     // Set up default args
-    const args = ['../bin/couchbackup.bin.js', '--db', databaseName];
+    const args = ['./bin/couchbackup.bin.js', '--db', databaseName];
     if (params.opts) {
       if (params.opts.mode) {
         args.push('--mode');
@@ -251,7 +210,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     });
   } else {
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const restore = spawn('node', ['../bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
+    const restore = spawn('node', ['./bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
     restore.on('close', function(code) {

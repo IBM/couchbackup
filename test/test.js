@@ -34,7 +34,7 @@ const u = require('./citestutils.js');
           if (err) {
             done(err);
           } else {
-            u.readSortAndDeepEqual(actualBackup, '../test/fixtures/animaldb_expected.json', done);
+            u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected.json', done);
           }
         });
       });
@@ -43,7 +43,7 @@ const u = require('./citestutils.js');
     it('should restore animaldb to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
-      const input = fs.createReadStream('../test/fixtures/animaldb_expected.json');
+      const input = fs.createReadStream('./test/fixtures/animaldb_expected.json');
       const dbName = this.dbName;
       input.on('open', function() {
         u.testRestore(params, input, dbName, function(err) {
@@ -59,7 +59,7 @@ const u = require('./citestutils.js');
     it('should restore corrupted animaldb to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
-      const input = fs.createReadStream('../test/fixtures/animaldb_corrupted.json');
+      const input = fs.createReadStream('./test/fixtures/animaldb_corrupted.json');
       const dbName = this.dbName;
       input.on('open', function() {
         u.testRestore(params, input, dbName, function(err) {
@@ -75,7 +75,7 @@ const u = require('./citestutils.js');
     it('should restore resumed animaldb with blank line to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
-      const input = fs.createReadStream('../test/fixtures/animaldb_resumed_blank.json');
+      const input = fs.createReadStream('./test/fixtures/animaldb_resumed_blank.json');
       const dbName = this.dbName;
       input.on('open', function() {
         u.testRestore(params, input, dbName, function(err) {
@@ -100,7 +100,7 @@ const u = require('./citestutils.js');
           if (err) {
             done(err);
           } else {
-            u.readSortAndDeepEqual(actualBackup, '../test/fixtures/animaldb_expected_shallow.json', done);
+            u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected_shallow.json', done);
           }
         });
       });
