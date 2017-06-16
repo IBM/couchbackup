@@ -44,7 +44,15 @@ beforeEach('Create test database', function(done) {
 afterEach('Delete test database', function(done) {
   // Allow 10 seconds to delete the DB
   this.timeout(10 * 1000);
-  teardown(this.fileName, this.dbName, done);
+  deleteIfExists(this.fileName);
+  deleteIfExists(`${this.fileName}.log`);
+  cloudant.db.destroy(this.dbName, function(err) {
+    if (err) {
+      done(err);
+    } else {
+      done();
+    }
+  });
 });
 
 function deleteIfExists(fileName) {
@@ -53,18 +61,6 @@ function deleteIfExists(fileName) {
       if (err.code !== 'ENOENT') {
         console.error(`${err.code} ${err.message}`);
       }
-    }
-  });
-}
-
-function teardown(fileName, dbName, callback) {
-  deleteIfExists(fileName);
-  deleteIfExists(`${fileName}.log`);
-  cloudant.db.destroy(dbName, function(err) {
-    if (err) {
-      callback(err);
-    } else {
-      callback();
     }
   });
 }
@@ -445,28 +441,12 @@ function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) 
   }
 }
 
-function timeoutFilter(context, timeout) {
-  // Default to a limit of 1 minute for tests
-  const limit = (typeof process.env.TEST_TIMEOUT_LIMIT_SECS !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_LIMIT_SECS) : 60;
-  timeout = (!timeout) ? 60 : timeout;
+function setTimeout(context, timeout) {
   // Increase timeout using TEST_TIMEOUT_MULTIPLIER
   const multiplier = (typeof process.env.TEST_TIMEOUT_MULTIPLIER !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_MULTIPLIER) : 1;
   timeout *= multiplier;
-  if (timeout <= limit) {
-    // Set the mocha timeout
-    context.timeout(timeout * 1000);
-  } else {
-    // Workaround https://github.com/mochajs/mocha/issues/2546 by tearing down
-    // since the afterEach will not be called.
-    teardown(context.fileName, context.dbName, function(err) {
-      if (err) {
-        // Log if there was an error deleting
-        console.error(err);
-      }
-    });
-    // Now skip the test as it is expected to run for longer than the limit
-    context.skip();
-  }
+  // Set the mocha timeout
+  context.timeout(timeout * 1000);
 }
 
 function assertGzipFile(path, callback) {
@@ -498,7 +478,7 @@ function assertWrittenFewerThan(total, number, callback) {
 module.exports = {
   scenario: scenario,
   p: params,
-  timeoutFilter: timeoutFilter,
+  setTimeout: setTimeout,
   dbCompare: dbCompare,
   readSortAndDeepEqual: readSortAndDeepEqual,
   assertGzipFile: assertGzipFile,

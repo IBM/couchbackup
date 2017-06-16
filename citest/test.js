@@ -25,7 +25,7 @@ const u = require('./citestutils.js');
   describe(u.scenario('Basic backup and restore', params), function() {
     it('should backup animaldb to a file correctly', function(done) {
       // Allow up to 40 s to backup and compare (it should be much faster)!
-      u.timeoutFilter(this, 40);
+      u.setTimeout(this, 40);
       const actualBackup = `./${this.fileName}`;
       // Create a file and backup to it
       const output = fs.createWriteStream(actualBackup);
@@ -42,7 +42,7 @@ const u = require('./citestutils.js');
 
     it('should restore animaldb to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const input = fs.createReadStream('animaldb_expected.json');
       const dbName = this.dbName;
       input.on('open', function() {
@@ -58,7 +58,7 @@ const u = require('./citestutils.js');
 
     it('should restore corrupted animaldb to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const input = fs.createReadStream('animaldb_corrupted.json');
       const dbName = this.dbName;
       input.on('open', function() {
@@ -74,7 +74,7 @@ const u = require('./citestutils.js');
 
     it('should restore resumed animaldb with blank line to a database correctly', function(done) {
       // Allow up to 60 s to restore and compare (again it should be faster)!
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const input = fs.createReadStream('animaldb_resumed_blank.json');
       const dbName = this.dbName;
       input.on('open', function() {
@@ -90,7 +90,7 @@ const u = require('./citestutils.js');
 
     it('should execute a shallow mode backup successfully', function(done) {
       // Allow 30 s
-      u.timeoutFilter(this, 30);
+      u.setTimeout(this, 30);
       const actualBackup = `./${this.fileName}`;
       const output = fs.createWriteStream(actualBackup);
       // Add the shallow mode option
@@ -110,14 +110,14 @@ const u = require('./citestutils.js');
   describe(u.scenario('End to end backup and restore', params), function() {
     it('should backup and restore animaldb', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       u.testDirectBackupAndRestore(params, 'animaldb', this.dbName, done);
     });
-    it('should backup and restore largedb1g', function(done) {
+    it('should backup and restore largedb1g #slow', function(done) {
       // Allow up to 30 m for backup and restore of largedb1g
       // This is a long time but when many builds run in parallel it can take a
       // while to get this done.
-      u.timeoutFilter(this, 30 * 60);
+      u.setTimeout(this, 30 * 60);
       u.testDirectBackupAndRestore(params, 'largedb1g', this.dbName, done);
     });
   });
@@ -127,7 +127,7 @@ const u = require('./citestutils.js');
 
     it('should backup animaldb to a compressed file', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 40);
+      u.setTimeout(this, 40);
       const compressedBackup = `./${this.fileName}`;
       const output = fs.createWriteStream(compressedBackup);
       output.on('open', function() {
@@ -143,7 +143,7 @@ const u = require('./citestutils.js');
 
     it('should backup and restore animaldb via a compressed file', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const compressedBackup = `./${this.fileName}`;
       u.testBackupAndRestoreViaFile(p, 'animaldb', compressedBackup, this.dbName, function(err) {
         if (err) {
@@ -156,13 +156,13 @@ const u = require('./citestutils.js');
 
     it('should backup and restore animaldb via a compressed stream', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       u.testDirectBackupAndRestore(p, 'animaldb', this.dbName, done);
     });
 
-    it('should backup and restore largedb2g via a compressed file', function(done) {
+    it('should backup and restore largedb2g via a compressed file #slower', function(done) {
       // Categorize as a 60 min test so it only gets run with the long run tests
-      u.timeoutFilter(this, 60 * 60);
+      u.setTimeout(this, 60 * 60);
       const compressedBackup = `./${this.fileName}`;
       params.compression = true;
       u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName, done);
@@ -171,7 +171,7 @@ const u = require('./citestutils.js');
   describe(u.scenario('Resume tests', params), function() {
     it('should create a log file', function(done) {
       // Allow up to 90 s for this test
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
 
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
@@ -197,7 +197,7 @@ const u = require('./citestutils.js');
   describe(u.scenario('Buffer size tests', params), function() {
     it('should backup/restore animaldb with the same buffer size', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
       const p = u.p(params, {opts: {log: logFile, bufferSize: 1}});
@@ -205,7 +205,7 @@ const u = require('./citestutils.js');
     });
     it('should backup/restore animaldb with backup buffer > restore buffer', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
       const dbName = this.dbName;
@@ -224,7 +224,7 @@ const u = require('./citestutils.js');
     });
     it('should backup/restore animaldb with backup buffer < restore buffer', function(done) {
       // Allow up to 60 s for backup and restore of animaldb
-      u.timeoutFilter(this, 60);
+      u.setTimeout(this, 60);
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
       const dbName = this.dbName;
@@ -249,7 +249,7 @@ describe('Resume tests', function() {
   // both API and CLI
   it('should correctly backup and restore backup10m', function(done) {
     // Allow up to 90 s for this test
-    u.timeoutFilter(this, 90);
+    u.setTimeout(this, 90);
 
     const actualBackup = `./${this.fileName}`;
     const logFile = `./${this.fileName}` + '.log';
@@ -267,7 +267,7 @@ describe('Resume tests', function() {
   const params = {useApi: false};
   it('should correctly backup and restore backup10m using --output', function(done) {
     // Allow up to 90 s for this test
-    u.timeoutFilter(this, 90);
+    u.setTimeout(this, 90);
 
     const actualBackup = `./${this.fileName}`;
     const logFile = `./${this.fileName}` + '.log';
@@ -285,7 +285,7 @@ describe('Resume tests', function() {
 
 describe('Event tests', function() {
   it('should get a finished event when using stdout', function(done) {
-    u.timeoutFilter(this, 40);
+    u.setTimeout(this, 40);
     // Use the API so we can get events
     const params = {useApi: true};
     const backup = u.testBackup(params, 'animaldb', process.stdout, function(err) {
@@ -303,7 +303,7 @@ describe('Event tests', function() {
     });
   });
   it('should get a finished event when using file output', function(done) {
-    u.timeoutFilter(this, 40);
+    u.setTimeout(this, 40);
     // Use the API so we can get events
     const params = {useApi: true};
     const actualBackup = `./${this.fileName}`;
@@ -329,7 +329,7 @@ describe('Event tests', function() {
 
 describe('Write error tests', function() {
   it('calls callback with error set when stream is not writeable', function(done) {
-    u.timeoutFilter(this, 10);
+    u.setTimeout(this, 10);
     const dirname = fs.mkdtempSync('test_backup');
     // make temp dir not writeable
     fs.chmodSync(dirname, 0);
