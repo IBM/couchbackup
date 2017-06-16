@@ -4,6 +4,7 @@
 - [NEW] API for using as library is more Node.js like.
 - [NEW] Validate backup/restore options.
 - [NEW] Add User-Agent header to all requests.
+- [NEW] Verify database supports `/_bulk_get` endpoint prior to running backup.
 - [BREAKING CHANGE] The --buffer option is now --buffer-size.
 - [BREAKING CHANGE] Removed legacy 1.x API.
 - [BREAKING CHANGE] The `writeerror` event is now just `error`.

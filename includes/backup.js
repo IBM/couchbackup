@@ -22,6 +22,8 @@ const spoolchanges = require('./spoolchanges.js');
 const logfilesummary = require('./logfilesummary.js');
 const logfilegetbatches = require('./logfilegetbatches.js');
 
+var client;
+
 /**
  * Read documents from a database to be backed up.
  *
@@ -43,22 +45,58 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
   const start = new Date().getTime();  // backup start time
   const batchesPerDownloadSession = 50;  // max batches to read from log file for download at a time (prevent OOM)
 
-  // If resuming, pick up from existing log file from previous run. Otherwise,
-  // create new log file and process from that.
-  if (resume) {
-    downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
-  } else {
-    spoolchanges(dbUrl, log, blocksize, function(err) {
-      if (err) {
-        ee.emit('error', err);
-      } else {
-        downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
-      }
-    });
+  client = request.client(dbUrl, parallelism);
+
+  function proceedWithBackup() {
+    if (resume) {
+      // pick up from existing log file from previous run
+      downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+    } else {
+      // create new log file and process
+      spoolchanges(dbUrl, log, blocksize, function(err) {
+        if (err) {
+          ee.emit('error', err);
+        } else {
+          downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
+        }
+      });
+    }
   }
+
+  validateBulkGetSupport(dbUrl, function(err) {
+    if (err) {
+      return ee.emit('error', err);
+    } else {
+      proceedWithBackup();
+    }
+  });
 
   return ee;
 };
+
+/**
+ * Validate /_bulk_get support for a specified database.
+ *
+ * @param {string} dbUrl - URL of database
+ * @param {function} callback - called on completion with signature (err)
+ */
+function validateBulkGetSupport(dbUrl, callback) {
+  client({url: dbUrl + '/_bulk_get', method: 'GET'}, function(err, res, data) {
+    if (err) return callback(err);
+    switch (res.statusCode) {
+      case 404:
+        callback(new error.BackupError('BulkGetError', 'ERROR: Database does not support /_bulk_get endpoint'));
+        break;
+      case 405:
+        callback();  // => supports /_bulk_get endpoint
+        break;
+      default:
+        request.checkResponseAndCallbackFatalError(res, function(err) {
+          callback(err);
+        });
+    }
+  });
+}
 
 /**
  * Download remaining batches in a log file, splitting batches into sets
@@ -154,7 +192,6 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, callback
  * @param {any} callback - completion callback, (err, {total: number}).
  */
 function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal, callback) {
-  const client = request.client(dbUrl, parallelism);
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
