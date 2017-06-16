@@ -88,7 +88,7 @@ poisons.forEach(function(poison) {
       proxy.close();
     });
 
-    delete require.cache[require.resolve('./test.js')];
-    require('./test.js');
+    delete require.cache[require.resolve('./ci_e2e.js')];
+    require('./ci_e2e.js');
   });
 });
