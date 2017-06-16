@@ -12,13 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global describe it */
+/* global describe it before after */
 'use strict';
 
-var assert = require('assert');
-var applyEnvVars = require('../includes/config.js').applyEnvironmentVariables;
+const assert = require('assert');
+const applyEnvVars = require('../includes/config.js').applyEnvironmentVariables;
 
-describe('#unit Default parameters', function() {
+describe('#unit Configuration', function() {
+  var processEnvCopy;
+
+  before('Save env', function() {
+    // Copy env so we can reset it after the tests
+    processEnvCopy = JSON.parse(JSON.stringify(process.env));
+  });
+
+  after('Reset env', function() {
+    process.env = processEnvCopy;
+  });
+
   it('respects the COUCH_URL env variable', function(done) {
     process.env.COUCH_URL = 'http://user:pass@myurl.com';
     var config = {};
