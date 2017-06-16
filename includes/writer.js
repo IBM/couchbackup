@@ -16,12 +16,14 @@
 const async = require('async');
 const request = require('./request.js');
 const stream = require('stream');
+const error = require('./error.js');
+
 // global flag across all threads to indicate
 // - that we stop processing the queue
 // - that we only emit an error on the first failing thread
 var didError = false;
 
-module.exports = function(couchDbUrl, bufferSize, parallelism) {
+module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
   const client = request.client(couchDbUrl, parallelism);
   var buffer = [];
   var written = 0;
@@ -146,11 +148,11 @@ module.exports = function(couchDbUrl, bufferSize, parallelism) {
             done();
           });
         } else {
-          console.error('ERROR on line', linenumber, ': not an array');
+          ee.emit('error', new error.BackupError('BackupFileJsonError', `Error on line ${linenumber} of backup file - not an array`));
           done();
         }
       } catch (e) {
-        console.error('ERROR on line', linenumber, ': cannot parse as JSON');
+        ee.emit('error', new error.BackupError('BackupFileJsonError', `Error on line ${linenumber} of backup file - cannot parse as JSON`));
         // Could be an incomplete write that was subsequently resumed
         done();
       }

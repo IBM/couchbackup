@@ -247,6 +247,7 @@ the backup completes or fails.
 
 The `backup` function returns an event emitter. You can subscribe to:
 
+* `changes` - when a batch of changes has been written to log stream.
 * `written` - when a batch of documents has been written to backup stream.
 * `finished` - emitted once when all documents are backed up.
 * `error` - emitted when something goes wrong for a single batch.

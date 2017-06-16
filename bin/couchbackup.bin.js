@@ -51,15 +51,19 @@ if (program.output) {
   ws = fs.createWriteStream(null, { fd: fd });
 }
 
+debug('Fetching all database changes...');
+
 return couchbackup.backup(
   databaseUrl,
   ws,
   opts,
   error.terminationCallback
-).on('written', function(obj) {
-  debug('written', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+).on('changes', function(batch) {
+  debug('Total batches received:', batch + 1);
+}).on('written', function(obj) {
+  debug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
 }).on('error', function(e) {
   debug('ERROR', e);
 }).on('finished', function(obj) {
-  debug('finished', obj);
+  debug('Finished - Total document revisions written:', obj.total);
 });
