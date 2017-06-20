@@ -18,9 +18,9 @@
 var assert = require('assert');
 var logfilesummary = require('../includes/logfilesummary.js');
 
-describe('fetching summart from thed log file', function() {
+describe('#unit Fetching summary from the log file', function() {
   it('should fetch a summary correctly', function(done) {
-    logfilesummary('./test/test.log', function(err, data) {
+    logfilesummary('./test/fixtures/test.log', function(err, data) {
       assert.equal(data.changesComplete, true);
       assert.equal(typeof data.batches, 'object');
       assert.equal(Object.keys(data.batches).length, 2);

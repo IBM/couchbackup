@@ -17,6 +17,8 @@
 
 const url = require('url');
 const toxy = require('toxy');
+// Import the common hooks
+require('../test/hooks.js');
 
 const tpoisons = toxy.poisons;
 const trules = toxy.rules;
@@ -88,7 +90,7 @@ poisons.forEach(function(poison) {
       proxy.close();
     });
 
-    delete require.cache[require.resolve('./test.js')];
-    require('./test.js');
+    delete require.cache[require.resolve('../test/ci_e2e.js')];
+    require('../test/ci_e2e.js');
   });
 });

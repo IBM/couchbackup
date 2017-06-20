@@ -12,62 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global beforeEach afterEach */
+/* global */
 'use strict';
 
 const assert = require('assert');
 const spawn = require('child_process').spawn;
-const cloudant = require('cloudant')({url: process.env.COUCH_BACKEND_URL});
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const stream = require('stream');
-const uuid = require('uuid/v4');
 const fs = require('fs');
 const zlib = require('zlib');
 const Tail = require('tail').Tail;
-
-beforeEach('Create test database', function(done) {
-  // Allow 10 seconds to create the DB
-  this.timeout(10 * 1000);
-  const unique = uuid();
-  this.fileName = `${unique}`;
-  this.dbName = 'couchbackup_test_' + unique;
-  cloudant.db.create(this.dbName, function(err) {
-    if (err) {
-      done(err);
-    } else {
-      done();
-    }
-  });
-});
-
-afterEach('Delete test database', function(done) {
-  // Allow 10 seconds to delete the DB
-  this.timeout(10 * 1000);
-  teardown(this.fileName, this.dbName, done);
-});
-
-function deleteIfExists(fileName) {
-  fs.unlink(fileName, function(err) {
-    if (err) {
-      if (err.code !== 'ENOENT') {
-        console.error(`${err.code} ${err.message}`);
-      }
-    }
-  });
-}
-
-function teardown(fileName, dbName, callback) {
-  deleteIfExists(fileName);
-  deleteIfExists(`${fileName}.log`);
-  cloudant.db.destroy(dbName, function(err) {
-    if (err) {
-      callback(err);
-    } else {
-      callback();
-    }
-  });
-}
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -128,7 +83,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     var destination = 'pipe';
 
     // Set up default args
-    const args = ['../bin/couchbackup.bin.js', '--db', databaseName];
+    const args = ['./bin/couchbackup.bin.js', '--db', databaseName];
     if (params.opts) {
       if (params.opts.mode) {
         args.push('--mode');
@@ -255,7 +210,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     });
   } else {
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const restore = spawn('node', ['../bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
+    const restore = spawn('node', ['./bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
     restore.on('close', function(code) {
@@ -445,28 +400,12 @@ function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) 
   }
 }
 
-function timeoutFilter(context, timeout) {
-  // Default to a limit of 1 minute for tests
-  const limit = (typeof process.env.TEST_TIMEOUT_LIMIT_SECS !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_LIMIT_SECS) : 60;
-  timeout = (!timeout) ? 60 : timeout;
+function setTimeout(context, timeout) {
   // Increase timeout using TEST_TIMEOUT_MULTIPLIER
   const multiplier = (typeof process.env.TEST_TIMEOUT_MULTIPLIER !== 'undefined') ? parseInt(process.env.TEST_TIMEOUT_MULTIPLIER) : 1;
   timeout *= multiplier;
-  if (timeout <= limit) {
-    // Set the mocha timeout
-    context.timeout(timeout * 1000);
-  } else {
-    // Workaround https://github.com/mochajs/mocha/issues/2546 by tearing down
-    // since the afterEach will not be called.
-    teardown(context.fileName, context.dbName, function(err) {
-      if (err) {
-        // Log if there was an error deleting
-        console.error(err);
-      }
-    });
-    // Now skip the test as it is expected to run for longer than the limit
-    context.skip();
-  }
+  // Set the mocha timeout
+  context.timeout(timeout * 1000);
 }
 
 function assertGzipFile(path, callback) {
@@ -498,7 +437,7 @@ function assertWrittenFewerThan(total, number, callback) {
 module.exports = {
   scenario: scenario,
   p: params,
-  timeoutFilter: timeoutFilter,
+  setTimeout: setTimeout,
   dbCompare: dbCompare,
   readSortAndDeepEqual: readSortAndDeepEqual,
   assertGzipFile: assertGzipFile,

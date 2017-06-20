@@ -21,7 +21,7 @@ const app = rewire('../app.js');
 
 const validateArgs = app.__get__('validateArgs');
 
-describe('Validate arguments', function() {
+describe('#unit Validate arguments', function() {
   const goodUrl = 'http://localhost:5984/db';
 
   it('returns error for invalid URL type', function() {

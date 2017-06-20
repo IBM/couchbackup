@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-def getEnv(envName) {
+def getEnvForSuite(suiteName) {
   // Base environment variables
   def envVars = [
     "COUCH_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
@@ -23,24 +23,22 @@ def getEnv(envName) {
   ]
 
   // Add test suite specific environment variables
-  switch(envName) {
-    case 'test-default':
+  switch(suiteName) {
+    case 'test':
       envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
-      envVars.add("TEST_TIMEOUT_LIMIT_SECS=1800")
       break
-    case 'toxy-default':
+    case 'toxytests/toxy':
       envVars.add("COUCH_URL=http://localhost:3000") // proxy
-      envVars.add("TEST_TIMEOUT_LIMIT_SECS=3600") // 1hr
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
       break
     default:
-      error("Unknown test suite environment ${envName}")
+      error("Unknown test suite environment ${suiteName}")
   }
 
   return envVars
 }
 
-def setupNodeAndTest(version, testSuite='test', envName='default') {
+def setupNodeAndTest(version, filter='', testSuite='test') {
   node {
     // Install NVM
     sh 'wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash'
@@ -50,25 +48,22 @@ def setupNodeAndTest(version, testSuite='test', envName='default') {
     // Run tests using creds
     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'],
                      [$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW']]) {
-      withEnv(getEnv("${testSuite}-${envName}")) {
+      withEnv(getEnvForSuite("${testSuite}")) {
         try {
           // Actions:
           //  1. Load NVM
           //  2. Install/use required Node.js version
           //  3. Install mocha-jenkins-reporter so that we can get junit style output
-          //  4. Run unit tests
-          //  5. Fetch database compare tool for CI tests
-          //  6. Run test suite
+          //  4. Fetch database compare tool for CI tests
+          //  5. Run tests using filter
           sh """
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
             nvm install ${version}
             nvm use ${version}
             npm install mocha-jenkins-reporter --save-dev
-            ./node_modules/mocha/bin/mocha test --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/unit-test-results.xml,junit_report_stack=true,junit_report_name=UnitTests
-            cd citest
             curl -O -u ${env.ARTIFACTORY_USER}:${env.ARTIFACTORY_PW} https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
             unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
-            ../node_modules/mocha/bin/mocha ${testSuite} --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./ci-${testSuite}-results.xml,junit_report_stack=true,junit_report_name=IntegrationTests
+            ./node_modules/mocha/bin/mocha --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testSuite}
           """
         } finally {
           junit '**/*test-results.xml'
@@ -98,14 +93,29 @@ stage('Build') {
 }
 
 stage('QA') {
+  // Allow a supplied a test filter, but provide a reasonable default.
+  String filter;
+  if (env.TEST_FILTER == null) {
+    // The set of default tests includes unit and integration tests, but
+    // not ones tagged #slower, #slowest.
+    // For release builds include the #slower, but not #slowest.
+    if (isReleaseVersion) {
+      filter = '-i -g \'#slowest\''
+    } else {
+      filter = '-i -g \'#slowe\''
+    }
+  } else {
+    filter = env.TEST_FILTER
+  }
+
   def axes = [
-    Node4x:{ setupNodeAndTest('lts/argon') }, //4.x LTS
-    Node6x:{ setupNodeAndTest('lts/boron') }, // 6.x LTS
-    Node:{ setupNodeAndTest('node') } // Current
+    Node4x:{ setupNodeAndTest('lts/argon', filter) }, //4.x LTS
+    Node6x:{ setupNodeAndTest('lts/boron', filter) }, // 6.x LTS
+    Node:{ setupNodeAndTest('node', filter) } // Current
   ]
-  // Add unreliable network tests for release builds
-  if (isReleaseVersion) {
-    axes.Network = { setupNodeAndTest('node', 'toxy') }
+  // Add unreliable network tests if specified
+  if (env.RUN_TOXY_TESTS) {
+    axes.Network = { setupNodeAndTest('node', '', 'toxytests/toxy') }
   }
   // Run the required axes in parallel
   parallel(axes)

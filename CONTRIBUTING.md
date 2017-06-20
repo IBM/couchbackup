@@ -58,9 +58,27 @@ Unit tests are in the `test` folder and are run using the command:
 npm test
 ```
 
+Unit tests should be tagged with `#unit` so that they can be run separately from
+the integration tests.
+
 ### Integration tests
 
-Integration tests are in the `citest` folder. These tests invoke `couchbackup`
-and `couchrestore` to work with real databases. The integration tests require
-credentials to access databases so they run as part of the CI, but currently
-they cannot be run in a local development environment.
+Integration tests are in files prefixed `ci_` in the `test` folder.
+These tests invoke `couchbackup` and `couchrestore` to work with real databases.
+The integration tests require credentials to create databases for restoration and
+to download the database comparison tool so whilst they do run as part of the
+Jenkins CI they cannot be run for all dev environments.
+
+Internal developers with credentials can test the CI locally by using these
+environment variables for example:
+```
+export COUCH_URL=https://...
+export COUCH_BACKEND_URL=$COUCH_URL
+export DBCOMPARE_NAME=DatabaseCompare
+export DBCOMPARE_VERSION=1.0
+```
+
+and then run the non-slow integration tests by issuing the command:
+```sh
+./node_modules/mocha/bin/mocha -i -g '#unit|#slow'
+```
