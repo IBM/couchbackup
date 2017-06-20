@@ -15,6 +15,7 @@
 
 // fatal errors
 const codes = {
+  'Error': 1,
   'InvalidOption': 2,
   'RestoreDatabaseNotFound': 10,
   'Unauthorized': 11,
@@ -23,7 +24,8 @@ const codes = {
   'LogDoesNotExist': 21,
   'IncompleteChangesInLogFile': 22,
   'SpoolChangesError': 30,
-  'HTTPFatalError': 40
+  'HTTPFatalError': 40,
+  'BulkGetError': 50
 };
 
 module.exports = {
