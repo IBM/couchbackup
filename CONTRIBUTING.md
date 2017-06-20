@@ -1,24 +1,28 @@
 # Contributing
 
-## Contributor License Agreement
+## Issues
 
-In order for us to accept pull-requests, the contributor must first complete
-a Contributor License Agreement (CLA). This clarifies the intellectual
-property license granted with any contribution. It is for your protection as a
-Contributor as well as the protection of IBM and its customers; it does not
-change your rights to use your own Contributions for any other purpose.
+Before opening a new issue please consider the following:
+* Only the latest release of the tool is supported. If at all possible please try
+to reproduce the issue using the latest version.
+* Please check the [existing issues](https://github.com/cloudant/couchbackup/issues)
+to see if the problem has already been reported. Note that the default search
+includes only open issues, but it may already have been closed.
+* Cloudant customers should contact Cloudant support for urgent issues.
+* When opening a new issue please complete the template fully.
 
-This is a quick process: one option is signing using Preview on a Mac,
-then sending a copy to us via email. Signing this agreement covers a few repos
-as mentioned in the appendix of the CLA.
+## Developer Certificate of Origin
 
-You can download the CLAs here:
+In order for us to accept pull-requests, the contributor must sign-off a
+[Developer Certificate of Origin (DCO)](DCO1.1.txt). This clarifies the
+intellectual property license granted with any contribution. It is for your
+protection as a Contributor as well as the protection of IBM and its customers;
+it does not change your rights to use your own Contributions for any other purpose.
 
- - [Individual](http://cloudant.github.io/cloudant-sync-eap/cla/cla-individual.pdf)
- - [Corporate](http://cloudant.github.io/cloudant-sync-eap/cla/cla-corporate.pdf)
+Please read the agreement and acknowledge it by ticking the appropriate box in the PR
+ text, for example:
 
-If you are an IBMer, please contact us directly as the contribution process is
-slightly different.
+- [x] Tick to sign-off your agreement to the Developer Certificate of Origin (DCO) 1.1
 
 ## Requirements
 
@@ -69,8 +73,8 @@ The integration tests require credentials to create databases for restoration an
 to download the database comparison tool so whilst they do run as part of the
 Jenkins CI they cannot be run for all dev environments.
 
-Internal developers with credentials can test the CI locally by using these
-environment variables for example:
+Internal developers with credentials and the compare tool can test the CI
+locally by using these environment variables for example:
 ```
 export COUCH_URL=https://...
 export COUCH_BACKEND_URL=$COUCH_URL
@@ -82,3 +86,14 @@ and then run the non-slow integration tests by issuing the command:
 ```sh
 ./node_modules/mocha/bin/mocha -i -g '#unit|#slow'
 ```
+
+## Output and debugging
+
+The [`debug` package](https://www.npmjs.com/package/debug) is used to control
+the output and debug statements.
+
+The `DEBUG` environment variable controls the debugging.
+* `couchbackup:backup` and `couchbackup:restore` are enabled by default and
+produce the CLI stderr output statements.
+* `couchbackup` - all debug statements
+* `couchbackup:<module>` - to enable the debug statements for a given module
