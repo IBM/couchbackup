@@ -18,6 +18,7 @@
   parallelism.
 - [IMPROVED] Better error handling in couchrestore when remote database
   cannot be written to.
+- [IMPROVED] Validate HTTP writer responses when restoring a database.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored

@@ -54,15 +54,13 @@ function exists(dbUrl, callback) {
       return;
     }
     if (res) {
-      if (res.statusCode === 200) {
-        callback(null, true);
-      } else if (res.statusCode === 404) {
-        callback(null, false);
-      } else {
-        // generic error code (for now, maybe map HTTP status codes to explanations?)
-        var e = new Error(`HEAD ${dbUrl} returned error code ${res.statusCode}`);
-        callback(e, false);
-      }
+      request.checkResponseAndCallbackFatalError(res, function(err) {
+        if (err) {
+          callback(err, false);
+        } else {
+          callback(null, true);
+        }
+      });
     }
   });
 }

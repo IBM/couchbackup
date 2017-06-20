@@ -47,7 +47,8 @@
     "cloudant": "^1.7.1",
     "uuid": "^3.0.1",
     "tail": "^1.2.1",
-    "rewire": "^2.4.20"
+    "rewire": "^2.4.20",
+    "nock": "^9.0.13"
   },
   "scripts": {
     "test": "eslint --ignore-path .gitignore . && mocha --grep \"#unit\""

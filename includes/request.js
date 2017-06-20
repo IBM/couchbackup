@@ -17,9 +17,21 @@ const pkg = require('../package.json');
 const http = require('http');
 const https = require('https');
 const request = require('request');
+const error = require('./error.js');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
+
+var checkResponse = function(resp, errName) {
+  errName = errName || 'HTTPError';
+  if (resp.statusCode >= 400) {
+    var errMsg = `${resp.statusCode} ${resp.statusMessage || ''}: ${resp.request.method} ${resp.request.uri.href}`;
+    if (resp.body && resp.body.error && resp.body.reason) {
+      errMsg += ` - Error: ${resp.body.error}, Reason: ${resp.body.reason}`;
+    }
+    return new error.BackupError(errName, errMsg);
+  }
+};
 
 module.exports = {
   client: function(url, parallelism) {
@@ -34,5 +46,11 @@ module.exports = {
       headers: {'User-Agent': userAgent},
       json: true,
       gzip: true});
+  },
+  checkResponseAndCallbackError: function(resp, callback) {
+    callback(checkResponse(resp));
+  },
+  checkResponseAndCallbackFatalError: function(resp, callback) {
+    callback(checkResponse(resp, 'HTTPFatalError'));
   }
 };

@@ -175,27 +175,40 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
     var r = {
       url: dbUrl + '/_bulk_get',
       qs: { revs: true }, // gets previous revision tokens too
-      method: 'post',
+      method: 'POST',
       body: payload
     };
     client(r, function(err, res, data) {
-      if (!err && data && data.results) {
-        // create an output array with the docs returned
-        data.results.forEach(function(d) {
-          if (d.docs) {
-            d.docs.forEach(function(doc) {
-              if (doc.ok) {
-                output.push(doc.ok);
-              }
-            });
-          }
-        });
-        total += output.length;
-        var t = (new Date().getTime() - start) / 1000;
-        ee.emit('received', {length: output.length, time: t, total: total, data: output, batch: thisBatch}, q, logCompletedBatch);
-      } else {
+      if (err) {
         ee.emit('error', err);
         done();
+      } else {
+        request.checkResponseAndCallbackError(res, function(err) {
+          if (err) {
+            ee.emit('error', err);
+            done();
+          } else {
+            // create an output array with the docs returned
+            data.results.forEach(function(d) {
+              if (d.docs) {
+                d.docs.forEach(function(doc) {
+                  if (doc.ok) {
+                    output.push(doc.ok);
+                  }
+                });
+              }
+            });
+            total += output.length;
+            var t = (new Date().getTime() - start) / 1000;
+            ee.emit('received', {
+              batch: thisBatch,
+              data: output,
+              length: output.length,
+              time: t,
+              total: total
+            }, q, logCompletedBatch);
+          }
+        });
       }
     });
   }, parallelism);

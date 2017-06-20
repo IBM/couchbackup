@@ -18,6 +18,7 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
+const debug = require('debug')('couchbackup:spoolchanges');
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -71,24 +72,27 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
   c.end();
 
   c.on('response', function(resp) {
-    if (resp.statusCode !== 200) {
-      c.abort();
-      callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request failed with status code ${resp.statusCode}`));
-    } else {
-      console.error('Streaming changes to disk:');
-    }
-  }).pipe(liner())
-    .pipe(change(onChange))
-    .on('finish', function() {
-      processBuffer(true);
-      console.error('');
-      if (!lastSeq) {
-        logStream.end();
-        callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
+    request.checkResponseAndCallbackFatalError(resp, function(err) {
+      if (err) {
+        c.abort();
+        callback(err);
       } else {
-        logStream.write(':changes_complete ' + lastSeq + '\n');
-        logStream.end();
-        callback();
+        debug('Streaming changes to disk...');
+        resp
+          .pipe(liner())
+          .pipe(change(onChange))
+          .on('finish', function() {
+            processBuffer(true);
+            if (!lastSeq) {
+              logStream.end();
+              callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
+            } else {
+              logStream.write(':changes_complete ' + lastSeq + '\n');
+              logStream.end();
+              callback();
+            }
+          });
       }
     });
+  });
 };
