@@ -39,6 +39,7 @@ function params() {
 // Returns the event emitter for API calls, or the child process for CLI calls
 function testBackup(params, databaseName, outputStream, callback) {
   var gzip;
+  var openssl;
   var backup;
   var backupStream = outputStream;
 
@@ -57,6 +58,24 @@ function testBackup(params, databaseName, outputStream, callback) {
       backupStream = gzip.stdin;
       // register an error handler
       gzip.on('error', function(err) {
+        callback(err);
+      });
+    }
+  }
+
+  // Pipe via encryption if requested
+  if (params.encryption) {
+    if (params.useApi) {
+      // Currently only CLI support for testing encryption
+      callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
+    } else {
+      // Spawn process for openssl
+      openssl = spawn('openssl', ['aes-128-cbc', '-pass', 'pass:12345'], {'stdio': ['pipe', 'pipe', 'inherit']});
+      // Pipe the streams as needed
+      openssl.stdout.pipe(outputStream);
+      backupStream = openssl.stdin;
+      // register an error handler
+      openssl.on('error', function(err) {
         callback(err);
       });
     }
@@ -145,6 +164,15 @@ function testBackup(params, databaseName, outputStream, callback) {
           callback(err);
         }
       });
+    } else if (openssl) {
+      openssl.on('close', function(code) {
+        try {
+          assert.equal(code, 0, `The encryption should exit normally, got exit code ${code}.`);
+          callback();
+        } catch (err) {
+          callback(err);
+        }
+      });
     } else {
       backup.on('close', function(code) {
         callback();
@@ -196,6 +224,19 @@ function testRestore(params, inputStream, databaseName, callback) {
       // Pipe the streams as needed
       inputStream.pipe(gunzip.stdin);
       restoreStream = gunzip.stdout;
+    }
+  }
+
+  // Pipe via decryption if requested
+  if (params.encryption) {
+    if (params.useApi) {
+      callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
+    } else {
+      // Spawn process for openssl
+      const dopenssl = spawn('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345'], {'stdio': ['pipe', 'pipe', 'inherit']});
+      // Pipe the streams as needed
+      inputStream.pipe(dopenssl.stdin);
+      restoreStream = dopenssl.stdout;
     }
   }
 
@@ -425,6 +466,23 @@ function assertGzipFile(path, callback) {
   }
 }
 
+function assertEncryptedFile(path, callback) {
+  try {
+    // Openssl encrypted files start with Salted
+    const expectedBytes = Buffer.from('Salted');
+    const buffer = Buffer.alloc(6);
+    const fd = fs.openSync(path, 'r');
+    // Read the first six bytes
+    fs.readSync(fd, buffer, 0, 6, 0);
+    fs.closeSync(fd);
+    // Assert first 6 characters of the file are "Salted"
+    assert.deepEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
+    callback();
+  } catch (err) {
+    callback(err);
+  }
+}
+
 function assertWrittenFewerThan(total, number, callback) {
   try {
     assert(total < number && total > 0, `Saw ${total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
@@ -441,6 +499,7 @@ module.exports = {
   dbCompare: dbCompare,
   readSortAndDeepEqual: readSortAndDeepEqual,
   assertGzipFile: assertGzipFile,
+  assertEncryptedFile: assertEncryptedFile,
   testBackup: testBackup,
   testRestore: testRestore,
   testDirectBackupAndRestore: testDirectBackupAndRestore,
