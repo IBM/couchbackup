@@ -83,18 +83,17 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
 function validateBulkGetSupport(dbUrl, callback) {
   client({url: dbUrl + '/_bulk_get', method: 'GET'}, function(err, res, data) {
     if (err) return callback(err);
-    switch (res.statusCode) {
-      case 404:
-        callback(new error.BackupError('BulkGetError', 'ERROR: Database does not support /_bulk_get endpoint'));
-        break;
-      case 405:
-        callback();  // => supports /_bulk_get endpoint
-        break;
-      default:
-        request.checkResponseAndCallbackFatalError(res, function(err) {
-          callback(err);
-        });
-    }
+    request.checkResponseAndCallbackError(res, callback, function(res) {
+      switch (res.statusCode) {
+        case 404:
+          return new error.BackupError('BulkGetError', 'ERROR: Database does not support /_bulk_get endpoint');
+        case 405:
+          // => supports /_bulk_get endpoint
+          return;
+        default:
+          return new error.HTTPFatalError(res);
+      }
+    });
   });
 }
 
@@ -120,23 +119,32 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
   // Generate a set of batches (up to batchesPerDownloadSession) to download from the
   // log file and download them. Set noRemainingBatches to `true` for last batch.
   function downloadSingleBatchSet(done) {
-    readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, function(err, batchSetIds) {
-      if (batchSetIds.length === 0) {
-        noRemainingBatches = true;
-        return done();
-      }
+    // Fetch the doc IDs for the batches in the current set to
+    // download them.
+    function batchSetComplete(err, data) {
+      total = data.total;
+      done();
+    }
+    function processRetrievedBatches(err, batches) {
+      // process them in parallelised queue
+      processBatchSet(dbUrl, parallelism, log, batches, ee, startTime, total, batchSetComplete);
+    }
 
-      // Fetch the doc IDs for the batches in the current set to
-      // download and download them.
-      function batchSetComplete(err, data) {
-        total = data.total;
+    readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, function(err, batchSetIds) {
+      if (err) {
+        ee.emit('error', err);
+        if (err.isFatal) {
+          // Stop processing changes file for fatal errors
+          noRemainingBatches = true;
+        }
         done();
+      } else {
+        if (batchSetIds.length === 0) {
+          noRemainingBatches = true;
+          return done();
+        }
+        logfilegetbatches(log, batchSetIds, processRetrievedBatches);
       }
-      function processRetrievedBatches(err, batches) {
-        // process them in parallelised queue
-        processBatchSet(dbUrl, parallelism, log, batches, ee, startTime, total, batchSetComplete);
-      }
-      logfilegetbatches(log, batchSetIds, processRetrievedBatches);
     });
   }
 
@@ -155,16 +163,14 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
  *
  * @param {string} log - log file path
  * @param {number} batchesPerDownloadSession - maximum IDs to return
- * @param {any} ee - emit `error` event if log file invalid
  * @param {function} callback - sign (err, batchSetIds array)
  */
-function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, ee, callback) {
+function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, callback) {
   logfilesummary(log, function processSummary(err, summary) {
     if (!summary.changesComplete) {
-      ee.emit('error', new error.BackupError(
-        'IncompleteChangesInLogFile',
-        'WARNING: Changes did not finish spooling'
-        ));
+      callback(new error.BackupError('IncompleteChangesInLogFile',
+        'WARNING: Changes did not finish spooling'));
+      return;
     }
     if (Object.keys(summary.batches).length === 0) {
       return callback(null, []);
@@ -222,6 +228,10 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
       } else {
         request.checkResponseAndCallbackError(res, function(err) {
           if (err) {
+            if (err.isFatal) {
+              // Kill the queue for fatal errors
+              q.kill();
+            }
             ee.emit('error', err);
             done();
           } else {

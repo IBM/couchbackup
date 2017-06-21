@@ -26,6 +26,7 @@ const defaults = require('./includes/config.js').apiDefaults();
 const events = require('events');
 const debug = require('debug')('couchbackup:app');
 const error = require('./includes/error.js');
+const fs = require('fs');
 
 /**
  * Test for a positive, safe integer.
@@ -55,25 +56,44 @@ function isSafePositiveInteger(x) {
 function validateArgs(url, opts, cb) {
   if (typeof url !== 'string') {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid URL, must be type string'), null);
+    return;
   }
   if (opts && typeof opts.bufferSize !== 'undefined' && !isSafePositiveInteger(opts.bufferSize)) {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+    return;
   }
   if (opts && typeof opts.log !== 'undefined' && typeof opts.log !== 'string') {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid log option, must be type string'), null);
+    return;
   }
   if (opts && typeof opts.mode !== 'undefined' && ['full', 'shallow'].indexOf(opts.mode) === -1) {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid mode option, must be either "full" or "shallow"'), null);
+    return;
   }
   if (opts && typeof opts.output !== 'undefined' && typeof opts.output !== 'string') {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid output option, must be type string'), null);
+    return;
   }
   if (opts && typeof opts.parallelism !== 'undefined' && !isSafePositiveInteger(opts.parallelism)) {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+    return;
   }
   if (opts && typeof opts.resume !== 'undefined' && typeof opts.resume !== 'boolean') {
     cb(new error.BackupError('InvalidOption', 'ERROR: Invalid resume option, must be type boolean'), null);
+    return;
   }
+  if (opts && opts.resume) {
+    if (!opts.log) {
+      // This is the second place we check for the presence of the log option in conjunction with resume
+      // It has to be here for the API case
+      cb(new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified'), null);
+      return;
+    } else if (!fs.existsSync(opts.log)) {
+      cb(new error.BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist'), null);
+      return;
+    }
+  }
+  return true;
 }
 
 module.exports = {
@@ -96,7 +116,10 @@ module.exports = {
       callback = opts;
       opts = {};
     }
-    validateArgs(srcUrl, opts, callback);
+    if (!validateArgs(srcUrl, opts, callback)) {
+      // bad args, bail
+      return;
+    }
     opts = Object.assign({}, defaults, opts);
 
     var backup = null;
@@ -122,7 +145,9 @@ module.exports = {
       targetStream.write('\n');
     }
 
-    backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
+    // Get the event emitter from the backup process so we can handle events
+    // before passing them on to the app's event emitter if needed.
+    const internalEE = backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
       .on('changes', function(batch) {
         ee.emit('changes', batch);
       }).on('received', function(obj, q, logCompletedBatch) {
@@ -149,12 +174,19 @@ module.exports = {
           }
         }
       })
+      // For errors we expect, may or may not be fatal
       .on('error', function(err) {
-        if (error.codes()[err.name]) {
-          return callback(err); // fatal error
-        }
         debug('Error ' + JSON.stringify(err));
-        ee.emit('error', err);
+        if (err.isFatal) {
+          // These are fatal errors
+          // We only want to callback once for a fatal error
+          // even though other errors may be received,
+          // so deregister the listeners now
+          internalEE.removeAllListeners();
+          callback(err);
+        } else {
+          ee.emit('error', err);
+        }
       })
       .on('finished', function(obj) {
         function emitFinished() {
@@ -206,18 +238,26 @@ module.exports = {
       function(err, writer) {
         if (err) {
           callback(err, null);
+          return;
         }
         if (writer != null) {
           writer.on('restored', function(obj) {
             debug(' restored ', obj.total);
             ee.emit('restored', {documents: obj.documents, total: obj.total});
           })
+          // For errors we expect, may or may not be fatal
           .on('error', function(err) {
-            if (error.codes()[err.name]) {
-              return callback(err); // fatal error
-            }
             debug('Error ' + JSON.stringify(err));
-            ee.emit('error', err);
+            if (err.isFatal) {
+              // These are fatal errors
+              // We only want to callback once for a fatal error
+              // even though other errors may be received,
+              // so deregister listeners now
+              writer.removeAllListeners();
+              callback(err);
+            } else {
+              ee.emit('error', err);
+            }
           })
           .on('finished', function(obj) {
             debug('restore complete');

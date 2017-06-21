@@ -16,7 +16,6 @@
 const cliutils = require('./cliutils.js');
 const config = require('./config.js');
 const error = require('./error.js');
-const fs = require('fs');
 const path = require('path');
 const pkg = require('../package.json');
 
@@ -56,8 +55,10 @@ function parseBackupArgs() {
             defaults.url)
     .parse(process.argv);
 
-  if (program.resume && !fs.existsSync(program.log)) {
-    error.terminationCallback(new error.BackupError('LogDoesNotExist', 'ERROR: To resume a backup, the log file must exist'));
+  if (program.resume && (program.log === defaults.log)) {
+    // If resuming and the log file arg is the newly generated tmp name from defaults then we know that --log wasn't specified.
+    // We have to do this check here for the CLI case because of the default.
+    error.terminationCallback(new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified'));
   }
 
   return program;

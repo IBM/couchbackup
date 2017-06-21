@@ -17,13 +17,10 @@ const async = require('async');
 const request = require('./request.js');
 const stream = require('stream');
 const error = require('./error.js');
-
-// global flag across all threads to indicate
-// - that we stop processing the queue
-// - that we only emit an error on the first failing thread
-var didError = false;
+const debug = require('debug')('couchbackup:writer');
 
 module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
+  const writer = new stream.Transform({objectMode: true});
   const client = request.client(couchDbUrl, parallelism);
   var buffer = [];
   var written = 0;
@@ -45,31 +42,43 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     };
 
     const response = client(r, function(err, res, data) {
+      if (!err) {
+        // No request error, check the response for an error
+        request.checkResponseAndCallbackFatalError(res, function(responseError) {
+          err = responseError;
+        });
+      }
       if (err) {
-        writer.emit('error', err);
+        debug(`Error writing docs ${err.name} ${err.message}`);
+        if (err.isFatal) {
+          debug(`Fatal error: ${err.name}`);
+          response.abort();
+          q.kill();
+          cb(err);
+        } else {
+          debug(`Emitting non-fatal error: ${err.name}`);
+          writer.emit('error', err);
+          cb();
+        }
       } else {
         written += payload.docs.length;
         writer.emit('restored', {documents: payload.docs.length, total: written});
+        cb();
       }
-      cb();
-    });
-
-    response.on('response', function(resp) {
-      request.checkResponseAndCallbackFatalError(resp, function(err) {
-        if (err) {
-          response.abort();
-          // only emit the first error as there are multiple threads
-          if (!didError) {
-            didError = true;
-            writer.emit('error', err);
-          }
-        }
-      });
     });
   }, parallelism);
 
   // write the contents of the buffer to CouchDB in blocks of bufferSize
-  var processBuffer = function(flush, callback) {
+  function processBuffer(flush, callback) {
+    var didError = false;
+    function taskCallback(err) {
+      if (err && !didError) {
+        debug(`Queue task failed with error ${err.name}`);
+        didError = true;
+        callback(err);
+      }
+    }
+
     if (flush || buffer.length >= bufferSize) {
       // work through the buffer to break off bufferSize chunks
       // and feed the chunks to the queue
@@ -78,12 +87,14 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
         var toSend = buffer.splice(0, bufferSize);
 
         // and add the chunk to the queue
-        q.push({docs: toSend});
+        debug(`Adding ${toSend.length} to the write queue.`);
+        q.push({docs: toSend}, taskCallback);
       } while (buffer.length >= bufferSize);
 
       // send any leftover documents to the queue
       if (flush && buffer.length > 0) {
-        q.push({docs: buffer});
+        debug(`Adding remaining ${buffer.length} to the write queue.`);
+        q.push({docs: buffer}, taskCallback);
       }
 
       // wait until the queue size falls to a reasonable level
@@ -91,7 +102,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
         // wait until the queue length drops to twice the paralellism
         // or until empty on the last write
         function() {
-          // if we encountered an error, stop processing the queue
+          // if we encountered an error, stop this until loop
           if (didError) {
             return true;
           }
@@ -116,9 +127,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     } else {
       callback();
     }
-  };
-
-  var writer = new stream.Transform({objectMode: true});
+  }
 
   // take an object
   writer._transform = function(obj, encoding, done) {
@@ -144,9 +153,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
           this.pause();
 
           // break the buffer in to bufferSize chunks to be written to the database
-          processBuffer(false, function() {
-            done();
-          });
+          processBuffer(false, done);
         } else {
           ee.emit('error', new error.BackupError('BackupFileJsonError', `Error on line ${linenumber} of backup file - not an array`));
           done();
@@ -163,9 +170,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
 
   // called when we need to flush everything
   writer._flush = function(done) {
-    processBuffer(true, function() {
-      done();
-    });
+    processBuffer(true, done);
   };
   return writer;
 };

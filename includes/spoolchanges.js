@@ -85,9 +85,7 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
               logStream.end();
               callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
             } else {
-              logStream.write(':changes_complete ' + lastSeq + '\n');
-              logStream.end();
-              callback();
+              logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
             }
           });
       }

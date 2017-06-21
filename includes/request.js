@@ -22,16 +22,34 @@ const error = require('./error.js');
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
 
-var checkResponse = function(resp, errName) {
-  errName = errName || 'HTTPError';
-  if (resp.statusCode >= 400) {
-    var errMsg = `${resp.statusCode} ${resp.statusMessage || ''}: ${resp.request.method} ${resp.request.uri.href}`;
-    if (resp.body && resp.body.error && resp.body.reason) {
-      errMsg += ` - Error: ${resp.body.error}, Reason: ${resp.body.reason}`;
-    }
-    return new error.BackupError(errName, errMsg);
+// Default function to return an error for HTTP status codes
+// < 400 -> OK
+// 4XX (except 429) -> Fatal
+// 429 & >=500 -> Transient
+function checkResponse(resp) {
+  // Codes < 400 are considered OK
+  if (resp.statusCode === 429 || resp.statusCode >= 500) {
+    return new error.HTTPError(resp);
+  } else if (resp.statusCode >= 400) {
+    return new error.HTTPFatalError(resp);
   }
-};
+}
+
+function checkResponseAndCallbackError(resp, callback, errorFactory) {
+  if (!errorFactory) {
+    errorFactory = checkResponse;
+  }
+  callback(errorFactory(resp));
+}
+
+function checkResponseAndCallbackFatalError(resp, callback) {
+  checkResponseAndCallbackError(resp, callback, function(resp) {
+    // When there are no retries any >=400 error needs to be fatal
+    if (resp.statusCode >= 400) {
+      return new error.HTTPFatalError(resp);
+    }
+  });
+}
 
 module.exports = {
   client: function(url, parallelism) {
@@ -47,10 +65,6 @@ module.exports = {
       json: true,
       gzip: true});
   },
-  checkResponseAndCallbackError: function(resp, callback) {
-    callback(checkResponse(resp));
-  },
-  checkResponseAndCallbackFatalError: function(resp, callback) {
-    callback(checkResponse(resp, 'HTTPFatalError'));
-  }
+  checkResponseAndCallbackError: checkResponseAndCallbackError,
+  checkResponseAndCallbackFatalError: checkResponseAndCallbackFatalError
 };

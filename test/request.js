@@ -79,7 +79,7 @@ describe('#unit Check request response fatal error callback', function() {
         .reply(200, {ok: true});
 
     client({url: url + '/good', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackFatalError(res, function(err) {
+      request.checkResponseAndCallbackError(res, function(err) {
         assert.equal(err, null);
         assert.ok(couch.isDone());
         done();
@@ -102,15 +102,15 @@ describe('#unit Check request response fatal error callback', function() {
     });
   });
 
-  it('should callback with fatal error for 500 response', function(done) {
+  it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
         .get('/bad')
-        .reply(500, {error: 'foo', reason: 'bar'});
+        .reply(404, {error: 'foo', reason: 'bar'});
 
     client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackFatalError(res, function(err) {
+      request.checkResponseAndCallbackError(res, function(err) {
         assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
+        assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
         assert.ok(couch.isDone());
         done();
       });

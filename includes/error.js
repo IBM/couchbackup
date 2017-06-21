@@ -28,14 +28,45 @@ const codes = {
   'BulkGetError': 50
 };
 
-module.exports = {
-  BackupError: class BackupError extends Error {
-    constructor(name, message) {
-      super(message);
-      this.name = name;
+class BackupError extends Error {
+  constructor(name, message) {
+    super(message);
+    this.name = name;
+    this.isFatal = codes[name] !== undefined || false;
+  }
+}
+
+class HTTPError extends BackupError {
+  constructor(resp, name) {
+    var errMsg = `${resp.statusCode} ${resp.statusMessage || ''}: ${resp.request.method} ${resp.request.uri.href}`;
+    if (resp.body && resp.body.error && resp.body.reason) {
+      errMsg += ` - Error: ${resp.body.error}, Reason: ${resp.body.reason}`;
     }
-  },
-  codes: function() { return Object.assign({}, codes); },
+    // Special case some names for more useful error messages
+    switch (resp.statusCode) {
+      case 401:
+        name = 'Unauthorized';
+        break;
+      case 403:
+        name = 'Forbidden';
+        break;
+      default:
+        name = name || 'HTTPError';
+    }
+    super(name, errMsg);
+  }
+}
+
+class HTTPFatalError extends HTTPError {
+  constructor(resp) {
+    super(resp, 'HTTPFatalError');
+  }
+}
+
+module.exports = {
+  BackupError: BackupError,
+  HTTPError: HTTPError,
+  HTTPFatalError: HTTPFatalError,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
