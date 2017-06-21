@@ -12,16 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global describe it */
+/* global describe it beforeEach */
 'use strict';
 
 var assert = require('assert');
 var nock = require('nock');
 var request = require('../includes/request.js');
 
-describe('#unit Check request response', function() {
-  const url = 'http://localhost:5984';
-  const client = request.client(url, 1);
+const url = 'http://localhost:7777';
+const client = request.client(url, 1);
+
+describe('#unit Check request response error callback', function() {
+  beforeEach('Clean nock', function() {
+    nock.cleanAll();
+  });
 
   it('should not callback with error for 200 response', function(done) {
     var couch = nock(url)
@@ -37,6 +41,38 @@ describe('#unit Check request response', function() {
     });
   });
 
+  it('should callback with error for 500 response', function(done) {
+    var couch = nock(url)
+        .get('/bad')
+        .reply(500, {error: 'foo', reason: 'bar'});
+
+    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
+      request.checkResponseAndCallbackError(res, function(err) {
+        assert.equal(err.name, 'HTTPError');
+        assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
+        assert.ok(couch.isDone());
+        done();
+      });
+    });
+  });
+
+  it('should callback with fatal error for 404 response', function(done) {
+    var couch = nock(url)
+        .get('/bad')
+        .reply(404, {error: 'foo', reason: 'bar'});
+
+    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
+      request.checkResponseAndCallbackError(res, function(err) {
+        assert.equal(err.name, 'HTTPFatalError');
+        assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
+        assert.ok(couch.isDone());
+        done();
+      });
+    });
+  });
+});
+
+describe('#unit Check request response fatal error callback', function() {
   it('should not callback with fatal error for 200 response', function(done) {
     var couch = nock(url)
         .get('/good')
@@ -51,14 +87,14 @@ describe('#unit Check request response', function() {
     });
   });
 
-  it('should callback with error for 500 response', function(done) {
+  it('should callback with fatal error for 500 response', function(done) {
     var couch = nock(url)
         .get('/bad')
         .reply(500, {error: 'foo', reason: 'bar'});
 
     client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err.name, 'HTTPError');
+      request.checkResponseAndCallbackFatalError(res, function(err) {
+        assert.equal(err.name, 'HTTPFatalError');
         assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
         assert.ok(couch.isDone());
         done();

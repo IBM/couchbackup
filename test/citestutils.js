@@ -91,7 +91,16 @@ function testBackup(params, databaseName, outputStream, callback) {
   if (params.useApi) {
     backup = app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, function(err, data) {
       if (err) {
-        callback(err);
+        if (params.expectedBackupError) {
+          try {
+            assert.equal(err.name, params.expectedBackupError.name, `The backup should receive the expected error.`);
+            callback();
+          } catch (err) {
+            callback(err);
+          }
+        } else {
+          callback(err);
+        }
       } else {
         console.log(data);
         callback();
@@ -138,19 +147,6 @@ function testBackup(params, databaseName, outputStream, callback) {
     backup.stderr.on('data', function(data) {
       console.error(`${data}`);
     });
-
-    backup.on('close', function(code, signal) {
-      try {
-        if (params.abort) {
-          // Assert that the process was aborted as expected
-          assert.equal(signal, 'SIGTERM', `The backup should terminate.`);
-        } else {
-          assert.equal(code, 0, `The backup should exit normally, got exit code ${code}.`);
-        }
-      } catch (err) {
-        callback(err);
-      }
-    });
     backup.on('error', function(err) {
       callback(err);
     });
@@ -174,8 +170,20 @@ function testBackup(params, databaseName, outputStream, callback) {
         }
       });
     } else {
-      backup.on('close', function(code) {
-        callback();
+      backup.on('close', function(code, signal) {
+        try {
+          if (params.abort) {
+            // Assert that the process was aborted as expected
+            assert.equal(signal, 'SIGTERM', `The backup should terminate.`);
+          } else if (params.expectedBackupError) {
+            assert.equal(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
+          } else {
+            assert.equal(code, 0, `The backup should exit normally, got exit code ${code}.`);
+          }
+          callback();
+        } catch (err) {
+          callback(err);
+        }
       });
     }
   }
@@ -243,7 +251,16 @@ function testRestore(params, inputStream, databaseName, callback) {
   if (params.useApi) {
     app.restore(restoreStream, dbUrl(process.env.COUCH_URL, databaseName), null, function(err, data) {
       if (err) {
-        callback(err);
+        if (params.expectedRestoreError) {
+          try {
+            assert.equal(err.name, params.expectedRestoreError.name, `The restore should receive the expected error.`);
+            callback();
+          } catch (err) {
+            callback(err);
+          }
+        } else {
+          callback(err);
+        }
       } else {
         console.log(data);
         callback();
@@ -258,7 +275,11 @@ function testRestore(params, inputStream, databaseName, callback) {
     restoreStream.pipe(restore.stdin);
     restore.on('close', function(code) {
       try {
-        assert.equal(code, 0, `The restore should exit normally, got exit code ${code}`);
+        if (params.expectedRestoreError) {
+          assert.equal(code, params.expectedRestoreError.code, `The backup exited with unexpected code ${code}.`);
+        } else {
+          assert.equal(code, 0, `The restore should exit normally, got exit code ${code}`);
+        }
         callback();
       } catch (err) {
         callback(err);
