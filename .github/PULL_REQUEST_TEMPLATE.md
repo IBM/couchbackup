@@ -1,7 +1,7 @@
 Thanks for your hard work, please ensure all items are complete before opening a PR.
 
 - [ ] Tick to sign-off your agreement to the [Developer Certificate of Origin (DCO) 1.1](https://github.com/cloudant/couchbackup/blob/master/DCO1.1.txt)
-- [ ] You have added tests for any code changes [CONTRIBUTING.md](https://github.com/cloudant/couchbackup/blob/master/CONTRIBUTING.md#tests)
+- [ ] You have [added tests](https://github.com/cloudant/couchbackup/blob/master/CONTRIBUTING.md#testing) for any code changes
 - [ ] You have updated the [CHANGES.md](https://github.com/cloudant/couchbackup/blob/master/CHANGES.md)
 - [ ] You have completed the PR template below:
 
