@@ -26,13 +26,19 @@ It comes with a companion command-line utility that can restore the backed up da
 
 ## Installation
 
-To install use npm:
+To install the latest released version use npm:
 
 ```sh
 npm install -g @cloudant/couchbackup
 ```
 
-The minimum required Node.js version is 4.8.2.
+### Requirements
+* The minimum required Node.js version is 4.8.2.
+* The minimum required CouchDB version is 2.0.0.
+
+### Snapshots
+
+The latest builds of master are published to npm with the `snapshot` tag. Use the `snapshot` tag if you want to experiment with an unreleased fix or new function, but please note that snapshot versions are **unsupported**.
 
 ## Usage
 
@@ -125,6 +131,22 @@ and restore the file with:
 cat animaldb.tar.gz | gunzip | couchdbrestore --db animaldb2
 ```
 
+## Encrypted backups
+
+Similarly to compression it is possible to pipe the backup content through an
+encryption or decryption utility. For example with `openssl`:
+
+```sh
+couchbackup --db animaldb | openssl aes-128-cbc -pass pass:12345 > encrypted_animal.db
+```
+
+```sh
+openssl aes-128-cbc -d -in encrypted_animal.db -pass pass:12345 | couchrestore --db animaldb2
+```
+
+Note that the content is unencrypted while it is being processed by the
+backup tool before it is piped to the encryption utility.
+
 ## What's in a backup file?
 
 A backup file is a text file where each line contains a JSON encoded array of up to `buffer-size` objects e.g.
@@ -168,7 +190,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
 * `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
-* `DEBUG` - if set to `couchbackup`, debug messages will be sent to `stderr` during a backup or restore process
+* `DEBUG` - if set to `couchbackup`, all debug messages will be sent to `stderr` during a backup or restore process
 
 ### Command-line paramters
 
@@ -322,24 +344,35 @@ couchbackup.restore(
 
 ## Error Handling
 
-The `couchbackup` and `couchrestore` processes are designed to be relatively robust over an unreliable network. Work is batched and any failed requests are retried indefinitely. However, certain aspects of the execution will not tolerate failure,
+The `couchbackup` and `couchrestore` processes are designed to be relatively robust over an unreliable network. Work is batched and any failed requests are retried indefinitely. However, certain aspects of the execution will not tolerate failure:
 - Spooling changes from the database changes feed. A failure in the changes request during the backup process will result in process termination.
 - Validating the existence of a target database during the database restore process.
 
+### API
+
+When using the library programmatically an `Error` will be passed in one of two ways:
+* For fatal errors the callback will be called with `null, error` arguments
+* For non-fatal errors an `error` event will be emitted
+
 ### CLI Exit Codes
 
-On error, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
+On fatal errors, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
 details them.
 
-### `couchbackup`
-
-* `1`: unknown CLI option or generic error (sorry if you see this one).
-* `2`: invalid CLI option.
-* `20`: resume was specified without a log file
-* `21`: the resume log file does not exist
-
-### `couchrestore`
+### common to both `couchbackup` and `couchrestore`
 
 * `1`: unknown CLI option or generic error.
 * `2`: invalid CLI option.
+
+### `couchbackup`
+
+* `20`: resume was specified without a log file.
+* `21`: the resume log file does not exist.
+* `22`: incomplete changes in log file.
+* `30`: error spooling changes from the database.
+
+### `couchrestore`
+
 * `10`: restore target database does not exist.
+* `11`: unauthorized credentials for the database
+* `12`: incorrect permissions for the database
