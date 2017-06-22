@@ -1,0 +1,43 @@
+{
+  "total_rows": 11,
+  "offset": 0,
+  "rows": [
+    {
+      "id": "snipe",
+      "key": "snipe",
+      "value": {
+        "rev": "1-cb497ff296134b6e8c311963d1d41ea6"
+      },
+      "doc": {
+        "_id": "snipe",
+        "_rev": "1-cb497ff296134b6e8c311963d1d41ea6",
+        "min_length": 0.25,
+        "min_weight": 0.08,
+        "latin_name": "Gallinago gallinago",
+        "diet": "omnivore",
+        "max_length": 0.27,
+        "wiki_page": "http://en.wikipedia.org/wiki/Common_Snipe",
+        "class": "bird",
+        "max_weight": 0.14
+      }
+    },
+    {
+      "id": "zebra",
+      "key": "zebra",
+      "value": {
+        "rev": "1-154a9574f7aa96df26a6752fc10b7759"
+      },
+      "doc": {
+        "_id": "zebra",
+        "_rev": "1-154a9574f7aa96df26a6752fc10b7759",
+        "min_length": 2,
+        "min_weight": 175,
+        "diet": "herbivore",
+        "max_length": 2.5,
+        "wiki_page": "http://en.wikipedia.org/wiki/Plains_zebra",
+        "class": "mammal",
+        "max_weight": 387
+      }
+    }
+  ]
+}

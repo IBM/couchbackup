@@ -1,0 +1,59 @@
+{
+  "total_rows": 11,
+  "offset": 0,
+  "rows": [
+    {
+      "id": "elephant",
+      "key": "elephant",
+      "value": {
+        "rev": "1-4698ce7bbcdfb6644c1719e205a4130d"
+      },
+      "doc": {
+        "_id": "elephant",
+        "_rev": "1-4698ce7bbcdfb6644c1719e205a4130d",
+        "min_length": 3.2,
+        "min_weight": 4700,
+        "diet": "herbivore",
+        "max_length": 4,
+        "wiki_page": "http://en.wikipedia.org/wiki/African_elephant",
+        "class": "mammal",
+        "max_weight": 6050
+      }
+    },
+    {
+      "id": "giraffe",
+      "key": "giraffe",
+      "value": {
+        "rev": "1-5874d944abf1261c2a244a92b14c2f18"
+      },
+      "doc": {
+        "_id": "giraffe",
+        "_rev": "1-5874d944abf1261c2a244a92b14c2f18",
+        "min_length": 5,
+        "min_weight": 830,
+        "diet": "herbivore",
+        "max_length": 6,
+        "wiki_page": "http://en.wikipedia.org/wiki/Giraffe",
+        "class": "mammal",
+        "max_weight": 1600
+      }
+    },
+    {
+      "id": "kookaburra",
+      "key": "kookaburra",
+      "value": {
+        "rev": "1-0266ecfcdf2f0be7cbfa696dc7f0088e"
+      },
+      "doc": {
+        "_id": "kookaburra",
+        "_rev": "1-0266ecfcdf2f0be7cbfa696dc7f0088e",
+        "min_length": 0.28,
+        "latin_name": "Dacelo novaeguineae",
+        "diet": "carnivore",
+        "max_length": 0.42,
+        "wiki_page": "http://en.wikipedia.org/wiki/Kookaburra",
+        "class": "bird"
+      }
+    }
+  ]
+}

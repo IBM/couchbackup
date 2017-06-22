@@ -1,0 +1,62 @@
+{
+  "total_rows": 11,
+  "offset": 0,
+  "rows": [
+    {
+      "id": "llama",
+      "key": "llama",
+      "value": {
+        "rev": "1-342255201b0d698e70f9828b7002e30a"
+      },
+      "doc": {
+        "_id": "llama",
+        "_rev": "1-342255201b0d698e70f9828b7002e30a",
+        "min_length": 1.7,
+        "min_weight": 130,
+        "latin_name": "Lama glama",
+        "diet": "herbivore",
+        "max_length": 1.8,
+        "wiki_page": "http://en.wikipedia.org/wiki/Llama",
+        "class": "mammal",
+        "max_weight": 200
+      }
+    },
+    {
+      "id": "panda",
+      "key": "panda",
+      "value": {
+        "rev": "1-45e8c0010dd80b7e60d3a50f5bcf348f"
+      },
+      "doc": {
+        "_id": "panda",
+        "_rev": "1-45e8c0010dd80b7e60d3a50f5bcf348f",
+        "min_length": 1.2,
+        "min_weight": 75,
+        "diet": "carnivore",
+        "max_length": 1.8,
+        "wiki_page": "http://en.wikipedia.org/wiki/Panda",
+        "class": "mammal",
+        "max_weight": 115
+      }
+    },
+    {
+      "id": "snipe",
+      "key": "snipe",
+      "value": {
+        "rev": "1-cb497ff296134b6e8c311963d1d41ea6"
+      },
+      "doc": {
+        "_id": "snipe",
+        "_rev": "1-cb497ff296134b6e8c311963d1d41ea6",
+        "min_length": 0.25,
+        "min_weight": 0.08,
+        "latin_name": "Gallinago gallinago",
+        "diet": "omnivore",
+        "max_length": 0.27,
+        "wiki_page": "http://en.wikipedia.org/wiki/Common_Snipe",
+        "class": "bird",
+        "max_weight": 0.14
+      }
+    }
+  ]
+}
