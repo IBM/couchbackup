@@ -310,6 +310,14 @@ The `restore` function returns an event emitter. You can subscribe to:
 * `finished` - emitted once when all documents are restored.
 * `error` - emitted when something goes wrong for a single batch.
 
+The backup file (or `srcStream`) contains lists comprising of document
+revisions, where each list is separated by a newline. The list length is
+dictated by the `bufferSize` parameter used during the backup.
+
+It's possible a list could be corrupt due to failures in the backup process. A
+`BackupFileJsonError` is emitted for each corrupt list found. _These can only be
+ignored if the backup that generated the stream did complete successfully_. This
+ensures that corrupt lists also have a valid counterpart within the stream.
 
 Restore data from a stream:
 
