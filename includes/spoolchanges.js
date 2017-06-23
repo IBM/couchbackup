@@ -18,7 +18,6 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
-const debug = require('debug')('couchbackup:spoolchanges');
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -29,7 +28,7 @@ const debug = require('debug')('couchbackup:spoolchanges');
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {function(err)} callback - a callback to run on completion
  */
-module.exports = function(dbUrl, log, bufferSize, callback) {
+module.exports = function(dbUrl, log, bufferSize, ee, callback) {
   const client = request.client(dbUrl, 1);
 
   // list of document ids to process
@@ -43,7 +42,7 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
     if (buffer.length >= bufferSize || (lastOne && buffer.length > 0)) {
       var b = { docs: buffer.splice(0, bufferSize), batch: batch };
       logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
-      process.stderr.write('\r batch ' + batch);
+      ee.emit('changes', batch);
       batch++;
     }
   };
@@ -52,7 +51,7 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
   var onChange = function(c) {
     if (c) {
       if (c.error) {
-        console.error('error', c);
+        ee.emit('error', new error.BackupError('InvalidChange', `Received invalid change: ${c}`));
       } else if (c.changes) {
         var obj = {id: c.id};
         buffer.push(obj);
@@ -77,7 +76,6 @@ module.exports = function(dbUrl, log, bufferSize, callback) {
         c.abort();
         callback(err);
       } else {
-        debug('Streaming changes to disk...');
         resp
           .pipe(liner())
           .pipe(change(onChange))

@@ -53,7 +53,7 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
       downloadRemainingBatches(log, dbUrl, ee, start, batchesPerDownloadSession, parallelism);
     } else {
       // create new log file and process
-      spoolchanges(dbUrl, log, blocksize, function(err) {
+      spoolchanges(dbUrl, log, blocksize, ee, function(err) {
         if (err) {
           ee.emit('error', err);
         } else {

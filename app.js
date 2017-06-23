@@ -123,7 +123,9 @@ module.exports = {
     }
 
     backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
-      .on('received', function(obj, q, logCompletedBatch) {
+      .on('changes', function(batch) {
+        ee.emit('changes', batch);
+      }).on('received', function(obj, q, logCompletedBatch) {
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         // Callback to emit the written event when the content is flushed
         function writeFlushed() {
@@ -200,6 +202,7 @@ module.exports = {
       opts.bufferSize,
       opts.parallelism,
       srcStream,
+      ee,
       function(err, writer) {
         if (err) {
           callback(err, null);

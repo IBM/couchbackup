@@ -248,6 +248,8 @@ function testRestore(params, inputStream, databaseName, callback) {
         console.log(data);
         callback();
       }
+    }).on('error', function(err) {
+      console.error(`Caught non-fatal error: ${err}`);
     });
   } else {
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
@@ -342,7 +344,7 @@ function assertResumedBackup(params, resumedBackup, restoreCallback) {
     // For the CLI case we need to see the output because we don't have
     // the finished event.
     const listener = function(data) {
-      let matches = data.toString().match(/.*finished { total: (\d+) }.*/);
+      let matches = data.toString().match(/.*Finished - Total document revisions written: (\d+).*/);
       if (matches !== null) {
         assertWrittenFewerThan(matches[1], params.exclusiveMaxExpected, restoreCallback);
         resumedBackup.stderr.removeListener('data', listener);
