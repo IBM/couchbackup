@@ -58,8 +58,8 @@ const u = require('./citestutils.js');
     });
 
     it('should backup and restore largedb2g via a compressed file #slower', function(done) {
-      // Categorize as a 60 min test so it only gets run with the long run tests
-      u.setTimeout(this, 60 * 60);
+      // Takes ~ 25 min using CLI, but sometimes over an hour with API
+      u.setTimeout(this, 90 * 60);
       const compressedBackup = `./${this.fileName}`;
       params.compression = true;
       u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName, done);

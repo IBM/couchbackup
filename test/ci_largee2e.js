@@ -19,11 +19,11 @@ const u = require('./citestutils.js');
 
 [{useApi: true}, {useApi: false}].forEach(function(params) {
   describe(u.scenario('#slowest End to end backup and restore', params), function() {
-    // 15 GB is about the largest the CI can handle before getting very upset
+    // 10 GB is about the largest the CI can handle before getting very upset
     // about how long things are taking
-    it('should backup and restore largedb15g', function(done) {
+    it('should backup and restore largedb10g', function(done) {
       u.setTimeout(this, 350 * 60);
-      u.testDirectBackupAndRestore(params, 'largedb15g', this.dbName, done);
+      u.testDirectBackupAndRestore(params, 'largedb10g', this.dbName, done);
     });
   });
 });

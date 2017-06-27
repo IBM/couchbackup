@@ -52,10 +52,15 @@ function setupProxy(poison) {
       break;
     case 'slow-read':
       // https://github.com/h2non/toxy#slow-read
+      // Note this only impacts read of data from requests so only for non-GET
+      // In practice this means that it impacts restore much more than backup
+      // since although backup POSTs to _bulk_get the content is much smaller
+      // than what is POSTed to _bulk_docs for a restore.
+      // Similarly to bandwidth-limit use a 1 ms threshold
       proxy
         .poison(tpoisons.slowRead({ chunk: 256, threshold: 1 }))
-        // Slow read for 10 % of the time e.g. 1 ms in every 100
-        .withRule(trules.timeThreshold({ duration: 1, period: 100 }));
+        // Slow read for 10 % of the time e.g. 10 ms in every 100
+        .withRule(trules.timeThreshold({ duration: 10, period: 100 }));
       break;
     case 'rate-limit':
       // https://github.com/h2non/toxy#rate-limit
@@ -92,8 +97,10 @@ poisons.forEach(function(poison) {
 
       // For these tests COUCH_URL points to the toxy proxy on localhost whereas
       // COUCH_BACKEND_URL is the real CouchDb instance.
-
-      proxy.listen(url.parse(process.env.COUCH_URL).port);
+      const toxyUrl = url.parse(process.env.COUCH_URL);
+      // Listen on the specified hostname only, so if using localhost we don't
+      // need external connections.
+      proxy.listen(toxyUrl.port, toxyUrl.hostname);
     });
 
     after('stop toxy server', function() {
