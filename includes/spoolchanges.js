@@ -70,6 +70,11 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
   var c = client(r);
   c.end();
 
+  c.on('error', function(err) {
+    c.abort();
+    callback(new error.BackupError('SpoolChangesError', `ERROR: Failed changes request - ${err.message}`));
+  });
+
   c.on('response', function(resp) {
     request.checkResponseAndCallbackFatalError(resp, function(err) {
       if (err) {
