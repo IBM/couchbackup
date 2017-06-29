@@ -177,7 +177,7 @@ module.exports = {
       // For errors we expect, may or may not be fatal
       .on('error', function(err) {
         debug('Error ' + JSON.stringify(err));
-        if (err.isFatal) {
+        if (!err.isTransient) {
           // These are fatal errors
           // We only want to callback once for a fatal error
           // even though other errors may be received,
@@ -248,7 +248,7 @@ module.exports = {
           // For errors we expect, may or may not be fatal
           .on('error', function(err) {
             debug('Error ' + JSON.stringify(err));
-            if (err.isFatal) {
+            if (!err.isTransient) {
               // These are fatal errors
               // We only want to callback once for a fatal error
               // even though other errors may be received,

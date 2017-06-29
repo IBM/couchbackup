@@ -32,7 +32,7 @@ class BackupError extends Error {
   constructor(name, message) {
     super(message);
     this.name = name;
-    this.isFatal = codes[name] !== undefined || false;
+    this.isTransient = codes[name] === undefined;
   }
 }
 
