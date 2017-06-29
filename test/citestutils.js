@@ -249,7 +249,7 @@ function testRestore(params, inputStream, databaseName, callback) {
   }
 
   if (params.useApi) {
-    app.restore(restoreStream, dbUrl(process.env.COUCH_URL, databaseName), null, function(err, data) {
+    app.restore(restoreStream, dbUrl(process.env.COUCH_URL, databaseName), params.opts, function(err, data) {
       if (err) {
         if (params.expectedRestoreError) {
           try {
@@ -269,8 +269,17 @@ function testRestore(params, inputStream, databaseName, callback) {
       console.error(`Caught non-fatal error: ${err}`);
     });
   } else {
+    // Set up default args
+    const args = ['./bin/couchrestore.bin.js', '--db', databaseName];
+    if (params.opts) {
+      if (params.opts.bufferSize) {
+        args.push('--buffer-size');
+        args.push(params.opts.bufferSize);
+      }
+    }
+
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const restore = spawn('node', ['./bin/couchrestore.bin.js', '--db', databaseName], {'stdio': ['pipe', 'inherit', 'inherit']});
+    const restore = spawn('node', args, {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
     restore.on('close', function(code) {

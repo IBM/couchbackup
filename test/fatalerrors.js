@@ -188,6 +188,15 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         n.post('/fakenockdb/_bulk_docs').reply(400, {error: 'bad_request', reason: 'testing bad response'});
         restoreHttpError(params, 'HTTPFatalError', 40, done);
       });
+
+      it('should terminate on multiple _bulk_docs HTTPFatalError', function(done) {
+        const p = u.p(params, {opts: {bufferSize: 1}});
+        // Simulate the DB exists
+        const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
+        // Simulate a 500 trying to write docs, 5 times because of parallelism
+        n.post('/fakenockdb/_bulk_docs').times(5).reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        restoreHttpError(p, 'HTTPFatalError', 40, done);
+      });
     });
   });
 });
