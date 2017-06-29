@@ -19,11 +19,7 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
   exists(dbUrl, function(err, exists) {
     if (err) {
       callback(err, null);
-    } else if (!exists) {
-      var e = new Error(`Database ${dbUrl} does not exist. ` +
-        'Create the target database before restoring.');
-      e.name = 'RestoreDatabaseNotFound';
-      callback(e, null);
+      return;
     }
 
     var liner = require('../includes/liner.js');
@@ -50,15 +46,21 @@ function exists(dbUrl, callback) {
   const client = request.client(dbUrl, 1);
   client(r, function(err, res) {
     if (err) {
-      callback(err, false);
+      callback(err);
       return;
     }
     if (res) {
       request.checkResponseAndCallbackFatalError(res, function(err) {
         if (err) {
-          callback(err, false);
+          if (res.statusCode === 404) {
+            // Override the error type and mesasge for the DB not found case
+            err = new Error(`Database ${dbUrl} does not exist. ` +
+              'Create the target database before restoring.');
+            err.name = 'RestoreDatabaseNotFound';
+          }
+          callback(err);
         } else {
-          callback(null, true);
+          callback(null);
         }
       });
     }

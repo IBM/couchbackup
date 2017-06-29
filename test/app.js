@@ -79,6 +79,6 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, {resume: 'true'}, (err, data) => assert.equal(err.message, 'ERROR: Invalid resume option, must be type boolean'));
   });
   it('returns no error for valid resume type', function() {
-    validateArgs(goodUrl, {resume: true}, (err, data) => assert.fail('Unexpected error: ' + err.message));
+    validateArgs(goodUrl, {resume: false}, (err, data) => assert.fail('Unexpected error: ' + err.message));
   });
 });

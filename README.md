@@ -372,6 +372,8 @@ details them.
 
 * `1`: unknown CLI option or generic error.
 * `2`: invalid CLI option.
+* `11`: unauthorized credentials for the database
+* `12`: incorrect permissions for the database
 
 ### `couchbackup`
 
@@ -383,5 +385,3 @@ details them.
 ### `couchrestore`
 
 * `10`: restore target database does not exist.
-* `11`: unauthorized credentials for the database
-* `12`: incorrect permissions for the database
