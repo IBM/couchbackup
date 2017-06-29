@@ -55,31 +55,31 @@ function isSafePositiveInteger(x) {
  */
 function validateArgs(url, opts, cb) {
   if (typeof url !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid URL, must be type string'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid URL, must be type string'), null);
     return;
   }
   if (opts && typeof opts.bufferSize !== 'undefined' && !isSafePositiveInteger(opts.bufferSize)) {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
     return;
   }
   if (opts && typeof opts.log !== 'undefined' && typeof opts.log !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid log option, must be type string'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid log option, must be type string'), null);
     return;
   }
   if (opts && typeof opts.mode !== 'undefined' && ['full', 'shallow'].indexOf(opts.mode) === -1) {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid mode option, must be either "full" or "shallow"'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid mode option, must be either "full" or "shallow"'), null);
     return;
   }
   if (opts && typeof opts.output !== 'undefined' && typeof opts.output !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid output option, must be type string'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid output option, must be type string'), null);
     return;
   }
   if (opts && typeof opts.parallelism !== 'undefined' && !isSafePositiveInteger(opts.parallelism)) {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
     return;
   }
   if (opts && typeof opts.resume !== 'undefined' && typeof opts.resume !== 'boolean') {
-    cb(new error.BackupError('InvalidOption', 'ERROR: Invalid resume option, must be type boolean'), null);
+    cb(new error.BackupError('InvalidOption', 'Invalid resume option, must be type boolean'), null);
     return;
   }
   if (opts && opts.resume) {

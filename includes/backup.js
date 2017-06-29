@@ -86,7 +86,7 @@ function validateBulkGetSupport(dbUrl, callback) {
     request.checkResponseAndCallbackError(res, callback, function(res) {
       switch (res.statusCode) {
         case 404:
-          return new error.BackupError('BulkGetError', 'ERROR: Database does not support /_bulk_get endpoint');
+          return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
         case 405:
           // => supports /_bulk_get endpoint
           return;

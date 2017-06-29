@@ -70,7 +70,7 @@ module.exports = {
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
-        console.error(err.message);
+        console.error(`ERROR: ${err.message}`);
         process.exitCode = codes[err.name] || 1;
       });
       throw err;

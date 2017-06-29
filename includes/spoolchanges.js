@@ -72,7 +72,7 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
 
   c.on('error', function(err) {
     c.abort();
-    callback(new error.BackupError('SpoolChangesError', `ERROR: Failed changes request - ${err.message}`));
+    callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
   });
 
   c.on('response', function(resp) {
@@ -88,7 +88,7 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
             processBuffer(true);
             if (!lastSeq) {
               logStream.end();
-              callback(new error.BackupError('SpoolChangesError', `ERROR: Changes request terminated before last_seq was sent`));
+              callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
             } else {
               logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
             }
