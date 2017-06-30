@@ -22,6 +22,7 @@
   cannot be written to.
 - [IMPROVED] Validate HTTP writer responses when restoring a database.
 - [IMPROVED] Aborts backup and restore processes for known irrecoverable errors.
+- [IMPROVED] Retry restore batches on transient errors.
 - [FIXED] An issue where the process could exit before the backup content was
   completely flushed to the destination stream.
 - [FIXED] An issue where back pressure on the output stream was ignored
