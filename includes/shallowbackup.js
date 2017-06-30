@@ -14,61 +14,86 @@
 'use strict';
 
 const async = require('async');
+const error = require('./error.js');
+const events = require('events');
 const request = require('./request.js');
 
-module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
-  const client = request.client(dbUrl, parallelism);
-  if (typeof blocksize === 'string') {
-    blocksize = parseInt(blocksize);
-  }
-  const events = require('events');
-  const ee = new events.EventEmitter();
+// Both the 'log' and 'resume' parameters are unused in this function. They
+// exist so that the method signatures for shallow backup and backup are
+// symmetrical.
+module.exports = function(dbUrl, limit, parallelism, log, resume) {
+  if (typeof limit === 'string') limit = parseInt(limit);
 
-  var startdocid = null;
+  const client = request.client(dbUrl, parallelism);
+  const ee = new events.EventEmitter();
   const start = new Date().getTime();
-  var batch = 1;
+  var batch = 0;
+  var hasErrored = false;
+  var startKey = null;
   var total = 0;
 
-  async.doUntil(function(callback) {
-    var opts = {limit: blocksize + 1, include_docs: true};
-    if (startdocid) {
-      opts.startkey_docid = startdocid;
-    }
-    var r = {
-      url: dbUrl + '/_all_docs',
-      method: 'GET',
-      qs: opts
-    };
-    client(r, function(err, res, data) {
-      if (err || !data.rows) {
-        ee.emit('error', err || data);
-        return callback(null, null);
-      }
+  async.doUntil(
+    function(callback) {
+      var opts = {limit: limit, include_docs: true};
 
-      if (data.rows.length === blocksize + 1) {
-        startdocid = data.rows[blocksize].id;
-      } else {
-        startdocid = null;
-      }
+      // To avoid double fetching a document solely for the purposes of getting
+      // the next ID to use as a startkey for the next page we instead use the
+      // last ID of the current page and append the lowest unicode sort
+      // character.
+      if (startKey) opts.startkey = `"${startKey}\\u0000"`;
 
-      var docs = [];
-      for (var i = 0; i < Math.min(data.rows.length, blocksize); i++) {
-        delete data.rows[i].doc._rev;
-        docs.push(data.rows[i].doc);
-      }
+      var r = {
+        url: dbUrl + '/_all_docs',
+        method: 'GET',
+        qs: opts
+      };
+      client(r, function(err, res, data) {
+        if (err) {
+          ee.emit('error', err);
+          hasErrored = true; // fatal err
+          callback();
+        } else {
+          request.checkResponseAndCallbackError(res, function(err) {
+            if (err) {
+              ee.emit('error', err);
+              if (!err.isTransient) hasErrored = true; // fatal err
+              callback();
+            } else if (!data.rows) {
+              ee.emit('error', new error.BackupError(
+                'AllDocsError', 'ERROR: Invalid all docs response'));
+              callback();
+            } else {
+              if (data.rows.length < limit) {
+                startKey = null; // last batch
+              } else {
+                startKey = data.rows[limit - 1].id;
+              }
 
-      total += docs.length;
-      var t = (new Date().getTime() - start) / 1000;
-      ee.emit('received', {length: docs.length, batch: batch++, time: t, total: total, data: docs});
-      callback(null);
-    });
-  },
-  function() {
-    return (startdocid == null);
-  },
-  function(err) {
-    ee.emit('finished', {total: total, err: err});
-  });
+              var docs = [];
+              data.rows.forEach(function(doc) {
+                delete doc.doc._rev;
+                docs.push(doc.doc);
+              });
+
+              if (docs.length > 0) {
+                ee.emit('received', {
+                  batch: batch++,
+                  data: docs,
+                  length: docs.length,
+                  time: (new Date().getTime() - start) / 1000,
+                  total: total += docs.length
+                });
+              }
+
+              callback();
+            }
+          });
+        }
+      });
+    },
+    function() { return hasErrored || startKey == null; },
+    function() { ee.emit('finished', {total: total}); }
+  );
 
   return ee;
 };
