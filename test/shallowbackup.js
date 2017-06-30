@@ -59,7 +59,7 @@ describe('#unit Perform backup using shallow backup', function() {
       })
       .on('finished', function(data) {
         assert.equal(data.total, 11);
-        couch.isDone();
+        assert.ok(couch.isDone());
         done();
       });
   });
@@ -103,7 +103,7 @@ describe('#unit Perform backup using shallow backup', function() {
       })
       .on('finished', function(data) {
         assert.equal(data.total, 11);
-        couch.isDone();
+        assert.ok(couch.isDone());
         assert.equal(errCount, 1);
         done();
       });
@@ -136,7 +136,7 @@ describe('#unit Perform backup using shallow backup', function() {
       })
       .on('finished', function(data) {
         assert.equal(data.total, 6);
-        couch.isDone();
+        assert.ok(couch.isDone());
         assert.equal(errCount, 1);
         done();
       });
