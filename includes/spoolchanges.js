@@ -85,7 +85,15 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
       } else {
         resp
           .pipe(liner())
+          .on('error', function(err) {
+            c.abort();
+            callback(err);
+          })
           .pipe(change(onChange))
+          .on('error', function(err) {
+            c.abort();
+            callback(err);
+          })
           .on('finish', function() {
             processBuffer(true);
             if (!lastSeq) {
