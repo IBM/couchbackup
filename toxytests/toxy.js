@@ -29,39 +29,48 @@ function setupProxy(poison) {
     changeOrigin: true
   });
 
+  // Forward traffic to DB
+  proxy.forward(process.env.COUCH_BACKEND_URL);
+
   switch (poison) {
     case 'normal':
-      proxy
-        .forward(process.env.COUCH_BACKEND_URL)
-        .all('/*');
+      // No poisons to add
       break;
     case 'bandwidth-limit':
       // https://github.com/h2non/toxy#bandwidth
+      // Note the implementation of bandwidth is simplistic and the threshold
+      // delay is applied to every write of the buffer, so use the smallest
+      // delay possible and adjust the rate using the bytes size instead.
       proxy
-        .forward(process.env.COUCH_BACKEND_URL)
-        .poison(tpoisons.bandwidth({ bps: 256 * 1024 })) // 256 kB/s
-        .all('/*');
+        .poison(tpoisons.bandwidth({ bytes: 512, threshold: 1 })); // 0.5 MB/s
       break;
     case 'latency':
       // https://github.com/h2non/toxy#latency
       proxy
-        .forward(process.env.COUCH_BACKEND_URL)
-        .poison(tpoisons.latency({ max: 10000, min: 100 }))
-        .withRule(trules.probability(50))
-        .all('/*');
+        .poison(tpoisons.latency({ max: 1500, min: 250 }))
+        .withRule(trules.probability(60));
       break;
     case 'slow-read':
       // https://github.com/h2non/toxy#slow-read
       proxy
-        .forward(process.env.COUCH_BACKEND_URL)
-        .poison(tpoisons.slowRead({ bps: 1024, threshold: 100 }))
-        .withRule(trules.probability(50))
-        .all('/*');
+        .poison(tpoisons.slowRead({ chunk: 256, threshold: 1 }))
+        // Slow read for 10 % of the time e.g. 1 ms in every 100
+        .withRule(trules.timeThreshold({ duration: 1, period: 100 }));
+      break;
+    case 'rate-limit':
+      // https://github.com/h2non/toxy#rate-limit
+      // Simulate the Cloudant free plan with 20 lookups ps and 10 writes ps
+      proxy.post('/*/_bulk_get')
+         .poison(tpoisons.rateLimit({ limit: 20, threshold: 1000 }));
+      proxy.post('/*/_bulk_docs')
+         .poison(tpoisons.rateLimit({ limit: 10, threshold: 1000 }));
       break;
     default:
       throw Error('Unknown toxy poison ' + poison);
   }
 
+  // Catch remaining traffic
+  proxy.all('/*');
   return proxy;
 }
 
@@ -69,7 +78,8 @@ const poisons = [
   'normal',
   'bandwidth-limit',
   'latency',
-  'slow-read'
+  'slow-read',
+  'rate-limit'
 ];
 
 poisons.forEach(function(poison) {

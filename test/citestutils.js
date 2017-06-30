@@ -106,6 +106,9 @@ function testBackup(params, databaseName, outputStream, callback) {
         callback();
       }
     });
+    backup.on('error', function(err) {
+      console.error(`Caught non-fatal error: ${err}`);
+    });
   } else {
     // Default to pipe, but will use 'inherit' if using --output (see params.opts.output)
     var destination = 'pipe';
