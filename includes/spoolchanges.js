@@ -18,6 +18,7 @@ const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
+const debug = require('debug')('couchbackup:spoolchanges');
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -40,6 +41,7 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
   // send documents ids to the queue in batches of bufferSize + the last batch
   var processBuffer = function(lastOne) {
     if (buffer.length >= bufferSize || (lastOne && buffer.length > 0)) {
+      debug('writing', buffer.length, 'changes to the backup file');
       var b = { docs: buffer.splice(0, bufferSize), batch: batch };
       logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
       ee.emit('changes', batch);
@@ -88,8 +90,10 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
             processBuffer(true);
             if (!lastSeq) {
               logStream.end();
+              debug('changes request terminated before last_seq was sent');
               callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
             } else {
+              debug('finished streaming database changes');
               logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
             }
           });
