@@ -59,9 +59,10 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     });
   }, parallelism);
 
+  var didError = false;
+
   // write the contents of the buffer to CouchDB in blocks of bufferSize
   function processBuffer(flush, callback) {
-    var didError = false;
     function taskCallback(err) {
       if (err && !didError) {
         debug(`Queue task failed with error ${err.name}`);

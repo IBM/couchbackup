@@ -18,16 +18,25 @@ const request = require('./request.js');
 module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callback) {
   exists(dbUrl, function(err, exists) {
     if (err) {
-      callback(err, null);
+      callback(err);
       return;
     }
 
-    var liner = require('../includes/liner.js');
+    var liner = require('../includes/liner.js')();
     var writer = require('../includes/writer.js')(dbUrl, buffersize, parallelism, ee);
 
+    var errHandler = function(err) {
+      if (!err.isTransient) {
+        readstream.destroy();
+      }
+    };
+
     // pipe the input to the output, via transformation functions
-    readstream.pipe(liner())        // transform the input stream into per-line
-      .pipe(writer); // transform the data
+    readstream
+      .pipe(liner) // transform the input stream into per-line
+      .on('error', errHandler)
+      .pipe(writer) // transform the data
+      .on('error', errHandler);
 
     callback(null, writer);
   });
