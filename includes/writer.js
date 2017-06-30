@@ -50,7 +50,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
       }
       if (err) {
         debug(`Error writing docs ${err.name} ${err.message}`);
-        if (err.isFatal) {
+        if (!err.isTransient) {
           debug(`Fatal error: ${err.name}`);
           response.abort();
           q.kill();

@@ -86,7 +86,7 @@ function validateBulkGetSupport(dbUrl, callback) {
     request.checkResponseAndCallbackError(res, callback, function(res) {
       switch (res.statusCode) {
         case 404:
-          return new error.BackupError('BulkGetError', 'ERROR: Database does not support /_bulk_get endpoint');
+          return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
         case 405:
           // => supports /_bulk_get endpoint
           return;
@@ -133,7 +133,7 @@ function downloadRemainingBatches(log, dbUrl, ee, startTime, batchesPerDownloadS
     readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, function(err, batchSetIds) {
       if (err) {
         ee.emit('error', err);
-        if (err.isFatal) {
+        if (!err.isTransient) {
           // Stop processing changes file for fatal errors
           noRemainingBatches = true;
         }
@@ -228,7 +228,7 @@ function processBatchSet(dbUrl, parallelism, log, batches, ee, start, grandtotal
       } else {
         request.checkResponseAndCallbackError(res, function(err) {
           if (err) {
-            if (err.isFatal) {
+            if (!err.isTransient) {
               // Kill the queue for fatal errors
               q.kill();
             }

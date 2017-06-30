@@ -32,7 +32,7 @@ class BackupError extends Error {
   constructor(name, message) {
     super(message);
     this.name = name;
-    this.isFatal = codes[name] !== undefined || false;
+    this.isTransient = codes[name] === undefined;
   }
 }
 
@@ -70,7 +70,7 @@ module.exports = {
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
-        console.error(err.message);
+        console.error(`ERROR: ${err.message}`);
         process.exitCode = codes[err.name] || 1;
       });
       throw err;
