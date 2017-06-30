@@ -41,7 +41,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
       body: payload
     };
 
-    const response = client(r, function(err, res, data) {
+    client(r, function(err, res, data) {
       if (!err) {
         // No request error, check the response for an error
         request.checkResponseAndCallbackFatalError(res, function(responseError) {
@@ -50,16 +50,7 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
       }
       if (err) {
         debug(`Error writing docs ${err.name} ${err.message}`);
-        if (!err.isTransient) {
-          debug(`Fatal error: ${err.name}`);
-          response.abort();
-          q.kill();
-          cb(err);
-        } else {
-          debug(`Emitting non-fatal error: ${err.name}`);
-          writer.emit('error', err);
-          cb();
-        }
+        cb(err);
       } else {
         written += payload.docs.length;
         writer.emit('restored', {documents: payload.docs.length, total: written});
@@ -68,14 +59,18 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     });
   }, parallelism);
 
+  var didError = false;
+
   // write the contents of the buffer to CouchDB in blocks of bufferSize
   function processBuffer(flush, callback) {
-    var didError = false;
     function taskCallback(err) {
       if (err && !didError) {
         debug(`Queue task failed with error ${err.name}`);
-        didError = true;
-        callback(err);
+        if (!err.isTransient) {
+          didError = true;
+          q.kill();
+        }
+        writer.emit('error', err);
       }
     }
 
