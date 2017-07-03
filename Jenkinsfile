@@ -114,7 +114,7 @@ stage('QA') {
     Node:{ setupNodeAndTest('node', filter) } // Current
   ]
   // Add unreliable network tests if specified
-  if (env.RUN_TOXY_TESTS) {
+  if (env.RUN_TOXY_TESTS && env.RUN_TOXY_TESTS.toBoolean()) {
     axes.Network = { setupNodeAndTest('node', '', 'toxytests/toxy') }
   }
   // Run the required axes in parallel
