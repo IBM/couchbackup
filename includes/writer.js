@@ -44,13 +44,13 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     client(r, function(err, res, data) {
       if (!err) {
         // No request error, check the response for an error
-        request.checkResponseAndCallbackFatalError(res, function(responseError) {
+        request.checkResponseAndCallbackError(res, function(responseError) {
           err = responseError;
         });
       }
       if (err) {
         debug(`Error writing docs ${err.name} ${err.message}`);
-        cb(err);
+        cb(err, payload);
       } else {
         written += payload.docs.length;
         writer.emit('restored', {documents: payload.docs.length, total: written});
@@ -63,10 +63,12 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
 
   // write the contents of the buffer to CouchDB in blocks of bufferSize
   function processBuffer(flush, callback) {
-    function taskCallback(err) {
+    function taskCallback(err, payload) {
       if (err && !didError) {
         debug(`Queue task failed with error ${err.name}`);
-        if (!err.isTransient) {
+        if (err.isTransient) {
+          q.push(payload, taskCallback); // re-enqueue
+        } else {
           didError = true;
           q.kill();
         }
