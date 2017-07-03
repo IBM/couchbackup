@@ -56,6 +56,21 @@ describe('#unit Check request response error callback', function() {
     });
   });
 
+  it('should callback with error for 429 response', function(done) {
+    var couch = nock(url)
+        .get('/bad')
+        .reply(429, {error: 'foo', reason: 'bar'});
+
+    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
+      request.checkResponseAndCallbackError(res, function(err) {
+        assert.equal(err.name, 'HTTPError');
+        assert.equal(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
+        assert.ok(couch.isDone());
+        done();
+      });
+    });
+  });
+
   it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
         .get('/bad')
