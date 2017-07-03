@@ -372,8 +372,9 @@ details them.
 
 * `1`: unknown CLI option or generic error.
 * `2`: invalid CLI option.
-* `11`: unauthorized credentials for the database
-* `12`: incorrect permissions for the database
+* `11`: unauthorized credentials for the database.
+* `12`: incorrect permissions for the database.
+* `40`: database returned a fatal HTTP error.
 
 ### `couchbackup`
 
@@ -381,6 +382,7 @@ details them.
 * `21`: the resume log file does not exist.
 * `22`: incomplete changes in log file.
 * `30`: error spooling changes from the database.
+* `50`: source database does not support `/_bulk_get` endpoint.
 
 ### `couchrestore`
 
