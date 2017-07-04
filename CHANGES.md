@@ -1,17 +1,17 @@
-# Unreleased
+# 2.0.0 (2017-07-04)
 
-- [NEW] Moved to https://github.com/cloudant/couchbackup repository
-- [NEW] API for using as library is more Node.js like.
+- [NEW] Moved to https://github.com/cloudant/couchbackup repository.
 - [NEW] Validate backup/restore options.
 - [NEW] Add User-Agent header to all requests.
-- [NEW] Verify database supports `/_bulk_get` endpoint prior to running backup.
 - [NEW] Added unique CLI exit codes for known error conditions.
+- [NEW] API for using as library that is more Node.js-like.
+- [NEW] Added `changes` event for each batch spooled from the changes feed.
 - [BREAKING CHANGE] The --buffer option is now --buffer-size.
-- [BREAKING CHANGE] Removed legacy 1.x API.
 - [BREAKING CHANGE] The `writeerror` event is now just `error`.
 - [BREAKING CHANGE] The `writecomplete` event is now `finished`.
 - [BREAKING CHANGE] For restoring, the `written` event is now `restored`.
-- [DEPRECATED] Previous API functions.
+- [REMOVED] Removed legacy 1.x API.
+- [IMPROVED] Verify database supports `/_bulk_get` endpoint prior to running backup.
 - [IMPROVED] Existence of the restore destination database is checked before
   starting the restore process.
 - [IMPROVED] Added compression for backup HTTP responses, where supported by the
@@ -20,7 +20,7 @@
   parallelism.
 - [IMPROVED] Better error handling in couchrestore when remote database
   cannot be written to.
-- [IMPROVED] Validate HTTP writer responses when restoring a database.
+- [IMPROVED] Validate HTTP responses when restoring a database.
 - [IMPROVED] Aborts backup and restore processes for known irrecoverable errors.
 - [IMPROVED] Retry restore batches on transient errors.
 - [FIXED] An issue where the process could exit before the backup content was

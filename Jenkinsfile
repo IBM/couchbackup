@@ -98,12 +98,7 @@ stage('QA') {
   if (env.TEST_FILTER == null) {
     // The set of default tests includes unit and integration tests, but
     // not ones tagged #slower, #slowest.
-    // For release builds include the #slower, but not #slowest.
-    if (isReleaseVersion) {
-      filter = '-i -g \'#slowest\''
-    } else {
-      filter = '-i -g \'#slowe\''
-    }
+    filter = '-i -g \'#slowe\''
   } else {
     filter = env.TEST_FILTER
   }
