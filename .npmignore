@@ -9,6 +9,7 @@ examples
 
 # docs
 CONTRIBUTING.md
+DCO1.1.txt
 
 # github config
 .github
@@ -22,6 +23,7 @@ CONTRIBUTING.md
 # tests
 citest
 test
+toxytests
 
 # test logs
 backup.txt
