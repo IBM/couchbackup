@@ -17,11 +17,13 @@
 
 const assert = require('assert');
 const nock = require('nock');
-
+const request = require('../includes/request.js');
 const changes = require('../includes/spoolchanges.js');
 
 const url = 'http://localhost:7777';
 const dbName = 'fakenockdb';
+
+const db = request.client(`${url}/${dbName}`, 1);
 
 describe('#unit Check spool changes', function() {
   it('should terminate on request error', function(done) {
@@ -30,7 +32,7 @@ describe('#unit Check spool changes', function() {
       .query(true)
       .replyWithError({code: 'ECONNRESET', message: 'socket hang up'});
 
-    changes(`${url}/${dbName}`, '/dev/null', 500, null, function(err) {
+    changes(db, '/dev/null', 500, null, function(err) {
       assert.equal(err.name, 'SpoolChangesError');
       assert.equal(err.message, 'Failed changes request - socket hang up');
       done();
@@ -43,7 +45,7 @@ describe('#unit Check spool changes', function() {
       .query(true)
       .reply(500, {error: 'foo', reason: 'bar'});
 
-    changes(`${url}/${dbName}`, '/dev/null', 500, null, function(err) {
+    changes(db, '/dev/null', 500, null, function(err) {
       assert.equal(err.name, 'HTTPFatalError');
       assert.equal(err.message, `500 : GET ${url}/${dbName}/_changes?seq_interval=10000`);
       done();

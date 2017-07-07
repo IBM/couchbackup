@@ -22,9 +22,10 @@ const request = require('./request.js');
 // exist so that the method signatures for shallow backup and backup are
 // symmetrical.
 module.exports = function(dbUrl, limit, parallelism, log, resume) {
+  var db = request.client(dbUrl, parallelism);
+
   if (typeof limit === 'string') limit = parseInt(limit);
 
-  const client = request.client(dbUrl, parallelism);
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
   var batch = 0;
@@ -34,60 +35,48 @@ module.exports = function(dbUrl, limit, parallelism, log, resume) {
 
   async.doUntil(
     function(callback) {
-      var opts = {limit: limit, include_docs: true};
+      // Note, include_docs: true is set automatically when using the
+      // fetch function.
+      var opts = {limit: limit};
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
       // last ID of the current page and append the lowest unicode sort
       // character.
-      if (startKey) opts.startkey = `"${startKey}\\u0000"`;
-
-      var r = {
-        url: dbUrl + '/_all_docs',
-        method: 'GET',
-        qs: opts
-      };
-      client(r, function(err, res, data) {
+      if (startKey) opts.startkey = `${startKey}\0`;
+      db.fetch({}, opts, function(err, body) {
         if (err) {
+          err = error.convertResponseError(err);
           ee.emit('error', err);
-          hasErrored = true; // fatal err
+          if (!err.isTransient) hasErrored = true; // fatal err
+          callback();
+        } else if (!body.rows) {
+          ee.emit('error', new error.BackupError(
+            'AllDocsError', 'ERROR: Invalid all docs response'));
           callback();
         } else {
-          request.checkResponseAndCallbackError(res, function(err) {
-            if (err) {
-              ee.emit('error', err);
-              if (!err.isTransient) hasErrored = true; // fatal err
-              callback();
-            } else if (!data.rows) {
-              ee.emit('error', new error.BackupError(
-                'AllDocsError', 'ERROR: Invalid all docs response'));
-              callback();
-            } else {
-              if (data.rows.length < limit) {
-                startKey = null; // last batch
-              } else {
-                startKey = data.rows[limit - 1].id;
-              }
+          if (body.rows.length < limit) {
+            startKey = null; // last batch
+          } else {
+            startKey = body.rows[limit - 1].id;
+          }
 
-              var docs = [];
-              data.rows.forEach(function(doc) {
-                delete doc.doc._rev;
-                docs.push(doc.doc);
-              });
-
-              if (docs.length > 0) {
-                ee.emit('received', {
-                  batch: batch++,
-                  data: docs,
-                  length: docs.length,
-                  time: (new Date().getTime() - start) / 1000,
-                  total: total += docs.length
-                });
-              }
-
-              callback();
-            }
+          var docs = [];
+          body.rows.forEach(function(doc) {
+            delete doc.doc._rev;
+            docs.push(doc.doc);
           });
+
+          if (docs.length > 0) {
+            ee.emit('received', {
+              batch: batch++,
+              data: docs,
+              length: docs.length,
+              time: (new Date().getTime() - start) / 1000,
+              total: total += docs.length
+            });
+          }
+          callback();
         }
       });
     },

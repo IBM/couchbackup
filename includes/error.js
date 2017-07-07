@@ -37,13 +37,14 @@ class BackupError extends Error {
 }
 
 class HTTPError extends BackupError {
-  constructor(resp, name) {
-    var errMsg = `${resp.statusCode} ${resp.statusMessage || ''}: ${resp.request.method} ${resp.request.uri.href}`;
-    if (resp.body && resp.body.error && resp.body.reason) {
-      errMsg += ` - Error: ${resp.body.error}, Reason: ${resp.body.reason}`;
+  constructor(responseError, name) {
+    var errMsg = `${responseError.statusCode} ${responseError.statusMessage || ''}: ` +
+     `${responseError.request.method} ${(typeof responseError.request.uri === 'object') ? responseError.request.uri.href : responseError.request.uri}`;
+    if (responseError.error && responseError.reason) {
+      errMsg += ` - Error: ${responseError.error}, Reason: ${responseError.reason}`;
     }
     // Special case some names for more useful error messages
-    switch (resp.statusCode) {
+    switch (responseError.statusCode) {
       case 401:
         name = 'Unauthorized';
         break;
@@ -63,10 +64,63 @@ class HTTPFatalError extends HTTPError {
   }
 }
 
+// Default function to return an error for HTTP status codes
+// < 400 -> OK
+// 4XX (except 429) -> Fatal
+// 429 & >=500 -> Transient
+function checkResponse(err) {
+  if (err) {
+    // Codes < 400 are considered OK
+    if (err.statusCode === 429 || err.statusCode >= 500) {
+      return new HTTPError(err);
+    } else if (err.statusCode >= 400) {
+      return new HTTPFatalError(err);
+    } else {
+      // Send it back again if there was no status code, e.g. a cxn error
+      return augmentMessage(err);
+    }
+  }
+}
+
+function convertResponseError(responseError, errorFactory) {
+  if (!errorFactory) {
+    errorFactory = checkResponse;
+  }
+  return errorFactory(responseError);
+}
+
+function convertResponseErrorToFatal(responseError) {
+  return convertResponseError(responseError, function(err) {
+    // When there are no retries any >=400 error needs to be fatal
+    if (err && err.statusCode >= 400) {
+      return new HTTPFatalError(err);
+    } else {
+      // Handle e.g. connection errors without a status code
+      return augmentMessage(err);
+    }
+  });
+}
+
+function augmentMessage(err) {
+  // For errors that don't have a status code, we are likely looking at a cxn
+  // error.
+  // Try to augment the message with more detail
+  // TODO add this extra message detail to nano?
+  if (err && err.code) {
+    err.message = `${err.message} ${err.code}`;
+  }
+  if (err && err.description) {
+    err.message = `${err.message} ${err.description}`;
+  }
+  return err;
+}
+
 module.exports = {
   BackupError: BackupError,
   HTTPError: HTTPError,
   HTTPFatalError: HTTPFatalError,
+  convertResponseError: convertResponseError,
+  convertResponseErrorToFatal: convertResponseErrorToFatal,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
