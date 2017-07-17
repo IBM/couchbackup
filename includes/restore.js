@@ -27,7 +27,7 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
 
     var errHandler = function(err) {
       if (!err.isTransient) {
-        readstream.destroy();
+        readstream.emit('end');
       }
     };
 
