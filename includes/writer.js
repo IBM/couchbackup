@@ -120,7 +120,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     // it should contain an array of objects. The length of the array
     // depends on the bufferSize at backup time.
     linenumber++;
-    if (obj !== '') {
+    if (!didError && obj !== '') {
       // see if it parses as JSON
       try {
         var arr = JSON.parse(obj);

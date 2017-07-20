@@ -28,18 +28,15 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
     var liner = require('../includes/liner.js')();
     var writer = require('../includes/writer.js')(db, buffersize, parallelism, ee);
 
-    var errHandler = function(err) {
-      if (!err.isTransient) {
-        readstream.destroy();
-      }
-    };
-
     // pipe the input to the output, via transformation functions
     readstream
       .pipe(liner) // transform the input stream into per-line
-      .on('error', errHandler)
-      .pipe(writer) // transform the data
-      .on('error', errHandler);
+      .on('error', function(err) {
+        // Forward the error to the writer event emitter where we already have
+        // listeners on for handling errors
+        writer.emit('error', err);
+      })
+      .pipe(writer); // transform the data
 
     callback(null, writer);
   });
