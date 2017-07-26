@@ -18,9 +18,10 @@
 var assert = require('assert');
 var nock = require('nock');
 var request = require('../includes/request.js');
+var error = require('../includes/error.js');
 
-const url = 'http://localhost:7777';
-const client = request.client(url, 1);
+const url = 'http://localhost:7777/testdb';
+const db = request.client(url, 1);
 
 describe('#unit Check request response error callback', function() {
   beforeEach('Clean nock', function() {
@@ -32,12 +33,11 @@ describe('#unit Check request response error callback', function() {
         .get('/good')
         .reply(200, {ok: true});
 
-    client({url: url + '/good', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err, null);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('good', function(err) {
+      err = error.convertResponseError(err);
+      assert.equal(err, null);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 
@@ -46,13 +46,30 @@ describe('#unit Check request response error callback', function() {
         .get('/bad')
         .reply(500, {error: 'foo', reason: 'bar'});
 
-    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err.name, 'HTTPError');
-        assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('bad', function(err) {
+      err = error.convertResponseError(err);
+      assert.equal(err.name, 'HTTPError');
+      assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.ok(couch.isDone());
+      done();
+    });
+  });
+
+  it('should callback with error for POST 503 response', function(done) {
+    var couch = nock(url)
+        .post('/bad')
+        .query(true)
+        .reply(503, {error: 'service_unavailable', reason: 'Service unavailable'});
+
+    db.server.request(
+    {method: 'POST', db: db.config.db, path: 'bad', qs: {revs: true}, body: {}},
+    function(err, body) {
+      assert.ok(err);
+      err = error.convertResponseError(err);
+      assert.equal(err.name, 'HTTPError');
+      assert.equal(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 
@@ -61,13 +78,12 @@ describe('#unit Check request response error callback', function() {
         .get('/bad')
         .reply(429, {error: 'foo', reason: 'bar'});
 
-    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err.name, 'HTTPError');
-        assert.equal(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('bad', function(err) {
+      err = error.convertResponseError(err);
+      assert.equal(err.name, 'HTTPError');
+      assert.equal(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 
@@ -76,13 +92,12 @@ describe('#unit Check request response error callback', function() {
         .get('/bad')
         .reply(404, {error: 'foo', reason: 'bar'});
 
-    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('bad', function(err) {
+      err = error.convertResponseError(err);
+      assert.equal(err.name, 'HTTPFatalError');
+      assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 });
@@ -93,12 +108,11 @@ describe('#unit Check request response fatal error callback', function() {
         .get('/good')
         .reply(200, {ok: true});
 
-    client({url: url + '/good', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err, null);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('good', function(err) {
+      err = error.convertResponseErrorToFatal(err);
+      assert.equal(err, null);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 
@@ -107,13 +121,12 @@ describe('#unit Check request response fatal error callback', function() {
         .get('/bad')
         .reply(500, {error: 'foo', reason: 'bar'});
 
-    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackFatalError(res, function(err) {
-        assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('bad', function(err) {
+      err = error.convertResponseErrorToFatal(err);
+      assert.equal(err.name, 'HTTPFatalError');
+      assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 
@@ -122,13 +135,25 @@ describe('#unit Check request response fatal error callback', function() {
         .get('/bad')
         .reply(404, {error: 'foo', reason: 'bar'});
 
-    client({url: url + '/bad', method: 'GET'}, function(err, res, data) {
-      request.checkResponseAndCallbackError(res, function(err) {
-        assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
-        assert.ok(couch.isDone());
-        done();
-      });
+    db.get('bad', function(err) {
+      err = error.convertResponseErrorToFatal(err);
+      assert.equal(err.name, 'HTTPFatalError');
+      assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.ok(couch.isDone());
+      done();
+    });
+  });
+
+  it('should callback with same error for no status code error response', function(done) {
+    var couch = nock(url)
+        .get('/bad')
+        .replyWithError('testing badness');
+
+    db.get('bad', function(err) {
+      const err2 = error.convertResponseError(err);
+      assert.equal(err, err2);
+      assert.ok(couch.isDone());
+      done();
     });
   });
 });

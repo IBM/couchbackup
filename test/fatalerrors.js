@@ -92,19 +92,19 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for backup', function() {
       it('should terminate on BulkGetError', function(done) {
         // Simulate _bulk_get not available
-        nock(url).get('/fakenockdb/_bulk_get').reply(404, {error: 'not_found', reason: 'missing'});
+        nock(url).head('/fakenockdb/_bulk_get').reply(404, {error: 'not_found', reason: 'missing'});
         backupHttpError(params, 'BulkGetError', 50, done);
       });
 
       it('should terminate on Unauthorized _bulk_get check', function(done) {
         // Simulate a 401
-        nock(url).get('/fakenockdb/_bulk_get').reply(401, {error: 'unauthorized', reason: '_reader access is required for this request'});
+        nock(url).head('/fakenockdb/_bulk_get').reply(401, {error: 'unauthorized', reason: '_reader access is required for this request'});
         backupHttpError(params, 'Unauthorized', 11, done);
       });
 
-      it('terminate on Forbidden no _reader', function(done) {
+      it('should terminate on Forbidden no _reader', function(done) {
         // Simulate a 403
-        nock(url).get('/fakenockdb/_bulk_get').reply(403, {error: 'forbidden', reason: '_reader access is required for this request'});
+        nock(url).head('/fakenockdb/_bulk_get').reply(403, {error: 'forbidden', reason: '_reader access is required for this request'});
         backupHttpError(params, 'Forbidden', 12, done);
       });
 
@@ -112,7 +112,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Provide a mock complete changes log to allow a resume to skip ahead
         const p = u.p(params, {opts: {resume: true, log: './test/fixtures/test.log'}});
         // Allow the _bulk_get check to pass
-        const n = nock(url).get('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        const n = nock(url).head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
         n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, {error: 'bad_request', reason: 'testing bad response'});
         backupHttpError(p, 'HTTPFatalError', 40, done);
@@ -134,14 +134,14 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Use an incomplete changes log file
         const p = u.p(params, {opts: {resume: true, log: './test/fixtures/incomplete_changes.log'}});
         // Mock allow the _bulk_get check to pass
-        nock(url).get('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        nock(url).head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Should fail when it reads the incomplete changes
         backupHttpError(p, 'IncompleteChangesInLogFile', 22, done);
       });
 
       it('should terminate on _changes HTTPFatalError', function(done) {
         // Allow the _bulk_get check to pass
-        const n = nock(url).get('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        const n = nock(url).head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
         n.get('/fakenockdb/_changes').query(true).reply(400, {error: 'bad_request', reason: 'testing bad response'});
         backupHttpError(params, 'HTTPFatalError', 40, done);
@@ -149,7 +149,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on SpoolChangesError', function(done) {
         // Allow the _bulk_get check to pass
-        const n = nock(url).get('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        const n = nock(url).head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a changes without a last_seq
         n.get('/fakenockdb/_changes').query(true).reply(200,
           {results: [{seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',

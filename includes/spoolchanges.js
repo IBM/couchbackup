@@ -13,7 +13,6 @@
 // limitations under the License.
 'use strict';
 
-const request = require('./request.js');
 const fs = require('fs');
 const liner = require('./liner.js');
 const change = require('./change.js');
@@ -29,9 +28,7 @@ const debug = require('debug')('couchbackup:spoolchanges');
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {function(err)} callback - a callback to run on completion
  */
-module.exports = function(dbUrl, log, bufferSize, ee, callback) {
-  const client = request.client(dbUrl, 1);
-
+module.exports = function(db, log, bufferSize, ee, callback) {
   // list of document ids to process
   var buffer = [];
   var batch = 0;
@@ -65,47 +62,34 @@ module.exports = function(dbUrl, log, bufferSize, ee, callback) {
   };
 
   // stream the changes feed to disk
-  var r = {
-    url: dbUrl + '/_changes',
-    qs: { seq_interval: 10000 }
-  };
-  var c = client(r);
-  c.end();
-
-  c.on('error', function(err) {
-    c.abort();
+  var changesRequest = db.changes({ seq_interval: 10000 })
+  .on('error', function(err) {
     callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-  });
-
-  c.on('response', function(resp) {
-    request.checkResponseAndCallbackFatalError(resp, function(err) {
-      if (err) {
-        c.abort();
+  })
+  .on('response', function(resp) {
+    if (resp.statusCode >= 400) {
+      changesRequest.abort();
+      callback(error.convertResponseErrorToFatal(resp));
+    } else {
+      resp.pipe(liner())
+      .on('error', function(err) {
         callback(err);
-      } else {
-        resp
-          .pipe(liner())
-          .on('error', function(err) {
-            c.abort();
-            callback(err);
-          })
-          .pipe(change(onChange))
-          .on('error', function(err) {
-            c.abort();
-            callback(err);
-          })
-          .on('finish', function() {
-            processBuffer(true);
-            if (!lastSeq) {
-              logStream.end();
-              debug('changes request terminated before last_seq was sent');
-              callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
-            } else {
-              debug('finished streaming database changes');
-              logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
-            }
-          });
-      }
-    });
+      })
+      .pipe(change(onChange))
+      .on('error', function(err) {
+        callback(err);
+      })
+      .on('finish', function() {
+        processBuffer(true);
+        if (!lastSeq) {
+          logStream.end();
+          debug('changes request terminated before last_seq was sent');
+          callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
+        } else {
+          debug('finished streaming database changes');
+          logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
+        }
+      });
+    }
   });
 };

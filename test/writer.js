@@ -18,11 +18,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const nock = require('nock');
-
+const request = require('../includes/request.js');
 const writer = require('../includes/writer.js');
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
+  const db = request.client(dbUrl, 1);
 
   beforeEach('Reset nocks', function() {
     nock.cleanAll();
@@ -34,7 +35,7 @@ describe('#unit Check database restore writer', function() {
       .reply(200, {ok: true}); // success
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(dbUrl, 500, 1, null))
+      .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
         done(err);
       })
@@ -51,7 +52,7 @@ describe('#unit Check database restore writer', function() {
       .reply(401, {error: 'Unauthorized'}); // fatal error
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(dbUrl, 500, 1, null))
+      .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
         assert.equal(err.name, 'Unauthorized');
         assert.equal(err.message, `401 : POST ${dbUrl}/_bulk_docs`);
@@ -72,7 +73,7 @@ describe('#unit Check database restore writer', function() {
       .reply(200, {ok: true}); // success
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(dbUrl, 500, 1, null))
+      .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
         if (!err.isTransient) {
           done(err);

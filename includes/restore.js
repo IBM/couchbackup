@@ -14,16 +14,19 @@
 'use strict';
 
 const request = require('./request.js');
+const error = require('./error.js');
 
 module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callback) {
-  exists(dbUrl, function(err, exists) {
+  var db = request.client(dbUrl, parallelism);
+
+  exists(db, function(err) {
     if (err) {
       callback(err);
       return;
     }
 
     var liner = require('../includes/liner.js')();
-    var writer = require('../includes/writer.js')(dbUrl, buffersize, parallelism, ee);
+    var writer = require('../includes/writer.js')(db, buffersize, parallelism, ee);
 
     var errHandler = function(err) {
       if (!err.isTransient) {
@@ -47,31 +50,21 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
   @param {string} couchDbUrl - Database URL
   @param {function(err, exists)} callback - exists is true if database exists
 */
-function exists(dbUrl, callback) {
-  var r = {
-    url: dbUrl,
-    method: 'HEAD'
-  };
-  const client = request.client(dbUrl, 1);
-  client(r, function(err, res) {
-    if (err) {
-      callback(err);
-      return;
-    }
-    if (res) {
-      request.checkResponseAndCallbackFatalError(res, function(err) {
-        if (err) {
-          if (res.statusCode === 404) {
-            // Override the error type and mesasge for the DB not found case
-            err = new Error(`Database ${dbUrl} does not exist. ` +
-              'Create the target database before restoring.');
-            err.name = 'RestoreDatabaseNotFound';
-          }
-          callback(err);
-        } else {
-          callback(null);
-        }
-      });
-    }
+function exists(db, callback) {
+  db.head('', function(err) {
+    err = error.convertResponseError(err, function(err) {
+      if (err && err.statusCode === 404) {
+        // Override the error type and mesasge for the DB not found case
+        var noDBErr = new Error(`Database ${db.config.url}/${db.config.db} does not exist. ` +
+          'Create the target database before restoring.');
+        noDBErr.name = 'RestoreDatabaseNotFound';
+        return noDBErr;
+      } else {
+        // Delegate to the fatal error factory if it wasn't a 404
+        return error.convertResponseErrorToFatal(err);
+      }
+    });
+    // Callback with or without (i.e. undefined) error
+    callback(err);
   });
 }

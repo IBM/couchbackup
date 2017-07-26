@@ -16,40 +16,10 @@
 const pkg = require('../package.json');
 const http = require('http');
 const https = require('https');
-const request = require('request');
-const error = require('./error.js');
+const cloudant = require('cloudant');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
-
-// Default function to return an error for HTTP status codes
-// < 400 -> OK
-// 4XX (except 429) -> Fatal
-// 429 & >=500 -> Transient
-function checkResponse(resp) {
-  // Codes < 400 are considered OK
-  if (resp.statusCode === 429 || resp.statusCode >= 500) {
-    return new error.HTTPError(resp);
-  } else if (resp.statusCode >= 400) {
-    return new error.HTTPFatalError(resp);
-  }
-}
-
-function checkResponseAndCallbackError(resp, callback, errorFactory) {
-  if (!errorFactory) {
-    errorFactory = checkResponse;
-  }
-  callback(errorFactory(resp));
-}
-
-function checkResponseAndCallbackFatalError(resp, callback) {
-  checkResponseAndCallbackError(resp, callback, function(resp) {
-    // When there are no retries any >=400 error needs to be fatal
-    if (resp.statusCode >= 400) {
-      return new error.HTTPFatalError(resp);
-    }
-  });
-}
 
 module.exports = {
   client: function(url, parallelism) {
@@ -59,12 +29,13 @@ module.exports = {
       keepAliveMsecs: 30000,
       maxSockets: parallelism
     });
-    return request.defaults({
-      agent: keepAliveAgent,
-      headers: {'User-Agent': userAgent},
-      json: true,
-      gzip: true});
-  },
-  checkResponseAndCallbackError: checkResponseAndCallbackError,
-  checkResponseAndCallbackFatalError: checkResponseAndCallbackFatalError
+    // Split the URL for use with nodejs-cloudant
+    var actUrl = url.substr(0, url.lastIndexOf('/'));
+    var dbName = url.substr(url.lastIndexOf('/') + 1);
+    return cloudant({url: actUrl,
+      requestDefaults: {
+        agent: keepAliveAgent,
+        headers: {'User-Agent': userAgent},
+        gzip: true}}).use(dbName);
+  }
 };

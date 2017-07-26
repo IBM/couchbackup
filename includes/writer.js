@@ -14,14 +14,12 @@
 'use strict';
 
 const async = require('async');
-const request = require('./request.js');
 const stream = require('stream');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:writer');
 
-module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
+module.exports = function(db, bufferSize, parallelism, ee) {
   const writer = new stream.Transform({objectMode: true});
-  const client = request.client(couchDbUrl, parallelism);
   var buffer = [];
   var written = 0;
   var linenumber = 0;
@@ -35,19 +33,9 @@ module.exports = function(couchDbUrl, bufferSize, parallelism, ee) {
     if (payload.docs && payload.docs[0] && payload.docs[0]._rev) {
       payload.new_edits = false;
     }
-    var r = {
-      url: couchDbUrl + '/_bulk_docs',
-      method: 'POST',
-      body: payload
-    };
 
-    client(r, function(err, res, data) {
-      if (!err) {
-        // No request error, check the response for an error
-        request.checkResponseAndCallbackError(res, function(responseError) {
-          err = responseError;
-        });
-      }
+    db.bulk(payload, function(err) {
+      err = error.convertResponseError(err);
       if (err) {
         debug(`Error writing docs ${err.name} ${err.message}`);
         cb(err, payload);

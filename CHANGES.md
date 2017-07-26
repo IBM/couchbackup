@@ -1,3 +1,6 @@
+# Unreleased
+- [NEW] Changed to use nodejs-cloudant for database requests.
+
 # 2.0.0 (2017-07-04)
 
 - [NEW] Moved to https://github.com/cloudant/couchbackup repository.
