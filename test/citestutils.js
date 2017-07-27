@@ -279,12 +279,22 @@ function testRestore(params, inputStream, databaseName, callback) {
         args.push('--buffer-size');
         args.push(params.opts.bufferSize);
       }
+      if (params.opts.parallelism) {
+        args.push('--parallelism');
+        args.push(params.opts.parallelism);
+      }
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
     const restore = spawn('node', args, {'stdio': ['pipe', 'inherit', 'inherit']});
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
+    restore.stdin.on('error', function(err) {
+      // Suppress errors that might arise from piping of input streams
+      // from the test process to the child process (this appears to be  handled
+      // gracefully in the shell)
+      console.error(`Test stream error code ${err.code}`);
+    });
     restore.on('close', function(code) {
       try {
         if (params.expectedRestoreError) {

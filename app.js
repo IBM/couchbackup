@@ -254,6 +254,10 @@ module.exports = {
               // even though other errors may be received,
               // so deregister listeners now
               writer.removeAllListeners();
+              // Only call destroy if it is available on the stream
+              if (srcStream.destroy && srcStream.destroy instanceof Function) {
+                srcStream.destroy();
+              }
               callback(err);
             } else {
               ee.emit('error', err);

@@ -21,6 +21,25 @@ const u = require('./citestutils.js');
 const url = 'http://localhost:7777';
 const nock = require('nock');
 const httpProxy = require('http-proxy');
+const Readable = require('stream').Readable;
+
+// Create an infinite stream to read.
+// It just keeps sending a backup line, useful for testing cases of
+// termination while a stream has content remaining (the animaldb backup
+// is too small for that).
+class InfiniteBackupStream extends Readable {
+  constructor(opt) {
+    super(opt);
+    this.contents = Buffer.from('[{"_id":"giraffe","_rev":"3-7665c3e66315ff40616cceef62886bd8","min_weight":830,"min_length":5,"max_weight":1600,"max_length":6,"wiki_page":"http://en.wikipedia.org/wiki/Giraffe","class":"mammal","diet":"herbivore","_revisions":{"start":3,"ids":["7665c3e66315ff40616cceef62886bd8","aaaf10d5a68cdf22d95a5482a0e95549","967a00dff5e02add41819138abb3284d"]}}]\n', 'utf8');
+  }
+
+  _read() {
+    var proceed;
+    do {
+      proceed = this.push(this.contents);
+    } while (proceed);
+  }
+}
 
 function assertNock(done) {
   try {
@@ -78,10 +97,12 @@ function restoreHttpError(opts, errorName, errorCode, done) {
       process.env.COUCH_URL = (params.useApi) ? url : 'http://localhost:8888';
     });
 
-    after('Reset process data', function() {
+    after('Reset process data', function(done) {
       process.env = processEnvCopy;
       if (!params.useApi) {
-        proxy.close();
+        proxy.close(done);
+      } else {
+        done();
       }
     });
 
@@ -184,18 +205,36 @@ function restoreHttpError(opts, errorName, errorCode, done) {
       it('should terminate on _bulk_docs HTTPFatalError', function(done) {
         // Simulate the DB exists
         const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
+        // Use a parallelism of one and mock one response
+        const p = u.p(params, {opts: {parallelism: 1}});
         // Simulate a 400 trying to write
         n.post('/fakenockdb/_bulk_docs').reply(400, {error: 'bad_request', reason: 'testing bad response'});
-        restoreHttpError(params, 'HTTPFatalError', 40, done);
+        restoreHttpError(p, 'HTTPFatalError', 40, done);
+      });
+
+      it('should terminate on _bulk_docs HTTPFatalError large stream', function(done) {
+        // Simulate the DB exists
+        const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
+        // Simulate a 400 trying to write
+        n.post('/fakenockdb/_bulk_docs').reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        // Use only parallelism 1 so we don't have to mock up loads of responses
+        const q = u.p(params, {opts: {parallelism: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
+        u.testRestore(q, new InfiniteBackupStream(), 'fakenockdb', function(err) {
+          if (err) {
+            done(err);
+          } else {
+            assertNock(done);
+          }
+        });
       });
 
       it('should terminate on multiple _bulk_docs HTTPFatalError', function(done) {
-        const p = u.p(params, {opts: {bufferSize: 1}});
         // Simulate the DB exists
         const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
-        // Simulate a 500 trying to write docs, 5 times because of parallelism
+        // Simulate a 400 trying to write docs, 5 times because of default parallelism
         n.post('/fakenockdb/_bulk_docs').times(5).reply(400, {error: 'bad_request', reason: 'testing bad response'});
-        restoreHttpError(p, 'HTTPFatalError', 40, done);
+        const q = u.p(params, {opts: {bufferSize: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
+        restoreHttpError(q, 'HTTPFatalError', 40, done);
       });
     });
   });
