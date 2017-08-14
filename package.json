@@ -24,7 +24,7 @@
     "commander": "^2.9.0",
     "debug": "2.6.3",
     "cloudant": "^1.8.0",
-    "tmp": "0.0.31"
+    "tmp": "0.0.33"
   },
   "main": "app.js",
   "bin": {
