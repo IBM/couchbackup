@@ -42,7 +42,7 @@
     "eslint-config-semistandard": "^11.0.0",
     "eslint-plugin-header": "^1.0.0",
     "jsdoc": "^3.5.2",
-    "mocha": "^3.2.0",
+    "mocha": "^4.0.0",
     "toxy": "^0.3.12",
     "uuid": "^3.0.1",
     "tail": "^1.2.1",
