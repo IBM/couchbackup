@@ -22,7 +22,7 @@ It comes with a companion command-line utility that can restore the backed up da
 **N.B.**
 
 * **couchbackup does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
-* **couchbackup does not backup attachments, it is recommended to store attachments directly in an object store.**
+* **couchbackup does not support backing up or restoring databases containing documents with attachments. It is recommended to store attachments directly in an object store. DO NOT USE THIS TOOL FOR DATABASES CONTAINING ATTACHMENTS.** [Note](#note-on-attachments)
 
 ## Installation
 
@@ -387,3 +387,16 @@ details them.
 ### `couchrestore`
 
 * `10`: restore target database does not exist.
+
+## Note on attachments
+
+TLDR; If you backup a database that contains attachments you will not be able to restore it.
+
+As documented above couchbackup does not support backing up or restoring databases containing documents with attachments.
+Attempting to backup a database that includes documents with attachments will appear to succeed. However, the attachment
+content will not have been downloaded and the backup file will contain attachment metadata. Consequently any attempt to
+restore the backup will result in errors because the attachment metadata will reference attachments that are not present
+in the restored database.
+
+It is recommended to store attachments directly in an object store with a link in the JSON document instead of using the
+native attachment API.
