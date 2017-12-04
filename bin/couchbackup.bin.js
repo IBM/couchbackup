@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,13 +30,14 @@ var opts = {
   log: program.log,
   mode: program.mode,
   parallelism: program.parallelism,
-  resume: program.resume
+  resume: program.resume,
+  iamApiKey: program.iamApiKey
 };
 
 // log configuration to console
 console.error('='.repeat(80));
 console.error('Performing backup on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
-console.error(JSON.stringify(opts, null, 2));
+console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
 console.error('='.repeat(80));
 
 var ws = process.stdout;

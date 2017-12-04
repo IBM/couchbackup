@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ describe('#unit Default parameters', function() {
     process.env.COUCH_RESUME = 'true';
     process.env.COUCH_OUTPUT = 'myfile.txt';
     process.env.COUCH_MODE = 'shallow';
+    process.env.CLOUDANT_IAM_API_KEY = 'ABC123-ZYX987_cba789-xyz321';
   });
 
   after('Reset process data', function() {
@@ -77,6 +78,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.equal(typeof program.parallelism, 'number');
       assert.equal(program.parallelism, process.env.COUCH_PARALLELISM);
+      done();
+    });
+
+    it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key backup command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.equal(typeof program.iamApiKey, 'string');
+      assert.equal(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
       done();
     });
 
@@ -137,6 +146,15 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.equal(typeof program.parallelism, 'number');
       assert.equal(program.parallelism, parallelism);
+      done();
+    });
+
+    it('respects the backup --iam-api-key command-line parameter', function(done) {
+      const key = '123abc-789zyx_CBA987-XYZ321';
+      process.argv = ['node', 'test', '--iam-api-key', key];
+      var program = parser.parseBackupArgs();
+      assert.equal(typeof program.iamApiKey, 'string');
+      assert.equal(program.iamApiKey, key);
       done();
     });
 
@@ -208,6 +226,14 @@ describe('#unit Default parameters', function() {
       done();
     });
 
+    it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key restore command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseRestoreArgs();
+      assert.equal(typeof program.iamApiKey, 'string');
+      assert.equal(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
+      done();
+    });
+
     it('respects the restore --url command-line parameter', function(done) {
       var url = 'https://a:b@myurl3.com';
       process.argv = ['node', 'test', '--url', url];
@@ -241,6 +267,15 @@ describe('#unit Default parameters', function() {
       var program = parser.parseRestoreArgs();
       assert.equal(typeof program.parallelism, 'number');
       assert.equal(program.parallelism, parallelism);
+      done();
+    });
+
+    it('respects the restore --iam-api-key command-line parameter', function(done) {
+      const key = '123abc-789zyx_CBA987-XYZ321';
+      process.argv = ['node', 'test', '--iam-api-key', key];
+      var program = parser.parseRestoreArgs();
+      assert.equal(typeof program.iamApiKey, 'string');
+      assert.equal(program.iamApiKey, key);
       done();
     });
   });

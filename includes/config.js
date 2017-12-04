@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -84,6 +84,16 @@ function applyEnvironmentVariables(opts) {
   // if we only want a shallow copy
   if (typeof process.env.COUCH_MODE !== 'undefined' && process.env.COUCH_MODE === 'shallow') {
     opts.mode = 'shallow';
+  }
+
+  // if we have a specified API key
+  if (typeof process.env.CLOUDANT_IAM_API_KEY !== 'undefined') {
+    opts.iamApiKey = process.env.CLOUDANT_IAM_API_KEY;
+  }
+
+  // if we have a specified IAM token endpoint
+  if (typeof process.env.CLOUDANT_IAM_TOKEN_URL !== 'undefined') {
+    opts.iamTokenUrl = process.env.CLOUDANT_IAM_TOKEN_URL;
   }
 }
 

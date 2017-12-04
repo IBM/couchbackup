@@ -1,5 +1,5 @@
 #!groovy
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,10 @@ def getEnvForSuite(suiteName) {
       envVars.add("COUCH_URL=http://localhost:3000") // proxy
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
       break
+      case 'test-iam':
+        envVars.add("COUCH_URL=https://${env.DB_USER}.cloudant.com")
+        envVars.add("COUCHBACKUP_TEST_IAM_API_KEY=${env.IAM_API_KEY}")
+        break
     default:
       error("Unknown test suite environment ${suiteName}")
   }
@@ -46,10 +50,15 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
     unstash name: 'built'
 
     // Run tests using creds
-    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'],
-                     [$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW']]) {
+    withCredentials([usernamePassword(credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+                      usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
+                      string(credentialsId: 'clientlibs-test-iam', variable: 'IAM_API_KEY')]) {
       withEnv(getEnvForSuite("${testSuite}")) {
         try {
+          // For the IAM tests we want to run the normal 'test' suite, but we
+          // want to keep the report named 'test-iam'
+          def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
+
           // Actions:
           //  1. Load NVM
           //  2. Install/use required Node.js version
@@ -63,7 +72,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
             npm install mocha-jenkins-reporter --save-dev
             curl -O -u ${env.ARTIFACTORY_USER}:${env.ARTIFACTORY_PW} https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
             unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
-            ./node_modules/mocha/bin/mocha --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testSuite}
+            ./node_modules/mocha/bin/mocha --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
           """
         } finally {
           junit '**/*test-results.xml'
@@ -106,7 +115,10 @@ stage('QA') {
   def axes = [
     Node4x:{ setupNodeAndTest('lts/argon', filter) }, //4.x LTS
     Node6x:{ setupNodeAndTest('lts/boron', filter) }, // 6.x LTS
-    Node:{ setupNodeAndTest('node', filter) } // Current
+    Node:{ setupNodeAndTest('node', filter) }, // Current
+    // Test IAM on the current Node.js version. Filter out unit tests and the
+    // slowest integration tests.
+    Iam: { setupNodeAndTest('node', '-i -g \'#unit|#slowe\'', 'test-iam') }
   ]
   // Add unreliable network tests if specified
   if (env.RUN_TOXY_TESTS && env.RUN_TOXY_TESTS.toBoolean()) {

@@ -190,6 +190,9 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
 * `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
+* `CLOUDANT_IAM_API_KEY` - optional [IAM API key](https://console.bluemix.net/docs/services/Cloudant/guides/iam.html#ibm-cloud-identity-and-access-management)
+ to use to access the Cloudant database instead of user information credentials in the URL. The endpoint used to retrieve the token defaults to
+ `https://iam.bluemix.net/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
 * `DEBUG` - if set to `couchbackup`, all debug messages will be sent to `stderr` during a backup or restore process
 
 ### Command-line paramters
@@ -202,6 +205,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `--resume` - same as `COUCH_RESUME`
 * `--output` - same as `COUCH_OUTPUT`
 * `--mode` - same as `COUCH_MODE`
+* `--iam-api-key` - same as `CLOUDANT_IAM_API_KEY`
 
 ## Using programmatically
 
@@ -241,6 +245,9 @@ target locations are not required.
 * `log`: see `COUCH_LOG`.
 * `resume`: see `COUCH_RESUME`.
 * `mode`: see `COUCH_MODE`.
+* `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
+* `iamTokenUrl` : may be used with `key` to override the default URL for
+  retrieving IAM tokens.
 
 The callback has the standard `err, data` parameters and is called when
 the backup completes or fails.
