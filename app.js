@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ const events = require('events');
 const debug = require('debug')('couchbackup:app');
 const error = require('./includes/error.js');
 const fs = require('fs');
+const legacyUrl = require('url');
 
 /**
  * Test for a positive, safe integer.
@@ -62,6 +63,10 @@ function validateArgs(url, opts, cb) {
     cb(new error.BackupError('InvalidOption', 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
     return;
   }
+  if (opts && typeof opts.iamApiKey !== 'undefined' && typeof opts.iamApiKey !== 'string') {
+    cb(new error.BackupError('InvalidOption', 'Invalid iamApiKey option, must be type string'), null);
+    return;
+  }
   if (opts && typeof opts.log !== 'undefined' && typeof opts.log !== 'string') {
     cb(new error.BackupError('InvalidOption', 'Invalid log option, must be type string'), null);
     return;
@@ -82,6 +87,32 @@ function validateArgs(url, opts, cb) {
     cb(new error.BackupError('InvalidOption', 'Invalid resume option, must be type boolean'), null);
     return;
   }
+
+  // Validate URL and ensure no auth if using key
+  try {
+    const urlObject = legacyUrl.parse(url);
+    // We require a protocol, host and path (for db), fail if any is missing.
+    if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
+      cb(new error.BackupError('InvalidOption', 'Invalid URL protocol.'));
+      return;
+    }
+    if (!urlObject.host) {
+      cb(new error.BackupError('InvalidOption', 'Invalid URL host.'));
+      return;
+    }
+    if (!urlObject.path) {
+      cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
+      return;
+    }
+    if (opts && opts.iamApiKey && urlObject.auth) {
+      cb(new error.BackupError('InvalidOption', 'URL user information must not be supplied when using IAM API key.'));
+      return;
+    }
+  } catch (err) {
+    cb(err);
+    return;
+  }
+
   if (opts && opts.resume) {
     if (!opts.log) {
       // This is the second place we check for the presence of the log option in conjunction with resume
@@ -106,6 +137,7 @@ module.exports = {
    * @param {object} opts - Backup options.
    * @param {number} [opts.parallelism=5] - Number of parallel HTTP requests to use.
    * @param {number} [opts.bufferSize=500] - Number of documents per batch request.
+   * @param {string} [opts.iamApiKey] - IAM API key to use to access Cloudant database.
    * @param {string} [opts.log] - Log file name. Default uses a temporary file.
    * @param {boolean} [opts.resume] - Whether to resume from existing log.
    * @param {string} [opts.mode=full] - Use `full` or `shallow` mode.
@@ -213,6 +245,7 @@ module.exports = {
    * @param {object} opts - Restore options.
    * @param {number} opts.parallelism - Number of parallel HTTP requests to use. Default 5.
    * @param {number} opts.bufferSize - Number of documents per batch request. Default 500.
+   * @param {string} opts.iamApiKey - IAM API key to use to access Cloudant database.
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {

@@ -30,6 +30,21 @@ describe('#unit Validate arguments', function() {
   it('returns no error for valid URL type', function() {
     validateArgs(goodUrl, {}, (err, data) => assert.fail('Unexpected error: ' + err.message));
   });
+  it('returns error for invalid (no host) URL', function() {
+    validateArgs('http://', {}, (err, data) => assert.equal(err.message, 'Invalid URL host.'));
+  });
+  it('returns error for invalid (no protocol) URL', function() {
+    validateArgs('invalid', {}, (err, data) => assert.equal(err.message, 'Invalid URL protocol.'));
+  });
+  it('returns error for invalid (wrong protocol) URL', function() {
+    validateArgs('ftp://invalid.example.com', {}, (err, data) => assert.equal(err.message, 'Invalid URL protocol.'));
+  });
+  it('returns error for invalid (no path) URL', function() {
+    validateArgs('https://invalid.example.com', {}, (err, data) => assert.equal(err.message, 'Invalid URL, missing path element (no database).'));
+  });
+  it('returns error for invalid (no protocol, no host) URL', function() {
+    validateArgs('invalid', {}, (err, data) => assert.equal(err.message, 'Invalid URL protocol.'));
+  });
   it('returns error for invalid buffer size type', function() {
     validateArgs(goodUrl, {bufferSize: '123'}, (err, data) => assert.equal(err.message, 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
   });
@@ -80,5 +95,11 @@ describe('#unit Validate arguments', function() {
   });
   it('returns no error for valid resume type', function() {
     validateArgs(goodUrl, {resume: false}, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  });
+  it('returns error for invalid key type', function() {
+    validateArgs(goodUrl, {iamApiKey: true}, (err, data) => assert.equal(err.message, 'Invalid iamApiKey option, must be type string'));
+  });
+  it('returns error for key and URL credentials supplied', function() {
+    validateArgs('https://a:b@example.com', {iamApiKey: 'abc123'}, (err, data) => assert.equal(err.message, 'URL user information must not be supplied when using IAM API key.'));
   });
 });

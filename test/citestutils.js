@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,9 @@ function testBackup(params, databaseName, outputStream, callback) {
   var openssl;
   var backup;
   var backupStream = outputStream;
+
+  // Configure API key if needed
+  augmentParamsWithApiKey(params);
 
   // Pipe via compression if requested
   if (params.compression) {
@@ -153,6 +156,10 @@ function testBackup(params, databaseName, outputStream, callback) {
         args.push('--buffer-size');
         args.push(params.opts.bufferSize);
       }
+      if (params.opts.iamApiKey) {
+        args.push('--iam-api-key');
+        args.push(params.opts.iamApiKey);
+      }
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
@@ -226,6 +233,9 @@ function backupAbort(usingApi, backup) {
 function testRestore(params, inputStream, databaseName, callback) {
   var restoreStream = inputStream;
 
+  // Configure API key if needed
+  augmentParamsWithApiKey(params);
+
   // Pipe via decompression if requested
   if (params.compression) {
     if (params.useApi) {
@@ -285,6 +295,10 @@ function testRestore(params, inputStream, databaseName, callback) {
       if (params.opts.parallelism) {
         args.push('--parallelism');
         args.push(params.opts.parallelism);
+      }
+      if (params.opts.iamApiKey) {
+        args.push('--iam-api-key');
+        args.push(params.opts.iamApiKey);
       }
     }
 
@@ -537,6 +551,15 @@ function assertWrittenFewerThan(total, number, callback) {
     callback();
   } catch (err) {
     callback(err);
+  }
+}
+
+function augmentParamsWithApiKey(params) {
+  if (process.env.COUCHBACKUP_TEST_IAM_API_KEY) {
+    if (!params.opts) {
+      params.opts = {};
+    }
+    params.opts.iamApiKey = process.env.COUCHBACKUP_TEST_IAM_API_KEY;
   }
 }
 
