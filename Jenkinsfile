@@ -18,7 +18,7 @@ def getEnvForSuite(suiteName) {
   def envVars = [
     "COUCH_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
     "DBCOMPARE_NAME=DatabaseCompare",
-    "DBCOMPARE_VERSION=1.0.0",
+    "DBCOMPARE_VERSION=1.0.1",
     "NVM_DIR=${env.HOME}/.nvm"
   ]
 
