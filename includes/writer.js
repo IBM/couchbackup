@@ -35,12 +35,14 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       payload.new_edits = false;
     }
 
-    var gzPayload = zlib.gzipSync(Buffer.from(JSON.stringify(payload), 'utf8'));
+    // Stream the payload through a zip stream to the server
+    var payloadStream = new stream.PassThrough();
+    payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
+    var zipstream = zlib.createGzip();
 
-    db.server.request({
+    var req = db.server.request({
       db: db.config.db,
       path: '_bulk_docs',
-      body: gzPayload,
       method: 'POST',
       headers: {'content-encoding': 'gzip'},
       contentType: 'application/json'
@@ -55,6 +57,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
         cb();
       }
     });
+    payloadStream.pipe(zipstream).pipe(req);
   }, parallelism);
 
   var didError = false;
