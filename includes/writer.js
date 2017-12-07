@@ -44,8 +44,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       db: db.config.db,
       path: '_bulk_docs',
       method: 'POST',
-      headers: {'content-encoding': 'gzip'},
-      contentType: 'application/json'
+      headers: {'content-encoding': 'gzip'}
     }, function(err) {
       err = error.convertResponseError(err);
       if (err) {
