@@ -15,6 +15,7 @@
 
 const async = require('async');
 const stream = require('stream');
+const zlib = require('zlib');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:writer');
 
@@ -34,7 +35,17 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       payload.new_edits = false;
     }
 
-    db.bulk(payload, function(err) {
+    // Stream the payload through a zip stream to the server
+    var payloadStream = new stream.PassThrough();
+    payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
+    var zipstream = zlib.createGzip();
+
+    var req = db.server.request({
+      db: db.config.db,
+      path: '_bulk_docs',
+      method: 'POST',
+      headers: {'content-encoding': 'gzip'}
+    }, function(err) {
       err = error.convertResponseError(err);
       if (err) {
         debug(`Error writing docs ${err.name} ${err.message}`);
@@ -45,6 +56,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
         cb();
       }
     });
+    payloadStream.pipe(zipstream).pipe(req);
   }, parallelism);
 
   var didError = false;

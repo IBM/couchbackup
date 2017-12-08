@@ -216,7 +216,8 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate the DB exists
         const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
         // Simulate a 400 trying to write
-        n.post('/fakenockdb/_bulk_docs').reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        // Provide a body function to handle the stream, but allow any body
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, {error: 'bad_request', reason: 'testing bad response'});
         // Use only parallelism 1 so we don't have to mock up loads of responses
         const q = u.p(params, {opts: {parallelism: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
         u.testRestore(q, new InfiniteBackupStream(), 'fakenockdb', function(err) {
@@ -232,7 +233,8 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate the DB exists
         const n = nock(url).head('/fakenockdb').reply(200, {ok: true});
         // Simulate a 400 trying to write docs, 5 times because of default parallelism
-        n.post('/fakenockdb/_bulk_docs').times(5).reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        // Provide a body function to handle the stream, but allow any body
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(5).reply(400, {error: 'bad_request', reason: 'testing bad response'});
         const q = u.p(params, {opts: {bufferSize: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
         restoreHttpError(q, 'HTTPFatalError', 40, done);
       });
