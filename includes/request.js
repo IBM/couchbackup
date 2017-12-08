@@ -16,7 +16,7 @@
 const pkg = require('../package.json');
 const http = require('http');
 const https = require('https');
-const cloudant = require('cloudant');
+const cloudant = require('@cloudant/cloudant');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
