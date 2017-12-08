@@ -1,6 +1,7 @@
 # Unreleased
 
 - [NEW] Changed to use nodejs-cloudant for database requests.
+- [IMPROVED] Added compression to restore process requests.
 - [FIXED] An unhandled `readstream.destroy is not a function` error when trying
   to terminate a restore process that encountered an error.
 - [UPGRADED] Increased debug dependency to 3.0.x.
