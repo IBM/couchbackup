@@ -39,7 +39,7 @@
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-react": "^7.0.0",
     "eslint-config-standard": "^10.2.1",
-    "eslint-config-semistandard": "^11.0.0",
+    "eslint-config-semistandard": "^12.0.0",
     "eslint-plugin-header": "^1.0.0",
     "jsdoc": "^3.5.2",
     "mocha": "^4.0.0",
