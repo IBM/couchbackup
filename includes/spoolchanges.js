@@ -63,33 +63,33 @@ module.exports = function(db, log, bufferSize, ee, callback) {
 
   // stream the changes feed to disk
   var changesRequest = db.changes({ seq_interval: 10000 })
-  .on('error', function(err) {
-    callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-  })
-  .on('response', function(resp) {
-    if (resp.statusCode >= 400) {
-      changesRequest.abort();
-      callback(error.convertResponseErrorToFatal(resp));
-    } else {
-      resp.pipe(liner())
-      .on('error', function(err) {
-        callback(err);
-      })
-      .pipe(change(onChange))
-      .on('error', function(err) {
-        callback(err);
-      })
-      .on('finish', function() {
-        processBuffer(true);
-        if (!lastSeq) {
-          logStream.end();
-          debug('changes request terminated before last_seq was sent');
-          callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
-        } else {
-          debug('finished streaming database changes');
-          logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
-        }
-      });
-    }
-  });
+    .on('error', function(err) {
+      callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
+    })
+    .on('response', function(resp) {
+      if (resp.statusCode >= 400) {
+        changesRequest.abort();
+        callback(error.convertResponseErrorToFatal(resp));
+      } else {
+        resp.pipe(liner())
+          .on('error', function(err) {
+            callback(err);
+          })
+          .pipe(change(onChange))
+          .on('error', function(err) {
+            callback(err);
+          })
+          .on('finish', function() {
+            processBuffer(true);
+            if (!lastSeq) {
+              logStream.end();
+              debug('changes request terminated before last_seq was sent');
+              callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
+            } else {
+              debug('finished streaming database changes');
+              logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
+            }
+          });
+      }
+    });
 };

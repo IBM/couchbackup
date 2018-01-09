@@ -30,29 +30,29 @@ function parseBackupArgs() {
     .description('Backup a CouchDB/Cloudant database to a backup text file.')
     .usage('[options...]')
     .option('-b, --buffer-size <n>',
-            cliutils.getUsage('number of documents fetched at once', defaults.bufferSize),
-            Number, defaults.bufferSize)
+      cliutils.getUsage('number of documents fetched at once', defaults.bufferSize),
+      Number, defaults.bufferSize)
     .option('-d, --db <db>',
-            cliutils.getUsage('name of the database to backup', defaults.db),
-            defaults.db)
+      cliutils.getUsage('name of the database to backup', defaults.db),
+      defaults.db)
     .option('-l, --log <file>',
-            cliutils.getUsage('file to store logging information during backup', 'a temporary file'),
-            path.normalize, defaults.log)
+      cliutils.getUsage('file to store logging information during backup', 'a temporary file'),
+      path.normalize, defaults.log)
     .option('-m, --mode <mode>',
-            cliutils.getUsage('"shallow" if only a superficial backup is done (ignoring conflicts and revision tokens), else "full" for complete backup', defaults.mode),
-            (mode) => { return mode.toLowerCase(); }, defaults.mode)
+      cliutils.getUsage('"shallow" if only a superficial backup is done (ignoring conflicts and revision tokens), else "full" for complete backup', defaults.mode),
+      (mode) => { return mode.toLowerCase(); }, defaults.mode)
     .option('-o, --output <file>',
-            cliutils.getUsage('file name to store the backup data', 'stdout'),
-            path.normalize, defaults.output)
+      cliutils.getUsage('file name to store the backup data', 'stdout'),
+      path.normalize, defaults.output)
     .option('-p, --parallelism <n>',
-            cliutils.getUsage('number of HTTP requests to perform in parallel when performing a backup', defaults.parallelism),
-            Number, defaults.parallelism)
+      cliutils.getUsage('number of HTTP requests to perform in parallel when performing a backup', defaults.parallelism),
+      Number, defaults.parallelism)
     .option('-r, --resume',
-            cliutils.getUsage('continue a previous backup from its last known position', defaults.resume),
-            defaults.resume)
+      cliutils.getUsage('continue a previous backup from its last known position', defaults.resume),
+      defaults.resume)
     .option('-u, --url <url>',
-            cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
-            defaults.url)
+      cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
+      defaults.url)
     .parse(process.argv);
 
   if (program.resume && (program.log === defaults.log)) {
@@ -75,17 +75,17 @@ function parseRestoreArgs() {
     .description('Restore a CouchDB/Cloudant database from a backup text file.')
     .usage('[options...]')
     .option('-b, --buffer-size <n>',
-            cliutils.getUsage('number of documents restored at once', defaults.bufferSize),
-            Number, defaults.bufferSize)
+      cliutils.getUsage('number of documents restored at once', defaults.bufferSize),
+      Number, defaults.bufferSize)
     .option('-d, --db <db>',
-            cliutils.getUsage('name of the new, existing database to restore to', defaults.db),
-            defaults.db)
+      cliutils.getUsage('name of the new, existing database to restore to', defaults.db),
+      defaults.db)
     .option('-p, --parallelism <n>',
-            cliutils.getUsage('number of HTTP requests to perform in parallel when restoring a backup', defaults.parallelism),
-            Number, defaults.parallelism)
+      cliutils.getUsage('number of HTTP requests to perform in parallel when restoring a backup', defaults.parallelism),
+      Number, defaults.parallelism)
     .option('-u, --url <url>',
-            cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
-            defaults.url)
+      cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
+      defaults.url)
     .parse(process.argv);
 
   return program;

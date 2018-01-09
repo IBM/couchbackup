@@ -155,7 +155,7 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, shallow) {
           return;
         }
         debug(`Download from ${s(sourceUrl)} complete.`);
-        streamToUpload.end();  // must call end() to complete upload.
+        streamToUpload.end(); // must call end() to complete upload.
         // resolve() is called by the upload
       }
     );
