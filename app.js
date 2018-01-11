@@ -125,7 +125,7 @@ module.exports = {
     var backup = null;
     if (opts.mode === 'shallow') {
       backup = backupShallow;
-    } else {  // full mode
+    } else { // full mode
       backup = backupFull;
     }
 
@@ -245,29 +245,29 @@ module.exports = {
             debug(' restored ', obj.total);
             ee.emit('restored', {documents: obj.documents, total: obj.total});
           })
-          // For errors we expect, may or may not be fatal
-          .on('error', function(err) {
-            debug('Error ' + JSON.stringify(err));
-            if (!err.isTransient) {
-              // These are fatal errors
-              // We only want to callback once for a fatal error
-              // even though other errors may be received,
-              // so deregister listeners now
-              writer.removeAllListeners();
-              // Only call destroy if it is available on the stream
-              if (srcStream.destroy && srcStream.destroy instanceof Function) {
-                srcStream.destroy();
+            // For errors we expect, may or may not be fatal
+            .on('error', function(err) {
+              debug('Error ' + JSON.stringify(err));
+              if (!err.isTransient) {
+                // These are fatal errors
+                // We only want to callback once for a fatal error
+                // even though other errors may be received,
+                // so deregister listeners now
+                writer.removeAllListeners();
+                // Only call destroy if it is available on the stream
+                if (srcStream.destroy && srcStream.destroy instanceof Function) {
+                  srcStream.destroy();
+                }
+                callback(err);
+              } else {
+                ee.emit('error', err);
               }
-              callback(err);
-            } else {
-              ee.emit('error', err);
-            }
-          })
-          .on('finished', function(obj) {
-            debug('restore complete');
-            ee.emit('finished', {total: obj.total});
-            callback(null, obj);
-          });
+            })
+            .on('finished', function(obj) {
+              debug('restore complete');
+              ee.emit('finished', {total: obj.total});
+              callback(null, obj);
+            });
         }
       }
     );

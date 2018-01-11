@@ -66,9 +66,9 @@ function setupProxy(poison) {
       // https://github.com/h2non/toxy#rate-limit
       // Simulate the Cloudant free plan with 20 lookups ps and 10 writes ps
       proxy.post('/*/_bulk_get')
-         .poison(tpoisons.rateLimit({ limit: 20, threshold: 1000 }));
+        .poison(tpoisons.rateLimit({ limit: 20, threshold: 1000 }));
       proxy.post('/*/_bulk_docs')
-         .poison(tpoisons.rateLimit({ limit: 10, threshold: 1000 }));
+        .poison(tpoisons.rateLimit({ limit: 10, threshold: 1000 }));
       break;
     default:
       throw Error('Unknown toxy poison ' + poison);

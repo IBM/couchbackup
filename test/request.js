@@ -30,8 +30,8 @@ describe('#unit Check request response error callback', function() {
 
   it('should not callback with error for 200 response', function(done) {
     var couch = nock(url)
-        .get('/good')
-        .reply(200, {ok: true});
+      .get('/good')
+      .reply(200, {ok: true});
 
     db.get('good', function(err) {
       err = error.convertResponseError(err);
@@ -43,8 +43,8 @@ describe('#unit Check request response error callback', function() {
 
   it('should callback with error for 500 response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .reply(500, {error: 'foo', reason: 'bar'});
+      .get('/bad')
+      .reply(500, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
@@ -57,26 +57,26 @@ describe('#unit Check request response error callback', function() {
 
   it('should callback with error for POST 503 response', function(done) {
     var couch = nock(url)
-        .post('/bad')
-        .query(true)
-        .reply(503, {error: 'service_unavailable', reason: 'Service unavailable'});
+      .post('/bad')
+      .query(true)
+      .reply(503, {error: 'service_unavailable', reason: 'Service unavailable'});
 
     db.server.request(
-    {method: 'POST', db: db.config.db, path: 'bad', qs: {revs: true}, body: {}},
-    function(err, body) {
-      assert.ok(err);
-      err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPError');
-      assert.equal(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
-      assert.ok(couch.isDone());
-      done();
-    });
+      {method: 'POST', db: db.config.db, path: 'bad', qs: {revs: true}, body: {}},
+      function(err, body) {
+        assert.ok(err);
+        err = error.convertResponseError(err);
+        assert.equal(err.name, 'HTTPError');
+        assert.equal(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
+        assert.ok(couch.isDone());
+        done();
+      });
   });
 
   it('should callback with error for 429 response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .reply(429, {error: 'foo', reason: 'bar'});
+      .get('/bad')
+      .reply(429, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
@@ -89,8 +89,8 @@ describe('#unit Check request response error callback', function() {
 
   it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .reply(404, {error: 'foo', reason: 'bar'});
+      .get('/bad')
+      .reply(404, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
@@ -105,8 +105,8 @@ describe('#unit Check request response error callback', function() {
 describe('#unit Check request response fatal error callback', function() {
   it('should not callback with fatal error for 200 response', function(done) {
     var couch = nock(url)
-        .get('/good')
-        .reply(200, {ok: true});
+      .get('/good')
+      .reply(200, {ok: true});
 
     db.get('good', function(err) {
       err = error.convertResponseErrorToFatal(err);
@@ -118,8 +118,8 @@ describe('#unit Check request response fatal error callback', function() {
 
   it('should callback with fatal error for 500 response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .reply(500, {error: 'foo', reason: 'bar'});
+      .get('/bad')
+      .reply(500, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseErrorToFatal(err);
@@ -132,8 +132,8 @@ describe('#unit Check request response fatal error callback', function() {
 
   it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .reply(404, {error: 'foo', reason: 'bar'});
+      .get('/bad')
+      .reply(404, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseErrorToFatal(err);
@@ -146,8 +146,8 @@ describe('#unit Check request response fatal error callback', function() {
 
   it('should callback with same error for no status code error response', function(done) {
     var couch = nock(url)
-        .get('/bad')
-        .replyWithError('testing badness');
+      .get('/bad')
+      .replyWithError('testing badness');
 
     db.get('bad', function(err) {
       const err2 = error.convertResponseError(err);

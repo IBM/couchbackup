@@ -40,8 +40,8 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
     blocksize = parseInt(blocksize);
   }
   const ee = new events.EventEmitter();
-  const start = new Date().getTime();  // backup start time
-  const batchesPerDownloadSession = 50;  // max batches to read from log file for download at a time (prevent OOM)
+  const start = new Date().getTime(); // backup start time
+  const batchesPerDownloadSession = 50; // max batches to read from log file for download at a time (prevent OOM)
 
   const db = request.client(dbUrl, parallelism);
 
@@ -80,23 +80,23 @@ module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
  */
 function validateBulkGetSupport(db, callback) {
   db.head('_bulk_get',
-  function(err) {
-    err = error.convertResponseError(err, function(err) {
-      switch (err.statusCode) {
-        case undefined:
-          // There was no status code on the error
-          return err;
-        case 404:
-          return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
-        case 405:
-          // => supports /_bulk_get endpoint
-          return;
-        default:
-          return new error.HTTPFatalError(err);
-      }
+    function(err) {
+      err = error.convertResponseError(err, function(err) {
+        switch (err.statusCode) {
+          case undefined:
+            // There was no status code on the error
+            return err;
+          case 404:
+            return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
+          case 405:
+            // => supports /_bulk_get endpoint
+            return;
+          default:
+            return new error.HTTPFatalError(err);
+        }
+      });
+      callback(err);
     });
-    callback(err);
-  });
 }
 
 /**
@@ -115,7 +115,7 @@ function validateBulkGetSupport(db, callback) {
  *  (err, {batches: batch, docs: doccount}) {@see spoolchanges}.
  */
 function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSession, parallelism) {
-  var total = 0;  // running total of documents downloaded so far
+  var total = 0; // running total of documents downloaded so far
   var noRemainingBatches = false;
 
   // Generate a set of batches (up to batchesPerDownloadSession) to download from the
