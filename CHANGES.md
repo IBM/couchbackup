@@ -1,4 +1,4 @@
-# Unreleased
+# 2.0.1 (2018-01-11)
 
 - [NEW] Changed to use nodejs-cloudant for database requests.
 - [IMPROVED] Added compression to restore process requests.
