@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,8 +57,8 @@ function exists(db, callback) {
         noDBErr.name = 'RestoreDatabaseNotFound';
         return noDBErr;
       } else {
-        // Delegate to the fatal error factory if it wasn't a 404
-        return error.convertResponseErrorToFatal(err);
+        // Delegate to the default error factory if it wasn't a 404
+        return error.convertResponseError(err);
       }
     });
     // Callback with or without (i.e. undefined) error

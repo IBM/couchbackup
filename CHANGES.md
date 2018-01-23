@@ -1,4 +1,7 @@
 # Unreleased
+
+- [IMPROVED] Enhanced resilience of backup and restore processes by enabling the
+  nodejs-cloudant retry plugin.
 - [UPGRADED] Increased nodejs-cloudant dependency to 2.x.
 
 # 2.0.1 (2018-01-11)

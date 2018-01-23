@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ function validateBulkGetSupport(db, callback) {
             // => supports /_bulk_get endpoint
             return;
           default:
-            return new error.HTTPFatalError(err);
+            return new error.HTTPError(err);
         }
       });
       callback(err);
@@ -135,10 +135,8 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
     readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, function(err, batchSetIds) {
       if (err) {
         ee.emit('error', err);
-        if (!err.isTransient) {
-          // Stop processing changes file for fatal errors
-          noRemainingBatches = true;
-        }
+        // Stop processing changes file for fatal errors
+        noRemainingBatches = true;
         done();
       } else {
         if (batchSetIds.length === 0) {
@@ -226,10 +224,8 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
       function(err, body) {
         if (err) {
           err = error.convertResponseError(err);
-          if (!err.isTransient) {
-            // Kill the queue for fatal errors
-            q.kill();
-          }
+          // Kill the queue for fatal errors
+          q.kill();
           ee.emit('error', err);
           done();
         } else {

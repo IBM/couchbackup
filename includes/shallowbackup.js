@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ module.exports = function(dbUrl, limit, parallelism, log, resume) {
         if (err) {
           err = error.convertResponseError(err);
           ee.emit('error', err);
-          if (!err.isTransient) hasErrored = true; // fatal err
+          hasErrored = true;
           callback();
         } else if (!body.rows) {
           ee.emit('error', new error.BackupError(

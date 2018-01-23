@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ class BackupError extends Error {
   constructor(name, message) {
     super(message);
     this.name = name;
-    this.isTransient = codes[name] === undefined;
   }
 }
 
@@ -52,15 +51,9 @@ class HTTPError extends BackupError {
         name = 'Forbidden';
         break;
       default:
-        name = name || 'HTTPError';
+        name = name || 'HTTPFatalError';
     }
     super(name, errMsg);
-  }
-}
-
-class HTTPFatalError extends HTTPError {
-  constructor(resp) {
-    super(resp, 'HTTPFatalError');
   }
 }
 
@@ -70,11 +63,10 @@ class HTTPFatalError extends HTTPError {
 // 429 & >=500 -> Transient
 function checkResponse(err) {
   if (err) {
+    // Construct an HTTPError if there is request information on the error
     // Codes < 400 are considered OK
-    if (err.statusCode === 429 || err.statusCode >= 500) {
+    if (err.statusCode >= 400) {
       return new HTTPError(err);
-    } else if (err.statusCode >= 400) {
-      return new HTTPFatalError(err);
     } else {
       // Send it back again if there was no status code, e.g. a cxn error
       return augmentMessage(err);
@@ -87,18 +79,6 @@ function convertResponseError(responseError, errorFactory) {
     errorFactory = checkResponse;
   }
   return errorFactory(responseError);
-}
-
-function convertResponseErrorToFatal(responseError) {
-  return convertResponseError(responseError, function(err) {
-    // When there are no retries any >=400 error needs to be fatal
-    if (err && err.statusCode >= 400) {
-      return new HTTPFatalError(err);
-    } else {
-      // Handle e.g. connection errors without a status code
-      return augmentMessage(err);
-    }
-  });
 }
 
 function augmentMessage(err) {
@@ -118,9 +98,7 @@ function augmentMessage(err) {
 module.exports = {
   BackupError: BackupError,
   HTTPError: HTTPError,
-  HTTPFatalError: HTTPFatalError,
   convertResponseError: convertResponseError,
-  convertResponseErrorToFatal: convertResponseErrorToFatal,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       process.on('uncaughtException', function(err) {
