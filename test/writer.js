@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,19 +68,34 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(500, {error: 'Internal Server Error'}) // transient error
       .post('/_bulk_docs')
-      .reply(503, {error: 'Service Unavailable'}) // transient error
-      .post('/_bulk_docs')
-      .reply(200, {ok: true}); // success
+      .reply(200, {ok: true}); // third time lucky success
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
-        if (!err.isTransient) {
-          done(err);
-        }
+        done(err);
       })
       .on('finished', function(data) {
         assert.equal(data.total, 15);
+        assert.ok(nock.isDone());
+        done();
+      });
+  });
+
+  it('should fail after 3 transient errors', function(done) {
+    nock(dbUrl)
+      .post('/_bulk_docs')
+      .reply(429, {error: 'Too Many Requests'}) // transient error
+      .post('/_bulk_docs')
+      .reply(500, {error: 'Internal Server Error'}) // transient error
+      .post('/_bulk_docs')
+      .reply(503, {error: 'Service Unavailable'}); // Final transient error
+
+    fs.createReadStream('./test/fixtures/animaldb_expected.json')
+      .pipe(writer(db, 500, 1, null))
+      .on('error', function(err) {
+        assert.equal(err.name, 'HTTPFatalError');
+        assert.equal(err.message, `503 : POST ${dbUrl}/_bulk_docs`);
         assert.ok(nock.isDone());
         done();
       });

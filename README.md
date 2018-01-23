@@ -250,7 +250,6 @@ The `backup` function returns an event emitter. You can subscribe to:
 * `changes` - when a batch of changes has been written to log stream.
 * `written` - when a batch of documents has been written to backup stream.
 * `finished` - emitted once when all documents are backed up.
-* `error` - emitted when something goes wrong for a single batch.
 
 Backup data to a stream:
 
@@ -308,7 +307,6 @@ The `restore` function returns an event emitter. You can subscribe to:
 
 * `restored` - when a batch of documents is restored.
 * `finished` - emitted once when all documents are restored.
-* `error` - emitted when something goes wrong for a single batch.
 
 The backup file (or `srcStream`) contains lists comprising of document
 revisions, where each list is separated by a newline. The list length is
