@@ -23,7 +23,7 @@
     "async": "2.6.0",
     "commander": "^2.9.0",
     "debug": "~3.1.0",
-    "cloudant": "^1.8.0",
+    "@cloudant/cloudant": "^2.0.0-SNAPSHOT",
     "tmp": "0.0.33"
   },
   "main": "app.js",
