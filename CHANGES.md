@@ -1,3 +1,6 @@
+# Unreleased
+- [UPGRADED] Increased nodejs-cloudant dependency to 2.x.
+
 # 2.0.1 (2018-01-11)
 
 - [NEW] Changed to use nodejs-cloudant for database requests.
