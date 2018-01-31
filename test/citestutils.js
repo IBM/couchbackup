@@ -81,11 +81,27 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   }
 
+  var tail;
   if (params.abort) {
     // Create the log file for abort tests so we can tail it, other tests assert
     // the log file is usually created normally by the backup process.
     const f = fs.openSync(params.opts.log, 'w');
     fs.closeSync(f);
+
+    // Use tail to watch the log file for a batch to be completed then abort
+    tail = new Tail(params.opts.log, {useWatchFile: true, fsWatchOptions: {interval: 500}, follow: false});
+    tail.on('line', function(data) {
+      let matches = data.match(/:d batch\d+/);
+      if (matches !== null) {
+        // Turn off the tail.
+        tail.unwatch();
+        // Abort the backup
+        backupAbort(params.useApi, backup);
+      }
+    });
+    tail.on('error', function(err) {
+      callback(err);
+    });
   }
 
   if (params.useApi) {
@@ -176,8 +192,11 @@ function testBackup(params, databaseName, outputStream, callback) {
       backup.on('close', function(code, signal) {
         try {
           if (params.abort) {
+            // The tail should be stopped when we match a line and abort, but if
+            // something didn't work we need to make sure the tail is stopped
+            tail.unwatch();
             // Assert that the process was aborted as expected
-            assert.equal(signal, 'SIGTERM', `The backup should terminate.`);
+            assert.equal(signal, 'SIGTERM', `The backup should have terminated with SIGTERM, but was ${signal}.`);
           } else if (params.expectedBackupError) {
             assert.equal(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
           } else {
@@ -189,22 +208,6 @@ function testBackup(params, databaseName, outputStream, callback) {
         }
       });
     }
-  }
-  if (params.abort) {
-    // Use tail to watch the log file for a batch to be completed then abort
-    const tail = new Tail(params.opts.log);
-    tail.on('line', function(data) {
-      let matches = data.match(/:d batch\d+/);
-      if (matches !== null) {
-        // Turn off the tail.
-        tail.unwatch();
-        // Abort the backup
-        backupAbort(params.useApi, backup);
-      }
-    });
-    tail.on('error', function(err) {
-      callback(err);
-    });
   }
   return backup;
 }
