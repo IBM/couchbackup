@@ -177,16 +177,12 @@ module.exports = {
       // For errors we expect, may or may not be fatal
       .on('error', function(err) {
         debug('Error ' + JSON.stringify(err));
-        if (!err.isTransient) {
-          // These are fatal errors
-          // We only want to callback once for a fatal error
-          // even though other errors may be received,
-          // so deregister the listeners now
-          internalEE.removeAllListeners();
-          callback(err);
-        } else {
-          ee.emit('error', err);
-        }
+        // These are fatal errors
+        // We only want to callback once for a fatal error
+        // even though other errors may be received,
+        // so deregister the listeners now
+        internalEE.removeAllListeners();
+        callback(err);
       })
       .on('finished', function(obj) {
         function emitFinished() {
@@ -248,20 +244,16 @@ module.exports = {
             // For errors we expect, may or may not be fatal
             .on('error', function(err) {
               debug('Error ' + JSON.stringify(err));
-              if (!err.isTransient) {
-                // These are fatal errors
-                // We only want to callback once for a fatal error
-                // even though other errors may be received,
-                // so deregister listeners now
-                writer.removeAllListeners();
-                // Only call destroy if it is available on the stream
-                if (srcStream.destroy && srcStream.destroy instanceof Function) {
-                  srcStream.destroy();
-                }
-                callback(err);
-              } else {
-                ee.emit('error', err);
+              // These are fatal errors
+              // We only want to callback once for a fatal error
+              // even though other errors may be received,
+              // so deregister listeners now
+              writer.removeAllListeners();
+              // Only call destroy if it is available on the stream
+              if (srcStream.destroy && srcStream.destroy instanceof Function) {
+                srcStream.destroy();
               }
+              callback(err);
             })
             .on('finished', function(obj) {
               debug('restore complete');

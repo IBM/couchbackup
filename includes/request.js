@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,10 @@ module.exports = {
     // Split the URL for use with nodejs-cloudant
     var actUrl = url.substr(0, url.lastIndexOf('/'));
     var dbName = url.substr(url.lastIndexOf('/') + 1);
+    // Default set of plugins
+    var pluginsToUse = ['retry'];
     return cloudant({url: actUrl,
+      plugins: pluginsToUse,
       requestDefaults: {
         agent: keepAliveAgent,
         headers: {'User-Agent': userAgent},

@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
     .on('response', function(resp) {
       if (resp.statusCode >= 400) {
         changesRequest.abort();
-        callback(error.convertResponseErrorToFatal(resp));
+        callback(error.convertResponseError(resp));
       } else {
         resp.pipe(liner())
           .on('error', function(err) {
