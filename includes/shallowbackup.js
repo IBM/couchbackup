@@ -18,13 +18,8 @@ const error = require('./error.js');
 const events = require('events');
 const request = require('./request.js');
 
-// Both the 'log' and 'resume' parameters are unused in this function. They
-// exist so that the method signatures for shallow backup and backup are
-// symmetrical.
-module.exports = function(dbUrl, limit, parallelism, log, resume) {
-  var db = request.client(dbUrl, parallelism);
-
-  if (typeof limit === 'string') limit = parseInt(limit);
+module.exports = function(dbUrl, options) {
+  var db = request.client(dbUrl, options);
 
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
@@ -37,7 +32,7 @@ module.exports = function(dbUrl, limit, parallelism, log, resume) {
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      var opts = {limit: limit};
+      var opts = {limit: options.bufferSize};
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
@@ -55,10 +50,10 @@ module.exports = function(dbUrl, limit, parallelism, log, resume) {
             'AllDocsError', 'ERROR: Invalid all docs response'));
           callback();
         } else {
-          if (body.rows.length < limit) {
+          if (body.rows.length < opts.limit) {
             startKey = null; // last batch
           } else {
-            startKey = body.rows[limit - 1].id;
+            startKey = body.rows[opts.limit - 1].id;
           }
 
           var docs = [];

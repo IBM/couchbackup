@@ -21,7 +21,7 @@ var request = require('../includes/request.js');
 var error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
-const db = request.client(url, 1);
+const db = request.client(url, {parallelism: 1});
 
 describe('#unit Check request response error callback', function() {
   beforeEach('Clean nock', function() {

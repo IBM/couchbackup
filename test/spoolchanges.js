@@ -23,7 +23,7 @@ const changes = require('../includes/spoolchanges.js');
 const url = 'http://localhost:7777';
 const dbName = 'fakenockdb';
 
-const db = request.client(`${url}/${dbName}`, 1);
+const db = request.client(`${url}/${dbName}`, {parallelism: 1});
 
 describe('#unit Check spool changes', function() {
   it('should terminate on request error', function(done) {

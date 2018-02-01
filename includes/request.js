@@ -22,12 +22,12 @@ const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
 
 module.exports = {
-  client: function(url, parallelism) {
+  client: function(url, opts) {
     var protocol = (url.match(/^https/)) ? https : http;
     const keepAliveAgent = new protocol.Agent({
       keepAlive: true,
       keepAliveMsecs: 30000,
-      maxSockets: parallelism
+      maxSockets: opts.parallelism
     });
     // Split the URL for use with nodejs-cloudant
     var actUrl = url.substr(0, url.lastIndexOf('/'));
@@ -39,6 +39,7 @@ module.exports = {
       requestDefaults: {
         agent: keepAliveAgent,
         headers: {'User-Agent': userAgent},
-        gzip: true}}).use(dbName);
+        gzip: true
+      }}).use(dbName);
   }
 };

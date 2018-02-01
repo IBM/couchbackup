@@ -35,27 +35,24 @@ const logfilegetbatches = require('./logfilegetbatches.js');
  *  - `error` - on error
  *  - `finished` - when backup process is finished (either complete or errored)
  */
-module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
-  if (typeof blocksize === 'string') {
-    blocksize = parseInt(blocksize);
-  }
+module.exports = function(dbUrl, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime(); // backup start time
   const batchesPerDownloadSession = 50; // max batches to read from log file for download at a time (prevent OOM)
 
-  const db = request.client(dbUrl, parallelism);
+  const db = request.client(dbUrl, options);
 
   function proceedWithBackup() {
-    if (resume) {
+    if (options.resume) {
       // pick up from existing log file from previous run
-      downloadRemainingBatches(log, db, ee, start, batchesPerDownloadSession, parallelism);
+      downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
     } else {
       // create new log file and process
-      spoolchanges(db, log, blocksize, ee, function(err) {
+      spoolchanges(db, options.log, options.bufferSize, ee, function(err) {
         if (err) {
           ee.emit('error', err);
         } else {
-          downloadRemainingBatches(log, db, ee, start, batchesPerDownloadSession, parallelism);
+          downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
         }
       });
     }
