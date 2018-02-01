@@ -53,7 +53,7 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         assert.fail(err);
       })
@@ -94,7 +94,10 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
+      .on('error', function(err) {
+        assert.equal(err.name, 'HTTPError');
+      })
       .on('received', function(data) {
         if (data.batch === 3) {
           assert.equal(data.length, 2); // smaller last batch
@@ -123,7 +126,7 @@ describe('#unit Perform backup using shallow backup', function() {
 
     var errCount = 0;
 
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         errCount++;
         assert.equal(err.name, 'Unauthorized');

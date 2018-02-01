@@ -23,7 +23,7 @@ const writer = require('../includes/writer.js');
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
-  const db = request.client(dbUrl, 1);
+  const db = request.client(dbUrl, {parallelism: 1});
 
   beforeEach('Reset nocks', function() {
     nock.cleanAll();

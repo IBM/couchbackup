@@ -16,8 +16,8 @@
 const request = require('./request.js');
 const error = require('./error.js');
 
-module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callback) {
-  var db = request.client(dbUrl, parallelism);
+module.exports = function(dbUrl, options, readstream, ee, callback) {
+  var db = request.client(dbUrl, options);
 
   exists(db, function(err) {
     if (err) {
@@ -26,7 +26,7 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
     }
 
     var liner = require('../includes/liner.js')();
-    var writer = require('../includes/writer.js')(db, buffersize, parallelism, ee);
+    var writer = require('../includes/writer.js')(db, options.bufferSize, options.parallelism, ee);
 
     // pipe the input to the output, via transformation functions
     readstream

@@ -147,7 +147,7 @@ module.exports = {
 
     // Get the event emitter from the backup process so we can handle events
     // before passing them on to the app's event emitter if needed.
-    const internalEE = backup(srcUrl, opts.bufferSize, opts.parallelism, opts.log, opts.resume)
+    const internalEE = backup(srcUrl, opts)
       .on('changes', function(batch) {
         ee.emit('changes', batch);
       }).on('received', function(obj, q, logCompletedBatch) {
@@ -227,8 +227,7 @@ module.exports = {
 
     restoreInternal(
       targetUrl,
-      opts.bufferSize,
-      opts.parallelism,
+      opts,
       srcStream,
       ee,
       function(err, writer) {
