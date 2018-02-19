@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,6 +63,26 @@ describe('#unit Configuration', function() {
     applyEnvVars(config);
     assert.equal(typeof config.parallelism, 'number');
     assert.equal(config.parallelism, 20);
+    done();
+  });
+
+  it('respects the CLOUDANT_IAM_API_KEY env variable', function(done) {
+    const key = 'ABC123-ZYX987_cba789-xyz321';
+    process.env.CLOUDANT_IAM_API_KEY = key;
+    var config = {};
+    applyEnvVars(config);
+    assert.equal(typeof config.iamApiKey, 'string');
+    assert.equal(config.iamApiKey, key);
+    done();
+  });
+
+  it('respects the CLOUDANT_IAM_TOKEN_URL env variable', function(done) {
+    const u = 'https://testhost.example:1234/identity/token';
+    process.env.CLOUDANT_IAM_TOKEN_URL = u;
+    var config = {};
+    applyEnvVars(config);
+    assert.equal(typeof config.iamTokenUrl, 'string');
+    assert.equal(config.iamTokenUrl, u);
     done();
   });
 

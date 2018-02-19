@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         assert.fail(err);
       })
@@ -94,11 +94,8 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    var errCount = 0;
-
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
-        errCount++;
         assert.equal(err.name, 'HTTPError');
       })
       .on('received', function(data) {
@@ -111,7 +108,6 @@ describe('#unit Perform backup using shallow backup', function() {
       .on('finished', function(data) {
         assert.equal(data.total, 11);
         assert.ok(couch.isDone());
-        assert.equal(errCount, 1);
         done();
       });
   });
@@ -130,7 +126,7 @@ describe('#unit Perform backup using shallow backup', function() {
 
     var errCount = 0;
 
-    backup(dbUrl, 3, 1, null, null)
+    backup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         errCount++;
         assert.equal(err.name, 'Unauthorized');

@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,27 +35,24 @@ const logfilegetbatches = require('./logfilegetbatches.js');
  *  - `error` - on error
  *  - `finished` - when backup process is finished (either complete or errored)
  */
-module.exports = function(dbUrl, blocksize, parallelism, log, resume) {
-  if (typeof blocksize === 'string') {
-    blocksize = parseInt(blocksize);
-  }
+module.exports = function(dbUrl, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime(); // backup start time
   const batchesPerDownloadSession = 50; // max batches to read from log file for download at a time (prevent OOM)
 
-  const db = request.client(dbUrl, parallelism);
+  const db = request.client(dbUrl, options);
 
   function proceedWithBackup() {
-    if (resume) {
+    if (options.resume) {
       // pick up from existing log file from previous run
-      downloadRemainingBatches(log, db, ee, start, batchesPerDownloadSession, parallelism);
+      downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
     } else {
       // create new log file and process
-      spoolchanges(db, log, blocksize, ee, function(err) {
+      spoolchanges(db, options.log, options.bufferSize, ee, function(err) {
         if (err) {
           ee.emit('error', err);
         } else {
-          downloadRemainingBatches(log, db, ee, start, batchesPerDownloadSession, parallelism);
+          downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
         }
       });
     }
@@ -92,7 +89,7 @@ function validateBulkGetSupport(db, callback) {
             // => supports /_bulk_get endpoint
             return;
           default:
-            return new error.HTTPFatalError(err);
+            return new error.HTTPError(err);
         }
       });
       callback(err);
@@ -135,10 +132,8 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
     readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, function(err, batchSetIds) {
       if (err) {
         ee.emit('error', err);
-        if (!err.isTransient) {
-          // Stop processing changes file for fatal errors
-          noRemainingBatches = true;
-        }
+        // Stop processing changes file for fatal errors
+        noRemainingBatches = true;
         done();
       } else {
         if (batchSetIds.length === 0) {
@@ -226,10 +221,8 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
       function(err, body) {
         if (err) {
           err = error.convertResponseError(err);
-          if (!err.isTransient) {
-            // Kill the queue for fatal errors
-            q.kill();
-          }
+          // Kill the queue for fatal errors
+          q.kill();
           ee.emit('error', err);
           done();
         } else {

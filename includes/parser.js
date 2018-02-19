@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,9 @@ function parseBackupArgs() {
     .option('-d, --db <db>',
       cliutils.getUsage('name of the database to backup', defaults.db),
       defaults.db)
+    .option('-k, --iam-api-key <API key>',
+      cliutils.getUsage('IAM API key to access the Cloudant server'),
+      defaults.iamApiKey)
     .option('-l, --log <file>',
       cliutils.getUsage('file to store logging information during backup', 'a temporary file'),
       path.normalize, defaults.log)
@@ -80,6 +83,9 @@ function parseRestoreArgs() {
     .option('-d, --db <db>',
       cliutils.getUsage('name of the new, existing database to restore to', defaults.db),
       defaults.db)
+    .option('-k, --iam-api-key <API key>',
+      cliutils.getUsage('IAM API key to access the Cloudant server'),
+      defaults.iamApiKey)
     .option('-p, --parallelism <n>',
       cliutils.getUsage('number of HTTP requests to perform in parallel when restoring a backup', defaults.parallelism),
       Number, defaults.parallelism)

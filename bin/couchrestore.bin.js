@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@ var program = parser.parseRestoreArgs();
 var databaseUrl = cliutils.databaseUrl(program.url, program.db);
 var opts = {
   bufferSize: program.bufferSize,
-  parallelism: program.parallelism
+  parallelism: program.parallelism,
+  iamApiKey: program.iamApiKey
 };
 
 // log configuration to console
 console.error('='.repeat(80));
 console.error('Performing restore on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
-console.error(JSON.stringify(opts, null, 2));
+console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
 console.error('='.repeat(80));
 
 return couchbackup.restore(

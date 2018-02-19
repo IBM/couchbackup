@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ var request = require('../includes/request.js');
 var error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
-const db = request.client(url, 1);
+const db = request.client(url, {parallelism: 1});
 
 describe('#unit Check request response error callback', function() {
   beforeEach('Clean nock', function() {
@@ -41,24 +41,26 @@ describe('#unit Check request response error callback', function() {
     });
   });
 
-  it('should callback with error for 500 response', function(done) {
+  it('should callback with error after 3 500 responses', function(done) {
     var couch = nock(url)
       .get('/bad')
+      .times(3)
       .reply(500, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPError');
+      assert.equal(err.name, 'HTTPFatalError');
       assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
       assert.ok(couch.isDone());
       done();
     });
   });
 
-  it('should callback with error for POST 503 response', function(done) {
+  it('should callback with error after 3 POST 503 responses', function(done) {
     var couch = nock(url)
       .post('/bad')
       .query(true)
+      .times(3)
       .reply(503, {error: 'service_unavailable', reason: 'Service unavailable'});
 
     db.server.request(
@@ -66,21 +68,22 @@ describe('#unit Check request response error callback', function() {
       function(err, body) {
         assert.ok(err);
         err = error.convertResponseError(err);
-        assert.equal(err.name, 'HTTPError');
+        assert.equal(err.name, 'HTTPFatalError');
         assert.equal(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
         assert.ok(couch.isDone());
         done();
       });
   });
 
-  it('should callback with error for 429 response', function(done) {
+  it('should callback with error after 3 429 responses', function(done) {
     var couch = nock(url)
       .get('/bad')
+      .times(3)
       .reply(429, {error: 'foo', reason: 'bar'});
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPError');
+      assert.equal(err.name, 'HTTPFatalError');
       assert.equal(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
       assert.ok(couch.isDone());
       done();
@@ -100,53 +103,11 @@ describe('#unit Check request response error callback', function() {
       done();
     });
   });
-});
-
-describe('#unit Check request response fatal error callback', function() {
-  it('should not callback with fatal error for 200 response', function(done) {
-    var couch = nock(url)
-      .get('/good')
-      .reply(200, {ok: true});
-
-    db.get('good', function(err) {
-      err = error.convertResponseErrorToFatal(err);
-      assert.equal(err, null);
-      assert.ok(couch.isDone());
-      done();
-    });
-  });
-
-  it('should callback with fatal error for 500 response', function(done) {
-    var couch = nock(url)
-      .get('/bad')
-      .reply(500, {error: 'foo', reason: 'bar'});
-
-    db.get('bad', function(err) {
-      err = error.convertResponseErrorToFatal(err);
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
-      assert.ok(couch.isDone());
-      done();
-    });
-  });
-
-  it('should callback with fatal error for 404 response', function(done) {
-    var couch = nock(url)
-      .get('/bad')
-      .reply(404, {error: 'foo', reason: 'bar'});
-
-    db.get('bad', function(err) {
-      err = error.convertResponseErrorToFatal(err);
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
-      assert.ok(couch.isDone());
-      done();
-    });
-  });
 
   it('should callback with same error for no status code error response', function(done) {
     var couch = nock(url)
       .get('/bad')
+      .times(3)
       .replyWithError('testing badness');
 
     db.get('bad', function(err) {

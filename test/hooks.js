@@ -15,7 +15,7 @@
 /* global beforeEach afterEach */
 'use strict';
 
-const cloudant = require('cloudant')(
+const cloudant = require('@cloudant/cloudant')(
   (process.env.COUCH_BACKEND_URL) ? {url: process.env.COUCH_BACKEND_URL} : 'https://no-couch-backend-url-set.test');
 const uuid = require('uuid/v4');
 const fs = require('fs');

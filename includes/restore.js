@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 const request = require('./request.js');
 const error = require('./error.js');
 
-module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callback) {
-  var db = request.client(dbUrl, parallelism);
+module.exports = function(dbUrl, options, readstream, ee, callback) {
+  var db = request.client(dbUrl, options);
 
   exists(db, function(err) {
     if (err) {
@@ -26,7 +26,7 @@ module.exports = function(dbUrl, buffersize, parallelism, readstream, ee, callba
     }
 
     var liner = require('../includes/liner.js')();
-    var writer = require('../includes/writer.js')(db, buffersize, parallelism, ee);
+    var writer = require('../includes/writer.js')(db, options.bufferSize, options.parallelism, ee);
 
     // pipe the input to the output, via transformation functions
     readstream
@@ -57,8 +57,8 @@ function exists(db, callback) {
         noDBErr.name = 'RestoreDatabaseNotFound';
         return noDBErr;
       } else {
-        // Delegate to the fatal error factory if it wasn't a 404
-        return error.convertResponseErrorToFatal(err);
+        // Delegate to the default error factory if it wasn't a 404
+        return error.convertResponseError(err);
       }
     });
     // Callback with or without (i.e. undefined) error
