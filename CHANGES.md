@@ -1,12 +1,12 @@
-# Unreleased
+# 2.1.0 (2018-02-20)
 
-- [IMPROVED] Enhanced resilience of backup and restore processes by enabling the
-  nodejs-cloudant retry plugin.
-- [UPGRADED] Increased nodejs-cloudant dependency to 2.x.
 - [NEW] Added API for upcoming IBM Cloud Identity and Access Management support
   for Cloudant on IBM Cloud. Note: IAM API key support is not yet enabled in the
   service.
+- [IMPROVED] Enhanced resilience of backup and restore processes by enabling the
+  nodejs-cloudant retry plugin.
 - [IMPROVED] Added URL validation for presence of host and database elements.
+- [UPGRADED] Increased nodejs-cloudant dependency to 2.x.  
 
 # 2.0.1 (2018-01-11)
 
