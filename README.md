@@ -33,7 +33,7 @@ npm install -g @cloudant/couchbackup
 ```
 
 ### Requirements
-* The minimum required Node.js version is 4.8.2.
+* The minimum required Node.js version is 6.13.0.
 * The minimum required CouchDB version is 2.0.0.
 
 ### Snapshots

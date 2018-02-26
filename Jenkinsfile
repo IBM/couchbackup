@@ -113,8 +113,8 @@ stage('QA') {
   }
 
   def axes = [
-    Node4x:{ setupNodeAndTest('lts/argon', filter) }, //4.x LTS
     Node6x:{ setupNodeAndTest('lts/boron', filter) }, // 6.x LTS
+    Node8x:{ setupNodeAndTest('lts/carbon', filter) }, // 8.x LTS
     Node:{ setupNodeAndTest('node', filter) }, // Current
     // Test IAM on the current Node.js version. Filter out unit tests and the
     // slowest integration tests.
