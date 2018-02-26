@@ -1,3 +1,6 @@
+# 2.2.0 (UNRELEASED)
+- [NOTE] Update engines in preparation for Node.js 4 “Argon” end-of-life.
+
 # 2.1.0 (2018-02-20)
 
 - [NEW] Added API for upcoming IBM Cloud Identity and Access Management support
