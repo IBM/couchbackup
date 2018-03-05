@@ -71,7 +71,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
         changesRequest.abort();
         callback(error.convertResponseError(resp));
       } else {
-        resp.pipe(liner())
+        changesRequest.pipe(liner())
           .on('error', function(err) {
             callback(err);
           })
