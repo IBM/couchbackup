@@ -1,4 +1,4 @@
-# 2.2.0 (UNRELEASED)
+# 2.2.0 (2018-03-06)
 - [FIXED] An issue where the `_changes` response stream doesn't get correctly
   decompressed.
 - [FIXED] Prevent duplicate execution of backup error callbacks.
