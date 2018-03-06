@@ -1,6 +1,7 @@
 # 2.2.0 (UNRELEASED)
 - [FIXED] An issue where the `_changes` response stream doesn't get correctly
   decompressed.
+- [FIXED] Prevent duplicate execution of backup error callbacks.
 - [NOTE] Update engines in preparation for Node.js 4 “Argon” end-of-life.
 
 # 2.1.0 (2018-02-20)
