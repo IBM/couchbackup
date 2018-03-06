@@ -195,6 +195,7 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, callback) {
  * @param {any} callback - completion callback, (err, {total: number}).
  */
 function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, callback) {
+  var hasErrored = false;
   var total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
@@ -220,10 +221,13 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
       {method: 'POST', db: db.config.db, path: '_bulk_get', qs: {revs: true}, body: payload},
       function(err, body) {
         if (err) {
-          err = error.convertResponseError(err);
-          // Kill the queue for fatal errors
-          q.kill();
-          ee.emit('error', err);
+          if (!hasErrored) {
+            hasErrored = true;
+            err = error.convertResponseError(err);
+            // Kill the queue for fatal errors
+            q.kill();
+            ee.emit('error', err);
+          }
           done();
         } else {
           // create an output array with the docs returned
