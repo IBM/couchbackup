@@ -127,6 +127,15 @@ function validateArgs(url, opts, cb) {
   return true;
 }
 
+function addEventListener(indicator, emitter, event, f) {
+  emitter.on(event, function(...args) {
+    if (!indicator.errored) {
+      if (event === 'error') indicator.errored = true;
+      f(...args);
+    }
+  });
+}
+
 module.exports = {
 
   /**
@@ -144,6 +153,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   backup: function(srcUrl, targetStream, opts, callback) {
+    var listenerErrorIndicator = {errored: false};
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
@@ -165,7 +175,7 @@ module.exports = {
 
     // if there is an error writing to the stream, call the completion
     // callback with the error set
-    targetStream.on('error', function(err) {
+    addEventListener(listenerErrorIndicator, targetStream, 'error', function(err) {
       debug('Error ' + JSON.stringify(err));
       if (callback) callback(err);
     });
@@ -179,60 +189,58 @@ module.exports = {
 
     // Get the event emitter from the backup process so we can handle events
     // before passing them on to the app's event emitter if needed.
-    const internalEE = backup(srcUrl, opts)
-      .on('changes', function(batch) {
-        ee.emit('changes', batch);
-      }).on('received', function(obj, q, logCompletedBatch) {
+    const internalEE = backup(srcUrl, opts);
+    addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
+      ee.emit('changes', batch);
+    });
+    addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
+      // this may be too verbose to have as well as the "backed up" message
+      // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+      // Callback to emit the written event when the content is flushed
+      function writeFlushed() {
+        ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
+        if (logCompletedBatch) {
+          logCompletedBatch(obj.batch);
+        }
         debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        // Callback to emit the written event when the content is flushed
-        function writeFlushed() {
-          ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
-          if (logCompletedBatch) {
-            logCompletedBatch(obj.batch);
-          }
+      }
+      // Write the received content to the targetStream
+      const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
+        'utf8',
+        writeFlushed);
+      if (!continueWriting) {
+        // The buffer was full, pause the queue to stop the writes until we
+        // get a drain event
+        if (q && !q.isPaused) {
+          q.pause();
+          targetStream.once('drain', function() {
+            q.resume();
+          });
         }
-        // Write the received content to the targetStream
-        const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
-          'utf8',
-          writeFlushed);
-        if (!continueWriting) {
-          // The buffer was full, pause the queue to stop the writes until we
-          // get a drain event
-          if (q && !q.isPaused) {
-            q.pause();
-            targetStream.once('drain', function() {
-              q.resume();
-            });
-          }
-        }
-      })
-      // For errors we expect, may or may not be fatal
-      .on('error', function(err) {
-        debug('Error ' + JSON.stringify(err));
-        // These are fatal errors
-        // We only want to callback once for a fatal error
-        // even though other errors may be received,
-        // so deregister the listeners now
-        internalEE.removeAllListeners();
-        callback(err);
-      })
-      .on('finished', function(obj) {
-        function emitFinished() {
-          debug('Backup complete - written ' + JSON.stringify(obj));
-          const summary = {total: obj.total};
-          ee.emit('finished', summary);
-          if (callback) callback(null, summary);
-        }
-        if (targetStream === process.stdout) {
-          // stdout cannot emit a finish event so use a final write + callback
-          targetStream.write('', 'utf8', emitFinished);
-        } else {
-          // If we're writing to a file, end the writes and register the
-          // emitFinished function for a callback when the file stream's finish
-          // event is emitted.
-          targetStream.end('', 'utf8', emitFinished);
-        }
-      });
+      }
+    });
+    // For errors we expect, may or may not be fatal
+    addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
+      debug('Error ' + JSON.stringify(err));
+      callback(err);
+    });
+    addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
+      function emitFinished() {
+        debug('Backup complete - written ' + JSON.stringify(obj));
+        const summary = {total: obj.total};
+        ee.emit('finished', summary);
+        if (callback) callback(null, summary);
+      }
+      if (targetStream === process.stdout) {
+        // stdout cannot emit a finish event so use a final write + callback
+        targetStream.write('', 'utf8', emitFinished);
+      } else {
+        // If we're writing to a file, end the writes and register the
+        // emitFinished function for a callback when the file stream's finish
+        // event is emitted.
+        targetStream.end('', 'utf8', emitFinished);
+      }
+    });
 
     return ee;
   },
@@ -249,6 +257,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {
+    var listenerErrorIndicator = {errored: false};
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
@@ -269,29 +278,23 @@ module.exports = {
           return;
         }
         if (writer != null) {
-          writer.on('restored', function(obj) {
+          addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
             debug(' restored ', obj.total);
             ee.emit('restored', {documents: obj.documents, total: obj.total});
-          })
-            // For errors we expect, may or may not be fatal
-            .on('error', function(err) {
-              debug('Error ' + JSON.stringify(err));
-              // These are fatal errors
-              // We only want to callback once for a fatal error
-              // even though other errors may be received,
-              // so deregister listeners now
-              writer.removeAllListeners();
-              // Only call destroy if it is available on the stream
-              if (srcStream.destroy && srcStream.destroy instanceof Function) {
-                srcStream.destroy();
-              }
-              callback(err);
-            })
-            .on('finished', function(obj) {
-              debug('restore complete');
-              ee.emit('finished', {total: obj.total});
-              callback(null, obj);
-            });
+          });
+          addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
+            debug('Error ' + JSON.stringify(err));
+            // Only call destroy if it is available on the stream
+            if (srcStream.destroy && srcStream.destroy instanceof Function) {
+              srcStream.destroy();
+            }
+            callback(err);
+          });
+          addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
+            debug('restore complete');
+            ee.emit('finished', {total: obj.total});
+            callback(null, obj);
+          });
         }
       }
     );

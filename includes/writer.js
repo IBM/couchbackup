@@ -40,23 +40,25 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
     var zipstream = zlib.createGzip();
 
-    var req = db.server.request({
-      db: db.config.db,
-      path: '_bulk_docs',
-      method: 'POST',
-      headers: {'content-encoding': 'gzip'}
-    }, function(err) {
-      err = error.convertResponseError(err);
-      if (err) {
-        debug(`Error writing docs ${err.name} ${err.message}`);
-        cb(err, payload);
-      } else {
-        written += payload.docs.length;
-        writer.emit('restored', {documents: payload.docs.length, total: written});
-        cb();
-      }
-    });
-    payloadStream.pipe(zipstream).pipe(req);
+    if (!didError) {
+      var req = db.server.request({
+        db: db.config.db,
+        path: '_bulk_docs',
+        method: 'POST',
+        headers: {'content-encoding': 'gzip'}
+      }, function(err) {
+        err = error.convertResponseError(err);
+        if (err) {
+          debug(`Error writing docs ${err.name} ${err.message}`);
+          cb(err, payload);
+        } else {
+          written += payload.docs.length;
+          writer.emit('restored', {documents: payload.docs.length, total: written});
+          cb();
+        }
+      });
+      payloadStream.pipe(zipstream).pipe(req);
+    }
   }, parallelism);
 
   var didError = false;
