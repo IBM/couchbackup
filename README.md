@@ -97,6 +97,8 @@ This log file can be used to resume backups from where you left off with `--resu
 couchbackup --db animaldb --log animaldb.log --resume true >> animaldb.txt
 ```
 
+The `--resume true` option works for a backup that has finished spooling changes, but has not yet completed downloading all the necessary batches of documents. It does _not_ provide an incremental backup solution.
+
 You may also specify the name of the output file, rather than directing the backup data to *stdout*:
 
 ```sh
