@@ -113,17 +113,17 @@ function testBackup(params, databaseName, outputStream, callback) {
         if (params.expectedBackupError) {
           try {
             assert.equal(err.name, params.expectedBackupError.name, `The backup should receive the expected error.`);
-            callback();
-          } catch (err) {
-            callback(err);
+            // Got the expected error, so wipe it for the callback
+            err = null;
+          } catch (caught) {
+            // Update the error with the assertion failure
+            err = caught;
           }
-        } else {
-          callback(err);
         }
       } else {
         console.log(data);
-        callback();
       }
+      callback(err);
     });
     if (backup) {
       backup.on('error', function(err) {
@@ -272,17 +272,15 @@ function testRestore(params, inputStream, databaseName, callback) {
         if (params.expectedRestoreError) {
           try {
             assert.equal(err.name, params.expectedRestoreError.name, `The restore should receive the expected error.`);
-            callback();
-          } catch (err) {
-            callback(err);
+            err = null;
+          } catch (caught) {
+            err = caught;
           }
-        } else {
-          callback(err);
         }
       } else {
         console.log(data);
-        callback();
       }
+      callback(err);
     }).on('error', function(err) {
       console.error(`Caught non-fatal error: ${err}`);
     });

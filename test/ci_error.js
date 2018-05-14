@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,23 +22,24 @@ const u = require('./citestutils.js');
 describe('Write error tests', function() {
   it('calls callback with error set when stream is not writeable', function(done) {
     u.setTimeout(this, 10);
-    const dirname = fs.mkdtempSync('test_backup');
-    // make temp dir not writeable
-    fs.chmodSync(dirname, 0);
+    const dirname = fs.mkdtempSync('test_backup_');
+    // make temp dir read only
+    fs.chmodSync(dirname, 0o444);
     const filename = dirname + '/test.backup';
     const backupStream = fs.createWriteStream(filename, {flags: 'w'});
     const params = {useApi: true};
     // try to do backup and check err was set in callback
-    u.testBackup(params, 'animaldb', backupStream, function(err) {
+    u.testBackup(params, 'animaldb', backupStream, function(resultErr) {
+      var err = null;
       try {
         // cleanup temp dir
-        fs.chmodSync(dirname, 0x1B6); // 666 in octal
         fs.rmdirSync(dirname);
         // error should have been set
-        assert.ok(err != null);
-        assert.equal(err.code, 'EACCES');
-        done();
-      } catch (err) {
+        assert.ok(resultErr);
+        assert.equal(resultErr.code, 'EACCES');
+      } catch (thrownErr) {
+        err = thrownErr;
+      } finally {
         done(err);
       }
     });

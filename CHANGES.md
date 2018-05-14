@@ -1,4 +1,8 @@
 # 2.3.0 (UNRELEASED)
+- [FIXED] Intermittent issues with multiple callbacks, particularly noticeable
+ when using Node.js 10.
+- [FIXED] Issue where a success message could confusingly be output after a
+ fatal error.
 
 # 2.2.0 (2018-03-06)
 
