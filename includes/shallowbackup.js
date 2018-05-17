@@ -16,11 +16,8 @@
 const async = require('async');
 const error = require('./error.js');
 const events = require('events');
-const request = require('./request.js');
 
-module.exports = function(dbUrl, options) {
-  var db = request.client(dbUrl, options);
-
+module.exports = function(db, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
   var batch = 0;

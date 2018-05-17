@@ -15,7 +15,6 @@
 
 const async = require('async');
 const events = require('events');
-const request = require('./request.js');
 const fs = require('fs');
 const error = require('./error.js');
 const spoolchanges = require('./spoolchanges.js');
@@ -25,7 +24,7 @@ const logfilegetbatches = require('./logfilegetbatches.js');
 /**
  * Read documents from a database to be backed up.
  *
- * @param {string} dbUrl - URL of source database.
+ * @param {string} db - `@cloudant/cloudant` DB object for source database.
  * @param {number} blocksize - number of documents to download in single request
  * @param {number} parallelism - number of concurrent downloads
  * @param {string} log - path to log file to use
@@ -35,12 +34,10 @@ const logfilegetbatches = require('./logfilegetbatches.js');
  *  - `error` - on error
  *  - `finished` - when backup process is finished (either complete or errored)
  */
-module.exports = function(dbUrl, options) {
+module.exports = function(db, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime(); // backup start time
   const batchesPerDownloadSession = 50; // max batches to read from log file for download at a time (prevent OOM)
-
-  const db = request.client(dbUrl, options);
 
   function proceedWithBackup() {
     if (options.resume) {

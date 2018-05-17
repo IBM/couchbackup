@@ -19,13 +19,14 @@
  * @see module:couchbackup
  */
 
-const restoreInternal = require('./includes/restore.js');
-const backupShallow = require('./includes/shallowbackup.js');
 const backupFull = require('./includes/backup.js');
 const defaults = require('./includes/config.js').apiDefaults();
-const events = require('events');
-const debug = require('debug')('couchbackup:app');
 const error = require('./includes/error.js');
+const request = require('./includes/request.js');
+const restoreInternal = require('./includes/restore.js');
+const backupShallow = require('./includes/shallowbackup.js');
+const debug = require('debug')('couchbackup:app');
+const events = require('events');
 const fs = require('fs');
 const legacyUrl = require('url');
 
@@ -136,6 +137,33 @@ function addEventListener(indicator, emitter, event, f) {
   });
 }
 
+/*
+  Check the referenced database exists and that the credentials used have
+  visibility. Callback with a fatal error if there is a problem with the DB.
+  @param {string} db - database object
+  @param {function(err)} callback - error is undefined if DB exists
+*/
+function proceedIfDbValid(db, callback) {
+  db.head('', function(err) {
+    err = error.convertResponseError(err, function(err) {
+      if (err && err.statusCode === 404) {
+        // Override the error type and mesasge for the DB not found case
+        var msg = `Database ${db.config.url.replace(/\/\/.+@/g, '//****:****@')}` +
+        `/${db.config.db} does not exist. ` +
+        'Check the URL and database name have been specified correctly.';
+        var noDBErr = new Error(msg);
+        noDBErr.name = 'DatabaseNotFound';
+        return noDBErr;
+      } else {
+        // Delegate to the default error factory if it wasn't a 404
+        return error.convertResponseError(err);
+      }
+    });
+    // Callback with or without (i.e. undefined) error
+    callback(err);
+  });
+}
+
 module.exports = {
 
   /**
@@ -162,16 +190,6 @@ module.exports = {
       // bad args, bail
       return;
     }
-    opts = Object.assign({}, defaults, opts);
-
-    var backup = null;
-    if (opts.mode === 'shallow') {
-      backup = backupShallow;
-    } else { // full mode
-      backup = backupFull;
-    }
-
-    const ee = new events.EventEmitter();
 
     // if there is an error writing to the stream, call the completion
     // callback with the error set
@@ -180,68 +198,92 @@ module.exports = {
       if (callback) callback(err);
     });
 
-    // If resuming write a newline as it's possible one would be missing from
-    // an interruption of the previous backup. If the backup was clean this
-    // will cause an empty line that will be gracefully handled by the restore.
-    if (opts.resume) {
-      targetStream.write('\n');
-    }
+    opts = Object.assign({}, defaults, opts);
 
-    // Get the event emitter from the backup process so we can handle events
-    // before passing them on to the app's event emitter if needed.
-    const internalEE = backup(srcUrl, opts);
-    addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
-      ee.emit('changes', batch);
-    });
-    addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
-      // this may be too verbose to have as well as the "backed up" message
-      // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-      // Callback to emit the written event when the content is flushed
-      function writeFlushed() {
-        ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
-        if (logCompletedBatch) {
-          logCompletedBatch(obj.batch);
-        }
-        debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-      }
-      // Write the received content to the targetStream
-      const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
-        'utf8',
-        writeFlushed);
-      if (!continueWriting) {
-        // The buffer was full, pause the queue to stop the writes until we
-        // get a drain event
-        if (q && !q.isPaused) {
-          q.pause();
-          targetStream.once('drain', function() {
-            q.resume();
-          });
-        }
-      }
-    });
-    // For errors we expect, may or may not be fatal
-    addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
-      debug('Error ' + JSON.stringify(err));
-      callback(err);
-    });
-    addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
-      function emitFinished() {
-        debug('Backup complete - written ' + JSON.stringify(obj));
-        const summary = {total: obj.total};
-        ee.emit('finished', summary);
-        if (callback) callback(null, summary);
-      }
-      if (targetStream === process.stdout) {
-        // stdout cannot emit a finish event so use a final write + callback
-        targetStream.write('', 'utf8', emitFinished);
-      } else {
-        // If we're writing to a file, end the writes and register the
-        // emitFinished function for a callback when the file stream's finish
-        // event is emitted.
-        targetStream.end('', 'utf8', emitFinished);
-      }
-    });
+    const ee = new events.EventEmitter();
 
+    // Set up the DB client
+    const backupDB = request.client(srcUrl, opts);
+
+    // Validate the DB exists, before proceeding to backup
+    proceedIfDbValid(backupDB, function(err) {
+      if (err) {
+        if (err.name === 'DatabaseNotFound') {
+          err.message = `${err.message} Ensure the backup source database exists.`;
+        }
+        // Didn't exist, or another fatal error, exit
+        callback(err);
+        return;
+      }
+      var backup = null;
+      if (opts.mode === 'shallow') {
+        backup = backupShallow;
+      } else { // full mode
+        backup = backupFull;
+      }
+
+      // If resuming write a newline as it's possible one would be missing from
+      // an interruption of the previous backup. If the backup was clean this
+      // will cause an empty line that will be gracefully handled by the restore.
+      if (opts.resume) {
+        targetStream.write('\n');
+      }
+
+      // Get the event emitter from the backup process so we can handle events
+      // before passing them on to the app's event emitter if needed.
+      const internalEE = backup(backupDB, opts);
+      addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
+        ee.emit('changes', batch);
+      });
+      addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
+        // this may be too verbose to have as well as the "backed up" message
+        // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+        // Callback to emit the written event when the content is flushed
+        function writeFlushed() {
+          ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
+          if (logCompletedBatch) {
+            logCompletedBatch(obj.batch);
+          }
+          debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+        }
+        // Write the received content to the targetStream
+        const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
+          'utf8',
+          writeFlushed);
+        if (!continueWriting) {
+          // The buffer was full, pause the queue to stop the writes until we
+          // get a drain event
+          if (q && !q.isPaused) {
+            q.pause();
+            targetStream.once('drain', function() {
+              q.resume();
+            });
+          }
+        }
+      });
+      // For errors we expect, may or may not be fatal
+      addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
+        debug('Error ' + JSON.stringify(err));
+        callback(err);
+      });
+      addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
+        function emitFinished() {
+          debug('Backup complete - written ' + JSON.stringify(obj));
+          const summary = {total: obj.total};
+          ee.emit('finished', summary);
+          if (callback) callback(null, summary);
+        }
+        if (targetStream === process.stdout) {
+          // stdout cannot emit a finish event so use a final write + callback
+          targetStream.write('', 'utf8', emitFinished);
+        } else {
+          // If we're writing to a file, end the writes and register the
+          // emitFinished function for a callback when the file stream's finish
+          // event is emitted.
+          targetStream.end('', 'utf8', emitFinished);
+        }
+      });
+    });
     return ee;
   },
 
@@ -267,41 +309,54 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
-    restoreInternal(
-      targetUrl,
-      opts,
-      srcStream,
-      ee,
-      function(err, writer) {
-        if (err) {
-          callback(err, null);
-          return;
-        }
-        if (writer != null) {
-          addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
-            debug(' restored ', obj.total);
-            ee.emit('restored', {documents: obj.documents, total: obj.total});
-          });
-          addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
-            debug('Error ' + JSON.stringify(err));
-            // Only call destroy if it is available on the stream
-            if (srcStream.destroy && srcStream.destroy instanceof Function) {
-              srcStream.destroy();
-            }
-            callback(err);
-          });
-          addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
-            debug('restore complete');
-            ee.emit('finished', {total: obj.total});
-            callback(null, obj);
-          });
-        }
-      }
-    );
+    // Set up the DB client
+    const restoreDB = request.client(targetUrl, opts);
 
+    // Validate the DB exists, before proceeding to restore
+    proceedIfDbValid(restoreDB, function(err) {
+      if (err) {
+        if (err.name === 'DatabaseNotFound') {
+          err.message = `${err.message} Create the target database before restoring.`;
+        }
+        // Didn't exist, or another fatal error, exit
+        callback(err);
+        return;
+      }
+
+      restoreInternal(
+        restoreDB,
+        opts,
+        srcStream,
+        ee,
+        function(err, writer) {
+          if (err) {
+            callback(err, null);
+            return;
+          }
+          if (writer != null) {
+            addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
+              debug(' restored ', obj.total);
+              ee.emit('restored', {documents: obj.documents, total: obj.total});
+            });
+            addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
+              debug('Error ' + JSON.stringify(err));
+              // Only call destroy if it is available on the stream
+              if (srcStream.destroy && srcStream.destroy instanceof Function) {
+                srcStream.destroy();
+              }
+              callback(err);
+            });
+            addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
+              debug('restore complete');
+              ee.emit('finished', {total: obj.total});
+              callback(null, obj);
+            });
+          }
+        }
+      );
+    });
     return ee;
   }
-
 };
 
 /**
