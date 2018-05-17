@@ -3,6 +3,7 @@
  when using Node.js 10.
 - [FIXED] Issue where a success message could confusingly be output after a
  fatal error.
+- [UPGRADED] Increased nodejs-cloudant dependency minimum to 2.2.x. 
 
 # 2.2.0 (2018-03-06)
 
