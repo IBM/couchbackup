@@ -17,8 +17,16 @@
 
 const assert = require('assert');
 const backup = require('../includes/shallowbackup.js');
+const request = require('../includes/request.js');
 const fs = require('fs');
 const nock = require('nock');
+
+// Function to create a DB object and call the shallow backup function
+// This is normally done by app.js
+function shallowBackup(dbUrl, opts) {
+  const db = request.client(dbUrl, opts);
+  return backup(db, opts);
+}
 
 // Note all these tests include a body parameter of include_docs and a query
 // string of include_docs because of a quirk of nano that when using the fetch
@@ -53,7 +61,7 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    backup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         assert.fail(err);
       })
@@ -94,7 +102,7 @@ describe('#unit Perform backup using shallow backup', function() {
       .query({limit: 3, startkey: snipeKey, include_docs: true})
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    backup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         assert.equal(err.name, 'HTTPError');
       })
@@ -126,7 +134,7 @@ describe('#unit Perform backup using shallow backup', function() {
 
     var errCount = 0;
 
-    backup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         errCount++;
         assert.equal(err.name, 'Unauthorized');

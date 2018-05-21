@@ -17,7 +17,7 @@
 const codes = {
   'Error': 1,
   'InvalidOption': 2,
-  'RestoreDatabaseNotFound': 10,
+  'DatabaseNotFound': 10,
   'Unauthorized': 11,
   'Forbidden': 12,
   'NoLogFileName': 20,

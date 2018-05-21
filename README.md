@@ -379,6 +379,7 @@ details them.
 
 * `1`: unknown CLI option or generic error.
 * `2`: invalid CLI option.
+* `10`: backup source or restore target database does not exist.
 * `11`: unauthorized credentials for the database.
 * `12`: incorrect permissions for the database.
 * `40`: database returned a fatal HTTP error.
@@ -392,8 +393,6 @@ details them.
 * `50`: source database does not support `/_bulk_get` endpoint.
 
 ### `couchrestore`
-
-* `10`: restore target database does not exist.
 
 ## Note on attachments
 
