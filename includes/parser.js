@@ -58,6 +58,9 @@ function parseBackupArgs() {
       defaults.url)
     .parse(process.argv);
 
+  // Special case the iamTokenUrl which is only an env var
+  program.iamTokenUrl = defaults.iamTokenUrl;
+
   if (program.resume && (program.log === defaults.log)) {
     // If resuming and the log file arg is the newly generated tmp name from defaults then we know that --log wasn't specified.
     // We have to do this check here for the CLI case because of the default.
@@ -93,6 +96,9 @@ function parseRestoreArgs() {
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
       defaults.url)
     .parse(process.argv);
+
+  // Special case the iamTokenUrl which is only an env var
+  program.iamTokenUrl = defaults.iamTokenUrl;
 
   return program;
 }

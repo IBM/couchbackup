@@ -31,7 +31,8 @@ var opts = {
   mode: program.mode,
   parallelism: program.parallelism,
   resume: program.resume,
-  iamApiKey: program.iamApiKey
+  iamApiKey: program.iamApiKey,
+  iamTokenUrl: program.iamTokenUrl
 };
 
 // log configuration to console

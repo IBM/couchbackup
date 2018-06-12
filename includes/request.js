@@ -37,8 +37,8 @@ module.exports = {
     // Default to cookieauth unless an IAM key is provided
     if (opts.iamApiKey) {
       const iamPluginConfig = {iamApiKey: opts.iamApiKey};
-      if (opts.iamTokenEndpoint) {
-        iamPluginConfig.iamTokenEndpoint = opts.iamTokenEndpoint;
+      if (opts.iamTokenUrl) {
+        iamPluginConfig.iamTokenUrl = opts.iamTokenUrl;
       }
       pluginsToUse.push({iamauth: iamPluginConfig});
     } else {
