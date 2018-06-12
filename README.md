@@ -197,7 +197,11 @@ This tool can be used to script the backup of your databases. Move the backup an
  `https://iam.bluemix.net/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
 * `DEBUG` - if set to `couchbackup`, all debug messages will be sent to `stderr` during a backup or restore process
 
-### Command-line paramters
+_Note:_ These environment variables can only be used with the CLI. When
+[using programmatically](#using-programmatically) the `opts` dictionary must be
+used.
+
+### Command-line parameters
 
 * `--url` - same as `COUCH_URL` environment variable
 * `--db` - same as `COUCH_DATABASE`
@@ -248,8 +252,8 @@ target locations are not required.
 * `resume`: see `COUCH_RESUME`.
 * `mode`: see `COUCH_MODE`.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
-* `iamTokenUrl` : may be used with `key` to override the default URL for
-  retrieving IAM tokens.
+* `iamTokenUrl`: may be used with `iamApiKey` to override the default URL for
+ retrieving IAM tokens.
 
 The callback has the standard `err, data` parameters and is called when
 the backup completes or fails.
@@ -308,6 +312,9 @@ target locations are not required.
 
 * `parallelism`: see `COUCH_PARALLELISM`.
 * `bufferSize`: see `COUCH_BUFFER_SIZE`.
+* `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
+* `iamTokenUrl`: may be used with `iamApiKey` to override the default URL for
+ retrieving IAM tokens.
 
 The callback has the standard `err, data` parameters and is called when
 the restore completes or fails.
