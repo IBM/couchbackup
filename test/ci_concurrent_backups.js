@@ -23,7 +23,7 @@ const uuid = require('uuid/v4');
 const params = { useApi: true };
 
 describe(u.scenario('Concurrent database backups', params), function() {
-  it('should run concurrent API database backups correctly', function(done) {
+  it('should run concurrent API database backups correctly #slower', function(done) {
     // Allow up to 900 s to backup and compare (it should be much faster)!
     u.setTimeout(this, 900);
 
