@@ -20,7 +20,7 @@
  */
 
 const backupFull = require('./includes/backup.js');
-const defaults = require('./includes/config.js').apiDefaults();
+const defaults = require('./includes/config.js').apiDefaults;
 const error = require('./includes/error.js');
 const request = require('./includes/request.js');
 const restoreInternal = require('./includes/restore.js');
@@ -198,7 +198,7 @@ module.exports = {
       if (callback) callback(err);
     });
 
-    opts = Object.assign({}, defaults, opts);
+    opts = Object.assign({}, defaults(), opts);
 
     const ee = new events.EventEmitter();
 
@@ -305,7 +305,7 @@ module.exports = {
       opts = {};
     }
     validateArgs(targetUrl, opts, callback);
-    opts = Object.assign({}, defaults, opts);
+    opts = Object.assign({}, defaults(), opts);
 
     const ee = new events.EventEmitter();
 
