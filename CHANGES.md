@@ -1,4 +1,4 @@
-# Unreleased
+# 2.3.1 (2018-06-15)
 
 - [FIXED] Concurrent database backups use the same default log file.
 - [FIXED] IAM token URL override option.
