@@ -69,7 +69,7 @@ describe('#unit Default parameters', function() {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
-      assert.strictEqual(program.bufferSize, process.env.COUCH_BUFFER_SIZE);
+      assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
     });
 
@@ -77,7 +77,7 @@ describe('#unit Default parameters', function() {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
-      assert.strictEqual(program.parallelism, process.env.COUCH_PARALLELISM);
+      assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
     });
 
@@ -214,7 +214,7 @@ describe('#unit Default parameters', function() {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
-      assert.strictEqual(program.bufferSize, process.env.COUCH_BUFFER_SIZE);
+      assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
     });
 
@@ -222,7 +222,7 @@ describe('#unit Default parameters', function() {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
-      assert.strictEqual(program.parallelism, process.env.COUCH_PARALLELISM);
+      assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
     });
 
