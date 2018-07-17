@@ -35,7 +35,7 @@ describe('#unit Check request response error callback', function() {
 
     db.get('good', function(err) {
       err = error.convertResponseError(err);
-      assert.strictEqual(err, null);
+      assert.strictEqual(err, undefined);
       assert.ok(couch.isDone());
       done();
     });
