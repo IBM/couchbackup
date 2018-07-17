@@ -34,8 +34,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_URL = 'http://user:pass@myurl.com';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.url, 'string');
-    assert.equal(config.url, process.env.COUCH_URL);
+    assert.strictEqual(typeof config.url, 'string');
+    assert.strictEqual(config.url, process.env.COUCH_URL);
     done();
   });
 
@@ -43,8 +43,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_DATABASE = 'mydb';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.db, 'string');
-    assert.equal(config.db, process.env.COUCH_DATABASE);
+    assert.strictEqual(typeof config.db, 'string');
+    assert.strictEqual(config.db, process.env.COUCH_DATABASE);
     done();
   });
 
@@ -52,8 +52,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_BUFFER_SIZE = '1000';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.bufferSize, 'number');
-    assert.equal(config.bufferSize, 1000);
+    assert.strictEqual(typeof config.bufferSize, 'number');
+    assert.strictEqual(config.bufferSize, 1000);
     done();
   });
 
@@ -61,8 +61,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_PARALLELISM = '20';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.parallelism, 'number');
-    assert.equal(config.parallelism, 20);
+    assert.strictEqual(typeof config.parallelism, 'number');
+    assert.strictEqual(config.parallelism, 20);
     done();
   });
 
@@ -71,8 +71,8 @@ describe('#unit Configuration', function() {
     process.env.CLOUDANT_IAM_API_KEY = key;
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.iamApiKey, 'string');
-    assert.equal(config.iamApiKey, key);
+    assert.strictEqual(typeof config.iamApiKey, 'string');
+    assert.strictEqual(config.iamApiKey, key);
     done();
   });
 
@@ -81,8 +81,8 @@ describe('#unit Configuration', function() {
     process.env.CLOUDANT_IAM_TOKEN_URL = u;
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.iamTokenUrl, 'string');
-    assert.equal(config.iamTokenUrl, u);
+    assert.strictEqual(typeof config.iamTokenUrl, 'string');
+    assert.strictEqual(config.iamTokenUrl, u);
     done();
   });
 
@@ -90,8 +90,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_LOG = 'my.log';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.log, 'string');
-    assert.equal(config.log, process.env.COUCH_LOG);
+    assert.strictEqual(typeof config.log, 'string');
+    assert.strictEqual(config.log, process.env.COUCH_LOG);
     done();
   });
 
@@ -99,8 +99,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_RESUME = 'true';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.resume, 'boolean');
-    assert.equal(config.resume, true);
+    assert.strictEqual(typeof config.resume, 'boolean');
+    assert.strictEqual(config.resume, true);
     done();
   });
 
@@ -108,8 +108,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_OUTPUT = 'myfile.txt';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.output, 'string');
-    assert.equal(config.output, process.env.COUCH_OUTPUT);
+    assert.strictEqual(typeof config.output, 'string');
+    assert.strictEqual(config.output, process.env.COUCH_OUTPUT);
     done();
   });
 
@@ -117,8 +117,8 @@ describe('#unit Configuration', function() {
     process.env.COUCH_MODE = 'shallow';
     var config = {};
     applyEnvVars(config);
-    assert.equal(typeof config.mode, 'string');
-    assert.equal(config.mode, 'shallow');
+    assert.strictEqual(typeof config.mode, 'string');
+    assert.strictEqual(config.mode, 'shallow');
     done();
   });
 });

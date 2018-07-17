@@ -112,7 +112,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       if (err) {
         if (params.expectedBackupError) {
           try {
-            assert.equal(err.name, params.expectedBackupError.name, `The backup should receive the expected error.`);
+            assert.strictEqual(err.name, params.expectedBackupError.name, `The backup should receive the expected error.`);
             // Got the expected error, so wipe it for the callback
             err = null;
           } catch (caught) {
@@ -182,7 +182,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     if (gzip) {
       gzip.on('close', function(code) {
         try {
-          assert.equal(code, 0, `The compression should exit normally, got exit code ${code}.`);
+          assert.strictEqual(code, 0, `The compression should exit normally, got exit code ${code}.`);
           callback();
         } catch (err) {
           callback(err);
@@ -191,7 +191,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     } else if (openssl) {
       openssl.on('close', function(code) {
         try {
-          assert.equal(code, 0, `The encryption should exit normally, got exit code ${code}.`);
+          assert.strictEqual(code, 0, `The encryption should exit normally, got exit code ${code}.`);
           callback();
         } catch (err) {
           callback(err);
@@ -205,11 +205,11 @@ function testBackup(params, databaseName, outputStream, callback) {
             // something didn't work we need to make sure the tail is stopped
             tail.unwatch();
             // Assert that the process was aborted as expected
-            assert.equal(signal, 'SIGTERM', `The backup should have terminated with SIGTERM, but was ${signal}.`);
+            assert.strictEqual(signal, 'SIGTERM', `The backup should have terminated with SIGTERM, but was ${signal}.`);
           } else if (params.expectedBackupError) {
-            assert.equal(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
+            assert.strictEqual(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
           } else {
-            assert.equal(code, 0, `The backup should exit normally, got exit code ${code}.`);
+            assert.strictEqual(code, 0, `The backup should exit normally, got exit code ${code}.`);
           }
           callback();
         } catch (err) {
@@ -271,7 +271,7 @@ function testRestore(params, inputStream, databaseName, callback) {
       if (err) {
         if (params.expectedRestoreError) {
           try {
-            assert.equal(err.name, params.expectedRestoreError.name, `The restore should receive the expected error.`);
+            assert.strictEqual(err.name, params.expectedRestoreError.name, `The restore should receive the expected error.`);
             err = null;
           } catch (caught) {
             err = caught;
@@ -315,9 +315,9 @@ function testRestore(params, inputStream, databaseName, callback) {
     restore.on('close', function(code) {
       try {
         if (params.expectedRestoreError) {
-          assert.equal(code, params.expectedRestoreError.code, `The backup exited with unexpected code ${code}.`);
+          assert.strictEqual(code, params.expectedRestoreError.code, `The backup exited with unexpected code ${code}.`);
         } else {
-          assert.equal(code, 0, `The restore should exit normally, got exit code ${code}`);
+          assert.strictEqual(code, 0, `The restore should exit normally, got exit code ${code}`);
         }
         callback();
       } catch (err) {
@@ -469,7 +469,7 @@ function dbCompare(db1Name, db2Name, callback) {
     [process.env.COUCH_BACKEND_URL, db1Name, process.env.COUCH_BACKEND_URL, db2Name], {'stdio': 'inherit'});
   comparison.on('exit', function(code) {
     try {
-      assert.equal(code, 0, `The database comparison should succeed, got exit code ${code}`);
+      assert.strictEqual(code, 0, `The database comparison should succeed, got exit code ${code}`);
       callback();
     } catch (err) {
       callback(err);
@@ -496,7 +496,7 @@ function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) 
   expectedContent.sort(sortByIdThenRev);
   // Assert that the backup matches the expected
   try {
-    assert.deepEqual(backupContent, expectedContent);
+    assert.deepStrictEqual(backupContent, expectedContent);
     callback();
   } catch (err) {
     callback(err);
@@ -521,7 +521,7 @@ function assertGzipFile(path, callback) {
     fs.readSync(fd, buffer, 0, 2, 0);
     fs.closeSync(fd);
     // Assert the magic number corresponds to gz extension
-    assert.deepEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
+    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
     callback();
   } catch (err) {
     callback(err);
@@ -538,7 +538,7 @@ function assertEncryptedFile(path, callback) {
     fs.readSync(fd, buffer, 0, 6, 0);
     fs.closeSync(fd);
     // Assert first 6 characters of the file are "Salted"
-    assert.deepEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
+    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
     callback();
   } catch (err) {
     callback(err);
