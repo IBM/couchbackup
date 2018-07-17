@@ -52,64 +52,64 @@ describe('#unit Default parameters', function() {
     it('respects the COUCH_URL env variable if the --url backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.url, 'string');
-      assert.equal(program.url, process.env.COUCH_URL);
+      assert.strictEqual(typeof program.url, 'string');
+      assert.strictEqual(program.url, process.env.COUCH_URL);
       done();
     });
 
     it('respects the COUCH_DATABASE env variable if the --db backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.db, 'string');
-      assert.equal(program.db, process.env.COUCH_DATABASE);
+      assert.strictEqual(typeof program.db, 'string');
+      assert.strictEqual(program.db, process.env.COUCH_DATABASE);
       done();
     });
 
     it('respects the COUCH_BUFFER_SIZE env variable if the --buffer-size backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.bufferSize, 'number');
-      assert.equal(program.bufferSize, process.env.COUCH_BUFFER_SIZE);
+      assert.strictEqual(typeof program.bufferSize, 'number');
+      assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
     });
 
     it('respects the COUCH_PARALLELISM env variable if the --parallelism backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.parallelism, 'number');
-      assert.equal(program.parallelism, process.env.COUCH_PARALLELISM);
+      assert.strictEqual(typeof program.parallelism, 'number');
+      assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
     });
 
     it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.iamApiKey, 'string');
-      assert.equal(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
+      assert.strictEqual(typeof program.iamApiKey, 'string');
+      assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
       done();
     });
 
     it('respects the COUCH_LOG env variable if the --log backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.log, 'string');
-      assert.equal(program.log, process.env.COUCH_LOG);
+      assert.strictEqual(typeof program.log, 'string');
+      assert.strictEqual(program.log, process.env.COUCH_LOG);
       done();
     });
 
     it('respects the COUCH_OUTPUT env variable if the --output backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.output, 'string');
-      assert.equal(program.output, process.env.COUCH_OUTPUT);
+      assert.strictEqual(typeof program.output, 'string');
+      assert.strictEqual(program.output, process.env.COUCH_OUTPUT);
       done();
     });
 
     it('respects the COUCH_MODE env variable if the --mode backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.mode, 'string');
-      assert.equal(program.mode, process.env.COUCH_MODE);
+      assert.strictEqual(typeof program.mode, 'string');
+      assert.strictEqual(program.mode, process.env.COUCH_MODE);
       done();
     });
 
@@ -117,8 +117,8 @@ describe('#unit Default parameters', function() {
       var url = 'http://user:pass@myurl2.com';
       process.argv = ['node', 'test', '--url', url];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.url, 'string');
-      assert.equal(program.url, url);
+      assert.strictEqual(typeof program.url, 'string');
+      assert.strictEqual(program.url, url);
       done();
     });
 
@@ -126,8 +126,8 @@ describe('#unit Default parameters', function() {
       var db = 'mydb2';
       process.argv = ['node', 'test', '--db', db];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.db, 'string');
-      assert.equal(program.db, db);
+      assert.strictEqual(typeof program.db, 'string');
+      assert.strictEqual(program.db, db);
       done();
     });
 
@@ -135,8 +135,8 @@ describe('#unit Default parameters', function() {
       var bufferSize = 500;
       process.argv = ['node', 'test', '--buffer-size', bufferSize];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.bufferSize, 'number');
-      assert.equal(program.bufferSize, bufferSize);
+      assert.strictEqual(typeof program.bufferSize, 'number');
+      assert.strictEqual(program.bufferSize, bufferSize);
       done();
     });
 
@@ -144,8 +144,8 @@ describe('#unit Default parameters', function() {
       var parallelism = 10;
       process.argv = ['node', 'test', '--parallelism', parallelism];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.parallelism, 'number');
-      assert.equal(program.parallelism, parallelism);
+      assert.strictEqual(typeof program.parallelism, 'number');
+      assert.strictEqual(program.parallelism, parallelism);
       done();
     });
 
@@ -153,8 +153,8 @@ describe('#unit Default parameters', function() {
       const key = '123abc-789zyx_CBA987-XYZ321';
       process.argv = ['node', 'test', '--iam-api-key', key];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.iamApiKey, 'string');
-      assert.equal(program.iamApiKey, key);
+      assert.strictEqual(typeof program.iamApiKey, 'string');
+      assert.strictEqual(program.iamApiKey, key);
       done();
     });
 
@@ -162,8 +162,8 @@ describe('#unit Default parameters', function() {
       var filename = 'my2.log';
       process.argv = ['node', 'test', '--log', filename];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.log, 'string');
-      assert.equal(program.log, filename);
+      assert.strictEqual(typeof program.log, 'string');
+      assert.strictEqual(program.log, filename);
       done();
     });
 
@@ -171,24 +171,24 @@ describe('#unit Default parameters', function() {
       var filename = 'myfile2.txt';
       process.argv = ['node', 'test', '--output', filename];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.output, 'string');
-      assert.equal(program.output, filename);
+      assert.strictEqual(typeof program.output, 'string');
+      assert.strictEqual(program.output, filename);
       done();
     });
 
     it('respects the backup --mode full command-line parameter', function(done) {
       process.argv = ['node', 'test', '--mode', 'full'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.mode, 'string');
-      assert.equal(program.mode, 'full');
+      assert.strictEqual(typeof program.mode, 'string');
+      assert.strictEqual(program.mode, 'full');
       done();
     });
 
     it('respects the backup --mode shallow command-line parameter', function(done) {
       process.argv = ['node', 'test', '--mode', 'shallow'];
       var program = parser.parseBackupArgs();
-      assert.equal(typeof program.mode, 'string');
-      assert.equal(program.mode, 'shallow');
+      assert.strictEqual(typeof program.mode, 'string');
+      assert.strictEqual(program.mode, 'shallow');
       done();
     });
   });
@@ -197,40 +197,40 @@ describe('#unit Default parameters', function() {
     it('respects the COUCH_URL env variable if the --url restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.url, 'string');
-      assert.equal(program.url, process.env.COUCH_URL);
+      assert.strictEqual(typeof program.url, 'string');
+      assert.strictEqual(program.url, process.env.COUCH_URL);
       done();
     });
 
     it('respects the COUCH_DATABASE env variable if the --db restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.db, 'string');
-      assert.equal(program.db, process.env.COUCH_DATABASE);
+      assert.strictEqual(typeof program.db, 'string');
+      assert.strictEqual(program.db, process.env.COUCH_DATABASE);
       done();
     });
 
     it('respects the COUCH_BUFFER_SIZE env variable if the --buffer-size restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.bufferSize, 'number');
-      assert.equal(program.bufferSize, process.env.COUCH_BUFFER_SIZE);
+      assert.strictEqual(typeof program.bufferSize, 'number');
+      assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
     });
 
     it('respects the COUCH_PARALLELISM env variable if the --parallelism restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.parallelism, 'number');
-      assert.equal(program.parallelism, process.env.COUCH_PARALLELISM);
+      assert.strictEqual(typeof program.parallelism, 'number');
+      assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
     });
 
     it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.iamApiKey, 'string');
-      assert.equal(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
+      assert.strictEqual(typeof program.iamApiKey, 'string');
+      assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
       done();
     });
 
@@ -238,8 +238,8 @@ describe('#unit Default parameters', function() {
       var url = 'https://a:b@myurl3.com';
       process.argv = ['node', 'test', '--url', url];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.url, 'string');
-      assert.equal(program.url, url);
+      assert.strictEqual(typeof program.url, 'string');
+      assert.strictEqual(program.url, url);
       done();
     });
 
@@ -247,8 +247,8 @@ describe('#unit Default parameters', function() {
       var db = 'mydb3';
       process.argv = ['node', 'test', '--db', db];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.db, 'string');
-      assert.equal(program.db, db);
+      assert.strictEqual(typeof program.db, 'string');
+      assert.strictEqual(program.db, db);
       done();
     });
 
@@ -256,8 +256,8 @@ describe('#unit Default parameters', function() {
       var bufferSize = 250;
       process.argv = ['node', 'test', '--buffer-size', bufferSize];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.bufferSize, 'number');
-      assert.equal(program.bufferSize, bufferSize);
+      assert.strictEqual(typeof program.bufferSize, 'number');
+      assert.strictEqual(program.bufferSize, bufferSize);
       done();
     });
 
@@ -265,8 +265,8 @@ describe('#unit Default parameters', function() {
       var parallelism = 5;
       process.argv = ['node', 'test', '--parallelism', parallelism];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.parallelism, 'number');
-      assert.equal(program.parallelism, parallelism);
+      assert.strictEqual(typeof program.parallelism, 'number');
+      assert.strictEqual(program.parallelism, parallelism);
       done();
     });
 
@@ -274,8 +274,8 @@ describe('#unit Default parameters', function() {
       const key = '123abc-789zyx_CBA987-XYZ321';
       process.argv = ['node', 'test', '--iam-api-key', key];
       var program = parser.parseRestoreArgs();
-      assert.equal(typeof program.iamApiKey, 'string');
-      assert.equal(program.iamApiKey, key);
+      assert.strictEqual(typeof program.iamApiKey, 'string');
+      assert.strictEqual(program.iamApiKey, key);
       done();
     });
   });

@@ -36,7 +36,7 @@ describe('Write error tests', function() {
         fs.rmdirSync(dirname);
         // error should have been set
         assert.ok(resultErr);
-        assert.equal(resultErr.code, 'EACCES');
+        assert.strictEqual(resultErr.code, 'EACCES');
       } catch (thrownErr) {
         err = thrownErr;
       } finally {
