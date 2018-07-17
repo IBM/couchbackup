@@ -35,7 +35,7 @@ describe('#unit Check request response error callback', function() {
 
     db.get('good', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err, null);
+      assert.strictEqual(err, null);
       assert.ok(couch.isDone());
       done();
     });
@@ -49,8 +49,8 @@ describe('#unit Check request response error callback', function() {
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.strictEqual(err.name, 'HTTPFatalError');
+      assert.strictEqual(err.message, `500 : GET ${url}/bad - Error: foo, Reason: bar`);
       assert.ok(couch.isDone());
       done();
     });
@@ -68,8 +68,8 @@ describe('#unit Check request response error callback', function() {
       function(err, body) {
         assert.ok(err);
         err = error.convertResponseError(err);
-        assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
+        assert.strictEqual(err.name, 'HTTPFatalError');
+        assert.strictEqual(err.message, `503 : POST ${url}/bad - Error: service_unavailable, Reason: Service unavailable`);
         assert.ok(couch.isDone());
         done();
       });
@@ -83,8 +83,8 @@ describe('#unit Check request response error callback', function() {
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.strictEqual(err.name, 'HTTPFatalError');
+      assert.strictEqual(err.message, `429 : GET ${url}/bad - Error: foo, Reason: bar`);
       assert.ok(couch.isDone());
       done();
     });
@@ -97,8 +97,8 @@ describe('#unit Check request response error callback', function() {
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
+      assert.strictEqual(err.name, 'HTTPFatalError');
+      assert.strictEqual(err.message, `404 : GET ${url}/bad - Error: foo, Reason: bar`);
       assert.ok(couch.isDone());
       done();
     });
@@ -112,7 +112,7 @@ describe('#unit Check request response error callback', function() {
 
     db.get('bad', function(err) {
       const err2 = error.convertResponseError(err);
-      assert.equal(err, err2);
+      assert.strictEqual(err, err2);
       assert.ok(couch.isDone());
       done();
     });
