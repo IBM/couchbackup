@@ -40,7 +40,7 @@ describe('#unit Check database restore writer', function() {
         done(err);
       })
       .on('finished', function(data) {
-        assert.equal(data.total, 15);
+        assert.strictEqual(data.total, 15);
         assert.ok(nock.isDone());
         done();
       });
@@ -54,8 +54,8 @@ describe('#unit Check database restore writer', function() {
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
-        assert.equal(err.name, 'Unauthorized');
-        assert.equal(err.message, `401 : POST ${dbUrl}/_bulk_docs`);
+        assert.strictEqual(err.name, 'Unauthorized');
+        assert.strictEqual(err.message, `401 : POST ${dbUrl}/_bulk_docs`);
         assert.ok(nock.isDone());
         done();
       });
@@ -76,7 +76,7 @@ describe('#unit Check database restore writer', function() {
         done(err);
       })
       .on('finished', function(data) {
-        assert.equal(data.total, 15);
+        assert.strictEqual(data.total, 15);
         assert.ok(nock.isDone());
         done();
       });
@@ -94,8 +94,8 @@ describe('#unit Check database restore writer', function() {
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
       .on('error', function(err) {
-        assert.equal(err.name, 'HTTPFatalError');
-        assert.equal(err.message, `503 : POST ${dbUrl}/_bulk_docs`);
+        assert.strictEqual(err.name, 'HTTPFatalError');
+        assert.strictEqual(err.message, `503 : POST ${dbUrl}/_bulk_docs`);
         assert.ok(nock.isDone());
         done();
       });

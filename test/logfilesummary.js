@@ -21,11 +21,11 @@ var logfilesummary = require('../includes/logfilesummary.js');
 describe('#unit Fetching summary from the log file', function() {
   it('should fetch a summary correctly', function(done) {
     logfilesummary('./test/fixtures/test.log', function(err, data) {
-      assert.equal(data.changesComplete, true);
-      assert.equal(typeof data.batches, 'object');
-      assert.equal(Object.keys(data.batches).length, 2);
-      assert.deepEqual(data.batches['1'], true);
-      assert.deepEqual(data.batches['4'], true);
+      assert.strictEqual(data.changesComplete, true);
+      assert.strictEqual(typeof data.batches, 'object');
+      assert.strictEqual(Object.keys(data.batches).length, 2);
+      assert.deepStrictEqual(data.batches['1'], true);
+      assert.deepStrictEqual(data.batches['4'], true);
       done();
     });
   });

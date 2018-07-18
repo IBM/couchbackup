@@ -34,8 +34,8 @@ describe('#unit Check spool changes', function() {
       .replyWithError({code: 'ECONNRESET', message: 'socket hang up'});
 
     changes(db, '/dev/null', 500, null, function(err) {
-      assert.equal(err.name, 'SpoolChangesError');
-      assert.equal(err.message, 'Failed changes request - socket hang up');
+      assert.strictEqual(err.name, 'SpoolChangesError');
+      assert.strictEqual(err.message, 'Failed changes request - socket hang up');
       done();
     });
   });
@@ -48,8 +48,8 @@ describe('#unit Check spool changes', function() {
       .reply(500, {error: 'foo', reason: 'bar'});
 
     changes(db, '/dev/null', 500, null, function(err) {
-      assert.equal(err.name, 'HTTPFatalError');
-      assert.equal(err.message, `500 : GET ${url}/${dbName}/_changes?seq_interval=10000`);
+      assert.strictEqual(err.name, 'HTTPFatalError');
+      assert.strictEqual(err.message, `500 : GET ${url}/${dbName}/_changes?seq_interval=10000`);
       done();
     });
   });

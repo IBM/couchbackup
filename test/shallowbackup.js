@@ -67,13 +67,13 @@ describe('#unit Perform backup using shallow backup', function() {
       })
       .on('received', function(data) {
         if (data.batch === 3) {
-          assert.equal(data.length, 2); // smaller last batch
+          assert.strictEqual(data.length, 2); // smaller last batch
         } else {
-          assert.equal(data.length, 3);
+          assert.strictEqual(data.length, 3);
         }
       })
       .on('finished', function(data) {
-        assert.equal(data.total, 11);
+        assert.strictEqual(data.total, 11);
         assert.ok(couch.isDone());
         done();
       });
@@ -104,17 +104,17 @@ describe('#unit Perform backup using shallow backup', function() {
 
     shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
-        assert.equal(err.name, 'HTTPError');
+        assert.strictEqual(err.name, 'HTTPError');
       })
       .on('received', function(data) {
         if (data.batch === 3) {
-          assert.equal(data.length, 2); // smaller last batch
+          assert.strictEqual(data.length, 2); // smaller last batch
         } else {
-          assert.equal(data.length, 3);
+          assert.strictEqual(data.length, 3);
         }
       })
       .on('finished', function(data) {
-        assert.equal(data.total, 11);
+        assert.strictEqual(data.total, 11);
         assert.ok(couch.isDone());
         done();
       });
@@ -137,15 +137,15 @@ describe('#unit Perform backup using shallow backup', function() {
     shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
       .on('error', function(err) {
         errCount++;
-        assert.equal(err.name, 'Unauthorized');
+        assert.strictEqual(err.name, 'Unauthorized');
       })
       .on('received', function(data) {
-        assert.equal(data.length, 3);
+        assert.strictEqual(data.length, 3);
       })
       .on('finished', function(data) {
-        assert.equal(data.total, 6);
+        assert.strictEqual(data.total, 6);
         assert.ok(couch.isDone());
-        assert.equal(errCount, 1);
+        assert.strictEqual(errCount, 1);
         done();
       });
   });
