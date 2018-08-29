@@ -18,7 +18,7 @@
 delete require.cache[require.resolve('./citestutils.js')];
 const u = require('./citestutils.js');
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('End to end backup and restore', params), function() {
     it('should backup and restore animaldb', function(done) {
       // Allow up to 60 s for backup and restore of animaldb

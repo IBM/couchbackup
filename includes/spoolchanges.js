@@ -52,7 +52,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
       if (c.error) {
         ee.emit('error', new error.BackupError('InvalidChange', `Received invalid change: ${c}`));
       } else if (c.changes) {
-        var obj = {id: c.id};
+        var obj = { id: c.id };
         buffer.push(obj);
         processBuffer(false);
       } else if (c.last_seq) {

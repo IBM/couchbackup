@@ -55,7 +55,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       backupStream.pipe(outputStream);
     } else {
       // Spawn process for gzip
-      gzip = spawn('gzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
+      gzip = spawn('gzip', [], { 'stdio': ['pipe', 'pipe', 'inherit'] });
       // Pipe the streams as needed
       gzip.stdout.pipe(outputStream);
       backupStream = gzip.stdin;
@@ -73,7 +73,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
       // Spawn process for openssl
-      openssl = spawn('openssl', ['aes-128-cbc', '-pass', 'pass:12345'], {'stdio': ['pipe', 'pipe', 'inherit']});
+      openssl = spawn('openssl', ['aes-128-cbc', '-pass', 'pass:12345'], { 'stdio': ['pipe', 'pipe', 'inherit'] });
       // Pipe the streams as needed
       openssl.stdout.pipe(outputStream);
       backupStream = openssl.stdin;
@@ -92,7 +92,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     fs.closeSync(f);
 
     // Use tail to watch the log file for a batch to be completed then abort
-    tail = new Tail(params.opts.log, {useWatchFile: true, fsWatchOptions: {interval: 500}, follow: false});
+    tail = new Tail(params.opts.log, { useWatchFile: true, fsWatchOptions: { interval: 500 }, follow: false });
     tail.on('line', function(data) {
       let matches = data.match(/:d batch\d+/);
       if (matches !== null) {
@@ -165,7 +165,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    backup = spawn('node', args, {'stdio': ['ignore', destination, 'pipe']});
+    backup = spawn('node', args, { 'stdio': ['ignore', destination, 'pipe'] });
     // Pipe the stdout to the supplied outputStream
     if (destination === 'pipe') {
       backup.stdout.pipe(backupStream);
@@ -246,7 +246,7 @@ function testRestore(params, inputStream, databaseName, callback) {
       inputStream.pipe(restoreStream);
     } else {
       // Spawn process for gunzip
-      const gunzip = spawn('gunzip', [], {'stdio': ['pipe', 'pipe', 'inherit']});
+      const gunzip = spawn('gunzip', [], { 'stdio': ['pipe', 'pipe', 'inherit'] });
       // Pipe the streams as needed
       inputStream.pipe(gunzip.stdin);
       restoreStream = gunzip.stdout;
@@ -259,7 +259,7 @@ function testRestore(params, inputStream, databaseName, callback) {
       callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
       // Spawn process for openssl
-      const dopenssl = spawn('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345'], {'stdio': ['pipe', 'pipe', 'inherit']});
+      const dopenssl = spawn('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345'], { 'stdio': ['pipe', 'pipe', 'inherit'] });
       // Pipe the streams as needed
       inputStream.pipe(dopenssl.stdin);
       restoreStream = dopenssl.stdout;
@@ -303,7 +303,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     }
 
     // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const restore = spawn('node', args, {'stdio': ['pipe', 'inherit', 'inherit']});
+    const restore = spawn('node', args, { 'stdio': ['pipe', 'inherit', 'inherit'] });
     // Pipe to write the readable inputStream into stdin
     restoreStream.pipe(restore.stdin);
     restore.stdin.on('error', function(err) {
@@ -345,7 +345,7 @@ function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callba
 
 function testBackupToFile(params, srcDb, backupFile, callback, processCallback) {
   // Open the file for appending if this is a resume
-  const output = fs.createWriteStream(backupFile, {flags: (params.opts && params.opts.resume) ? 'a' : 'w'});
+  const output = fs.createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
   output.on('open', function() {
     const backupProcess = testBackup(params, srcDb, output, function(err) {
       if (err) {
@@ -375,7 +375,7 @@ function testRestoreFromFile(params, backupFile, targetDb, callback) {
 
 function testDirectBackupAndRestore(params, srcDb, targetDb, callback) {
   // Allow a 64 MB highWaterMark for the passthrough during testing
-  const passthrough = new stream.PassThrough({highWaterMark: 67108864});
+  const passthrough = new stream.PassThrough({ highWaterMark: 67108864 });
   testBackupAndRestore(params, srcDb, passthrough, passthrough, targetDb, callback);
 }
 
@@ -466,7 +466,7 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 
 function dbCompare(db1Name, db2Name, callback) {
   const comparison = spawn(`./${process.env.DBCOMPARE_NAME}-${process.env.DBCOMPARE_VERSION}/bin/${process.env.DBCOMPARE_NAME}`,
-    [process.env.COUCH_BACKEND_URL, db1Name, process.env.COUCH_BACKEND_URL, db2Name], {'stdio': 'inherit'});
+    [process.env.COUCH_BACKEND_URL, db1Name, process.env.COUCH_BACKEND_URL, db2Name], { 'stdio': 'inherit' });
   comparison.on('exit', function(code) {
     try {
       assert.strictEqual(code, 0, `The database comparison should succeed, got exit code ${code}`);

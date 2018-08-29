@@ -26,8 +26,8 @@ describe('Write error tests', function() {
     // make temp dir read only
     fs.chmodSync(dirname, 0o444);
     const filename = dirname + '/test.backup';
-    const backupStream = fs.createWriteStream(filename, {flags: 'w'});
-    const params = {useApi: true};
+    const backupStream = fs.createWriteStream(filename, { flags: 'w' });
+    const params = { useApi: true };
     // try to do backup and check err was set in callback
     u.testBackup(params, 'animaldb', backupStream, function(resultErr) {
       var err = null;

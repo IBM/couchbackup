@@ -146,7 +146,7 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
   function isFinished() { return noRemainingBatches; }
 
   function onComplete() {
-    ee.emit('finished', {total: total});
+    ee.emit('finished', { total: total });
   }
 
   async.doUntil(downloadSingleBatchSet, isFinished, onComplete);
@@ -215,7 +215,7 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
     // part of the request body by the server yet. Working around using request
     // method to POST with a query string.
     db.server.request(
-      {method: 'POST', db: db.config.db, path: '_bulk_get', qs: {revs: true}, body: payload},
+      { method: 'POST', db: db.config.db, path: '_bulk_get', qs: { revs: true }, body: payload },
       function(err, body) {
         if (err) {
           if (!hasErrored) {
@@ -255,7 +255,7 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
   }
 
   q.drain = function() {
-    callback(null, {total: total});
+    callback(null, { total: total });
   };
 }
 

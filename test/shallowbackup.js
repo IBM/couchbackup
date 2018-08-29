@@ -46,22 +46,22 @@ describe('#unit Perform backup using shallow backup', function() {
     var couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs')
-      .query({limit: 3, include_docs: true})
+      .query({ limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
       .post('/_all_docs')
-      .query({limit: 3, startkey: badgerKey, include_docs: true})
+      .query({ limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3
       .post('/_all_docs')
-      .query({limit: 3, startkey: kookaburraKey, include_docs: true})
+      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
       .post('/_all_docs')
-      .query({limit: 3, startkey: snipeKey, include_docs: true})
+      .query({ limit: 3, startkey: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
       .on('error', function(err) {
         assert.fail(err);
       })
@@ -83,26 +83,26 @@ describe('#unit Perform backup using shallow backup', function() {
     var couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs')
-      .query({limit: 3, include_docs: true})
+      .query({ limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
       .post('/_all_docs')
-      .query({limit: 3, startkey: badgerKey, include_docs: true})
+      .query({ limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - transient error
       .post('/_all_docs')
-      .query({limit: 3, startkey: kookaburraKey, include_docs: true})
-      .reply(500, {error: 'Internal Server Error'})
+      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .reply(500, { error: 'Internal Server Error' })
       // batch 3 - retry
       .post('/_all_docs')
-      .query({limit: 3, startkey: kookaburraKey, include_docs: true})
+      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
       .post('/_all_docs')
-      .query({limit: 3, startkey: snipeKey, include_docs: true})
+      .query({ limit: 3, startkey: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
       .on('error', function(err) {
         assert.strictEqual(err.name, 'HTTPError');
       })
@@ -123,18 +123,18 @@ describe('#unit Perform backup using shallow backup', function() {
   it('should fail to perform a shallow backup on fatal error', function(done) {
     var couch = nock(dbUrl)
       // batch 1
-      .post('/_all_docs').query({limit: 3, include_docs: true})
+      .post('/_all_docs').query({ limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .post('/_all_docs').query({limit: 3, startkey: badgerKey, include_docs: true})
+      .post('/_all_docs').query({ limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - fatal error
-      .post('/_all_docs').query({limit: 3, startkey: kookaburraKey, include_docs: true})
-      .reply(401, {error: 'Unauthorized'});
+      .post('/_all_docs').query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .reply(401, { error: 'Unauthorized' });
 
     var errCount = 0;
 
-    shallowBackup(dbUrl, {bufferSize: 3, parallelism: 1})
+    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
       .on('error', function(err) {
         errCount++;
         assert.strictEqual(err.name, 'Unauthorized');

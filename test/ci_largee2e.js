@@ -17,7 +17,7 @@
 
 const u = require('./citestutils.js');
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('#slowest End to end backup and restore', params), function() {
     // 10 GB is about the largest the CI can handle before getting very upset
     // about how long things are taking

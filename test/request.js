@@ -21,7 +21,7 @@ var request = require('../includes/request.js');
 var error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
-const db = request.client(url, {parallelism: 1});
+const db = request.client(url, { parallelism: 1 });
 
 describe('#unit Check request response error callback', function() {
   beforeEach('Clean nock', function() {
@@ -31,7 +31,7 @@ describe('#unit Check request response error callback', function() {
   it('should not callback with error for 200 response', function(done) {
     var couch = nock(url)
       .get('/good')
-      .reply(200, {ok: true});
+      .reply(200, { ok: true });
 
     db.get('good', function(err) {
       err = error.convertResponseError(err);
@@ -45,7 +45,7 @@ describe('#unit Check request response error callback', function() {
     var couch = nock(url)
       .get('/bad')
       .times(3)
-      .reply(500, {error: 'foo', reason: 'bar'});
+      .reply(500, { error: 'foo', reason: 'bar' });
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
@@ -61,10 +61,10 @@ describe('#unit Check request response error callback', function() {
       .post('/bad')
       .query(true)
       .times(3)
-      .reply(503, {error: 'service_unavailable', reason: 'Service unavailable'});
+      .reply(503, { error: 'service_unavailable', reason: 'Service unavailable' });
 
     db.server.request(
-      {method: 'POST', db: db.config.db, path: 'bad', qs: {revs: true}, body: {}},
+      { method: 'POST', db: db.config.db, path: 'bad', qs: { revs: true }, body: {} },
       function(err, body) {
         assert.ok(err);
         err = error.convertResponseError(err);
@@ -79,7 +79,7 @@ describe('#unit Check request response error callback', function() {
     var couch = nock(url)
       .get('/bad')
       .times(3)
-      .reply(429, {error: 'foo', reason: 'bar'});
+      .reply(429, { error: 'foo', reason: 'bar' });
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);
@@ -93,7 +93,7 @@ describe('#unit Check request response error callback', function() {
   it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
       .get('/bad')
-      .reply(404, {error: 'foo', reason: 'bar'});
+      .reply(404, { error: 'foo', reason: 'bar' });
 
     db.get('bad', function(err) {
       err = error.convertResponseError(err);

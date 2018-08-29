@@ -181,7 +181,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   backup: function(srcUrl, targetStream, opts, callback) {
-    var listenerErrorIndicator = {errored: false};
+    var listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
@@ -240,7 +240,7 @@ module.exports = {
         // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         // Callback to emit the written event when the content is flushed
         function writeFlushed() {
-          ee.emit('written', {total: obj.total, time: obj.time, batch: obj.batch});
+          ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch });
           if (logCompletedBatch) {
             logCompletedBatch(obj.batch);
           }
@@ -269,7 +269,7 @@ module.exports = {
       addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
         function emitFinished() {
           debug('Backup complete - written ' + JSON.stringify(obj));
-          const summary = {total: obj.total};
+          const summary = { total: obj.total };
           ee.emit('finished', summary);
           if (callback) callback(null, summary);
         }
@@ -299,7 +299,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {
-    var listenerErrorIndicator = {errored: false};
+    var listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
@@ -336,7 +336,7 @@ module.exports = {
           if (writer != null) {
             addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
               debug(' restored ', obj.total);
-              ee.emit('restored', {documents: obj.documents, total: obj.total});
+              ee.emit('restored', { documents: obj.documents, total: obj.total });
             });
             addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
               debug('Error ' + JSON.stringify(err));
@@ -348,7 +348,7 @@ module.exports = {
             });
             addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
               debug('restore complete');
-              ee.emit('finished', {total: obj.total});
+              ee.emit('finished', { total: obj.total });
               callback(null, obj);
             });
           }

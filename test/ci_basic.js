@@ -18,7 +18,7 @@
 const fs = require('fs');
 const u = require('./citestutils.js');
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Basic backup and restore', params), function() {
     it('should backup animaldb to a file correctly', function(done) {
       // Allow up to 40 s to backup and compare (it should be much faster)!
@@ -59,7 +59,7 @@ const u = require('./citestutils.js');
       const actualBackup = `./${this.fileName}`;
       const output = fs.createWriteStream(actualBackup);
       // Add the shallow mode option
-      const p = u.p(params, {opts: {mode: 'shallow'}});
+      const p = u.p(params, { opts: { mode: 'shallow' } });
       output.on('open', function() {
         u.testBackup(p, 'animaldb', output, function(err) {
           if (err) {
@@ -77,7 +77,7 @@ const u = require('./citestutils.js');
         u.setTimeout(this, 60);
         const actualBackup = `./${this.fileName}`;
         const logFile = `./${this.fileName}` + '.log';
-        const p = u.p(params, {opts: {log: logFile, bufferSize: 1}});
+        const p = u.p(params, { opts: { log: logFile, bufferSize: 1 } });
         u.testBackupAndRestoreViaFile(p, 'animaldb', actualBackup, this.dbName, done);
       });
       it('should backup/restore animaldb with backup buffer > restore buffer', function(done) {
@@ -86,8 +86,8 @@ const u = require('./citestutils.js');
         const actualBackup = `./${this.fileName}`;
         const logFile = `./${this.fileName}` + '.log';
         const dbName = this.dbName;
-        const p = u.p(params, {opts: {log: logFile, bufferSize: 2}}); // backup
-        const q = u.p(params, {opts: {bufferSize: 1}}); // restore
+        const p = u.p(params, { opts: { log: logFile, bufferSize: 2 } }); // backup
+        const q = u.p(params, { opts: { bufferSize: 1 } }); // restore
         u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
           if (err) {
             done(err);
@@ -105,8 +105,8 @@ const u = require('./citestutils.js');
         const actualBackup = `./${this.fileName}`;
         const logFile = `./${this.fileName}` + '.log';
         const dbName = this.dbName;
-        const p = u.p(params, {opts: {log: logFile, bufferSize: 1}}); // backup
-        const q = u.p(params, {opts: {bufferSize: 2}}); // restore
+        const p = u.p(params, { opts: { log: logFile, bufferSize: 1 } }); // backup
+        const q = u.p(params, { opts: { bufferSize: 2 } }); // restore
         u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
           if (err) {
             done(err);

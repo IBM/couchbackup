@@ -18,7 +18,7 @@ const stream = require('stream');
 const liner = require('./liner.js');
 
 var onLine = function(onCommand, batches) {
-  var change = new stream.Transform({objectMode: true});
+  var change = new stream.Transform({ objectMode: true });
   change._transform = function(line, encoding, done) {
     if (line && line[0] === ':') {
       var obj = {

@@ -17,7 +17,7 @@
 var stream = require('stream');
 
 module.exports = function(onChange) {
-  var change = new stream.Transform({objectMode: true});
+  var change = new stream.Transform({ objectMode: true });
 
   change._transform = function(line, encoding, done) {
     var obj = null;

@@ -19,7 +19,7 @@ const u = require('./citestutils.js');
 
 describe('Encryption tests', function() {
   // Note CLI only to use openssl command
-  const p = {useApi: false, encryption: true};
+  const p = { useApi: false, encryption: true };
 
   it('should backup and restore animaldb via an encrypted file', function(done) {
     // Allow up to 60 s for backup and restore of animaldb

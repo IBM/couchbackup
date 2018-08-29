@@ -18,9 +18,9 @@
 const fs = require('fs');
 const u = require('./citestutils.js');
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Compression tests', params), function() {
-    const p = u.p(params, {compression: true});
+    const p = u.p(params, { compression: true });
 
     it('should backup animaldb to a compressed file', function(done) {
       // Allow up to 60 s for backup of animaldb
