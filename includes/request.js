@@ -36,20 +36,20 @@ module.exports = {
     var pluginsToUse = ['retry'];
     // Default to cookieauth unless an IAM key is provided
     if (opts.iamApiKey) {
-      const iamPluginConfig = {iamApiKey: opts.iamApiKey};
+      const iamPluginConfig = { iamApiKey: opts.iamApiKey };
       if (opts.iamTokenUrl) {
         iamPluginConfig.iamTokenUrl = opts.iamTokenUrl;
       }
-      pluginsToUse.push({iamauth: iamPluginConfig});
+      pluginsToUse.push({ iamauth: iamPluginConfig });
     } else {
       pluginsToUse.push('cookieauth');
     }
-    return cloudant({url: actUrl,
+    return cloudant({ url: actUrl,
       plugins: pluginsToUse,
       requestDefaults: {
         agent: keepAliveAgent,
-        headers: {'User-Agent': userAgent},
+        headers: { 'User-Agent': userAgent },
         gzip: true
-      }}).use(dbName);
+      } }).use(dbName);
   }
 };

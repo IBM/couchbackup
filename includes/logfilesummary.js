@@ -18,7 +18,7 @@ const stream = require('stream');
 const liner = require('./liner.js');
 
 var onLine = function(onCommand, getDocs) {
-  var change = new stream.Transform({objectMode: true});
+  var change = new stream.Transform({ objectMode: true });
 
   change._transform = function(line, encoding, done) {
     if (line && line[0] === ':') {
@@ -86,7 +86,7 @@ module.exports = function(log, callback) {
     .pipe(liner())
     .pipe(onLine(onCommand, false))
     .on('finish', function() {
-      var obj = {changesComplete: changesComplete, batches: state};
+      var obj = { changesComplete: changesComplete, batches: state };
       callback(null, obj);
     });
 };

@@ -52,7 +52,7 @@ function assertNock(done) {
 }
 
 function backupHttpError(opts, errorName, errorCode, done) {
-  const p = u.p(opts, {expectedBackupError: {name: errorName, code: errorCode}});
+  const p = u.p(opts, { expectedBackupError: { name: errorName, code: errorCode } });
 
   // Create a file and attempt a backup to it
   const output = fs.createWriteStream('/dev/null');
@@ -68,7 +68,7 @@ function backupHttpError(opts, errorName, errorCode, done) {
 }
 
 function restoreHttpError(opts, errorName, errorCode, done) {
-  const q = u.p(opts, {expectedRestoreError: {name: errorName, code: errorCode}});
+  const q = u.p(opts, { expectedRestoreError: { name: errorName, code: errorCode } });
   u.testRestoreFromFile(q, './test/fixtures/animaldb_expected.json', 'fakenockdb', function(err) {
     if (err) {
       done(err);
@@ -78,7 +78,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
   });
 }
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('#unit Fatal errors', params), function() {
     var processEnvCopy;
     var proxy;
@@ -90,7 +90,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
       // Set up a proxy to point to our nock server because the nock override
       // isn't visible to the spawned CLI process
       if (!params.useApi) {
-        proxy = httpProxy.createProxyServer({target: url}).listen(8888, 'localhost');
+        proxy = httpProxy.createProxyServer({ target: url }).listen(8888, 'localhost');
       }
 
       // setup environment variables
@@ -113,7 +113,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for backup', function() {
       it('should terminate when DB does not exist', function(done) {
         // Simulate existence check
-        nock(url).head('/fakenockdb').reply(404, {error: 'not_found', reason: 'missing'});
+        nock(url).head('/fakenockdb').reply(404, { error: 'not_found', reason: 'missing' });
         backupHttpError(params, 'DatabaseNotFound', 10, done);
       });
 
@@ -121,48 +121,48 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate existence check
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate _bulk_get not available
-        n.head('/fakenockdb/_bulk_get').reply(404, {error: 'not_found', reason: 'missing'});
+        n.head('/fakenockdb/_bulk_get').reply(404, { error: 'not_found', reason: 'missing' });
         backupHttpError(params, 'BulkGetError', 50, done);
       });
 
       it('should terminate on Unauthorized existence check', function(done) {
         // Simulate a 401
-        nock(url).head('/fakenockdb').reply(401, {error: 'unauthorized', reason: '_reader access is required for this request'});
+        nock(url).head('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
         backupHttpError(params, 'Unauthorized', 11, done);
       });
 
       it('should terminate on Forbidden no _reader', function(done) {
         // Simulate a 403
-        nock(url).head('/fakenockdb').reply(403, {error: 'forbidden', reason: '_reader access is required for this request'});
+        nock(url).head('/fakenockdb').reply(403, { error: 'forbidden', reason: '_reader access is required for this request' });
         backupHttpError(params, 'Forbidden', 12, done);
       });
 
       it('should terminate on _bulk_get HTTPFatalError', function(done) {
         // Provide a mock complete changes log to allow a resume to skip ahead
-        const p = u.p(params, {opts: {resume: true, log: './test/fixtures/test.log'}});
+        const p = u.p(params, { opts: { resume: true, log: './test/fixtures/test.log' } });
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
-        n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(p, 'HTTPFatalError', 40, done);
       });
 
       it('should terminate on NoLogFileName', function(done) {
         // Don't supply a log file name with resume
-        const p = u.p(params, {opts: {resume: true}});
+        const p = u.p(params, { opts: { resume: true } });
         backupHttpError(p, 'NoLogFileName', 20, done);
       });
 
       it('should terminate on LogDoesNotExist', function(done) {
         // Use a non-existent log file
-        const p = u.p(params, {opts: {resume: true, log: './test/fixtures/doesnotexist.log'}});
+        const p = u.p(params, { opts: { resume: true, log: './test/fixtures/doesnotexist.log' } });
         backupHttpError(p, 'LogDoesNotExist', 21, done);
       });
 
       it('should terminate on IncompleteChangesInLogFile', function(done) {
         // Use an incomplete changes log file
-        const p = u.p(params, {opts: {resume: true, log: './test/fixtures/incomplete_changes.log'}});
+        const p = u.p(params, { opts: { resume: true, log: './test/fixtures/incomplete_changes.log' } });
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
@@ -175,7 +175,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const n = nock(url).head('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
-        n.get('/fakenockdb/_changes').query(true).reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        n.get('/fakenockdb/_changes').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(params, 'HTTPFatalError', 40, done);
       });
 
@@ -185,10 +185,10 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a changes without a last_seq
         n.get('/fakenockdb/_changes').query(true).reply(200,
-          {results: [{seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',
+          { results: [{ seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',
             id: 'badger',
-            changes: [{rev: '4-51aa94e4b0ef37271082033bba52b850'}]
-          }]});
+            changes: [{ rev: '4-51aa94e4b0ef37271082033bba52b850' }]
+          }] });
         backupHttpError(params, 'SpoolChangesError', 30, done);
       });
     });
@@ -196,7 +196,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for restore', function() {
       it('should terminate on Unauthorized db existence check', function(done) {
         // Simulate a 401
-        nock(url).head('/fakenockdb').reply(401, {error: 'unauthorized', reason: '_reader access is required for this request'});
+        nock(url).head('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
         restoreHttpError(params, 'Unauthorized', 11, done);
       });
 
@@ -204,13 +204,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate the DB exists (i.e. you can read it)
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate a 403 trying to write
-        n.post('/fakenockdb/_bulk_docs').reply(403, {error: 'forbidden', reason: '_writer access is required for this request'});
+        n.post('/fakenockdb/_bulk_docs').reply(403, { error: 'forbidden', reason: '_writer access is required for this request' });
         restoreHttpError(params, 'Forbidden', 12, done);
       });
 
       it('should terminate on RestoreDatabaseNotFound', function(done) {
         // Simulate the DB does not exist
-        nock(url).head('/fakenockdb').reply(404, {error: 'not_found', reason: 'Database does not exist.'});
+        nock(url).head('/fakenockdb').reply(404, { error: 'not_found', reason: 'Database does not exist.' });
         restoreHttpError(params, 'DatabaseNotFound', 10, done);
       });
 
@@ -218,9 +218,9 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate the DB exists
         const n = nock(url).head('/fakenockdb').reply(200);
         // Use a parallelism of one and mock one response
-        const p = u.p(params, {opts: {parallelism: 1}});
+        const p = u.p(params, { opts: { parallelism: 1 } });
         // Simulate a 400 trying to write
-        n.post('/fakenockdb/_bulk_docs').reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        n.post('/fakenockdb/_bulk_docs').reply(400, { error: 'bad_request', reason: 'testing bad response' });
         restoreHttpError(p, 'HTTPFatalError', 40, done);
       });
 
@@ -229,9 +229,9 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate a 400 trying to write
         // Provide a body function to handle the stream, but allow any body
-        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, {error: 'bad_request', reason: 'testing bad response'});
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         // Use only parallelism 1 so we don't have to mock up loads of responses
-        const q = u.p(params, {opts: {parallelism: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
+        const q = u.p(params, { opts: { parallelism: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
         u.testRestore(q, new InfiniteBackupStream(), 'fakenockdb', function(err) {
           if (err) {
             done(err);
@@ -246,8 +246,8 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate a 400 trying to write docs, 5 times because of default parallelism
         // Provide a body function to handle the stream, but allow any body
-        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(5).reply(400, {error: 'bad_request', reason: 'testing bad response'});
-        const q = u.p(params, {opts: {bufferSize: 1}, expectedRestoreError: {name: 'HTTPFatalError', code: 40}});
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(5).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        const q = u.p(params, { opts: { bufferSize: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
         restoreHttpError(q, 'HTTPFatalError', 40, done);
       });
     });

@@ -23,7 +23,7 @@ const writer = require('../includes/writer.js');
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
-  const db = request.client(dbUrl, {parallelism: 1});
+  const db = request.client(dbUrl, { parallelism: 1 });
 
   beforeEach('Reset nocks', function() {
     nock.cleanAll();
@@ -32,7 +32,7 @@ describe('#unit Check database restore writer', function() {
   it('should complete successfully', function(done) {
     nock(dbUrl)
       .post('/_bulk_docs')
-      .reply(200, {ok: true}); // success
+      .reply(200, { ok: true }); // success
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
@@ -49,7 +49,7 @@ describe('#unit Check database restore writer', function() {
   it('should terminate on a fatal error', function(done) {
     nock(dbUrl)
       .post('/_bulk_docs')
-      .reply(401, {error: 'Unauthorized'}); // fatal error
+      .reply(401, { error: 'Unauthorized' }); // fatal error
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
@@ -64,11 +64,11 @@ describe('#unit Check database restore writer', function() {
   it('should retry on transient errors', function(done) {
     nock(dbUrl)
       .post('/_bulk_docs')
-      .reply(429, {error: 'Too Many Requests'}) // transient error
+      .reply(429, { error: 'Too Many Requests' }) // transient error
       .post('/_bulk_docs')
-      .reply(500, {error: 'Internal Server Error'}) // transient error
+      .reply(500, { error: 'Internal Server Error' }) // transient error
       .post('/_bulk_docs')
-      .reply(200, {ok: true}); // third time lucky success
+      .reply(200, { ok: true }); // third time lucky success
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))
@@ -85,11 +85,11 @@ describe('#unit Check database restore writer', function() {
   it('should fail after 3 transient errors', function(done) {
     nock(dbUrl)
       .post('/_bulk_docs')
-      .reply(429, {error: 'Too Many Requests'}) // transient error
+      .reply(429, { error: 'Too Many Requests' }) // transient error
       .post('/_bulk_docs')
-      .reply(500, {error: 'Internal Server Error'}) // transient error
+      .reply(500, { error: 'Internal Server Error' }) // transient error
       .post('/_bulk_docs')
-      .reply(503, {error: 'Service Unavailable'}); // Final transient error
+      .reply(503, { error: 'Service Unavailable' }); // Final transient error
 
     fs.createReadStream('./test/fixtures/animaldb_expected.json')
       .pipe(writer(db, 500, 1, null))

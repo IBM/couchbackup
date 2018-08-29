@@ -29,7 +29,7 @@ module.exports = function(db, options) {
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      var opts = {limit: options.bufferSize};
+      var opts = { limit: options.bufferSize };
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
@@ -73,7 +73,7 @@ module.exports = function(db, options) {
       });
     },
     function() { return hasErrored || startKey == null; },
-    function() { ee.emit('finished', {total: total}); }
+    function() { ee.emit('finished', { total: total }); }
   );
 
   return ee;

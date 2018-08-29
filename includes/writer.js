@@ -20,7 +20,7 @@ const error = require('./error.js');
 const debug = require('debug')('couchbackup:writer');
 
 module.exports = function(db, bufferSize, parallelism, ee) {
-  const writer = new stream.Transform({objectMode: true});
+  const writer = new stream.Transform({ objectMode: true });
   var buffer = [];
   var written = 0;
   var linenumber = 0;
@@ -45,7 +45,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
         db: db.config.db,
         path: '_bulk_docs',
         method: 'POST',
-        headers: {'content-encoding': 'gzip'}
+        headers: { 'content-encoding': 'gzip' }
       }, function(err) {
         err = error.convertResponseError(err);
         if (err) {
@@ -53,7 +53,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
           cb(err, payload);
         } else {
           written += payload.docs.length;
-          writer.emit('restored', {documents: payload.docs.length, total: written});
+          writer.emit('restored', { documents: payload.docs.length, total: written });
           cb();
         }
       });
@@ -83,13 +83,13 @@ module.exports = function(db, bufferSize, parallelism, ee) {
 
         // and add the chunk to the queue
         debug(`Adding ${toSend.length} to the write queue.`);
-        q.push({docs: toSend}, taskCallback);
+        q.push({ docs: toSend }, taskCallback);
       } while (buffer.length >= bufferSize);
 
       // send any leftover documents to the queue
       if (flush && buffer.length > 0) {
         debug(`Adding remaining ${buffer.length} to the write queue.`);
-        q.push({docs: buffer}, taskCallback);
+        q.push({ docs: buffer }, taskCallback);
       }
 
       // wait until the queue size falls to a reasonable level

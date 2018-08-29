@@ -36,11 +36,11 @@ function main() {
     .usage('Usage: $0 [options]')
     .example('$0 -s https://user:pass@host/db -b <bucket>', 'Backup db to bucket')
     .options({
-      'source': {alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL'},
-      'bucket': {alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket'},
-      'prefix': {alias: 'p', nargs: 1, describe: 'Prefix for backup object key', default: 'couchbackup'},
-      's3url': {nargs: 1, describe: 'S3 endpoint URL'},
-      'awsprofile': {nargs: 1, describe: 'The profile section to use in the ~/.aws/credentials file', default: 'default'}
+      'source': { alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL' },
+      'bucket': { alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket' },
+      'prefix': { alias: 'p', nargs: 1, describe: 'Prefix for backup object key', default: 'couchbackup' },
+      's3url': { nargs: 1, describe: 'S3 endpoint URL' },
+      'awsprofile': { nargs: 1, describe: 'The profile section to use in the ~/.aws/credentials file', default: 'default' }
     })
     .help('h').alias('h', 'help')
     .epilog('Copyright (C) IBM 2017')
@@ -60,7 +60,7 @@ function main() {
   // Creds are from ~/.aws/credentials, environment etc. (see S3 docs).
   const awsOpts = {
     signatureVersion: 'v4',
-    credentials: new AWS.SharedIniFileCredentials({profile: awsProfile})
+    credentials: new AWS.SharedIniFileCredentials({ profile: awsProfile })
   };
   if (typeof s3Endpoint !== 'undefined') {
     awsOpts.endpoint = new AWS.Endpoint(s3Endpoint);
@@ -122,7 +122,7 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, shallow) {
     // written to it and it then read by the S3 upload client.
     // It has a 64MB highwater mark to allow for fairly
     // uneven network connectivity.
-    const streamToUpload = new stream.PassThrough({highWaterMark: 67108864});
+    const streamToUpload = new stream.PassThrough({ highWaterMark: 67108864 });
 
     // Set up S3 upload.
     const params = {

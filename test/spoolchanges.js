@@ -23,7 +23,7 @@ const changes = require('../includes/spoolchanges.js');
 const url = 'http://localhost:7777';
 const dbName = 'fakenockdb';
 
-const db = request.client(`${url}/${dbName}`, {parallelism: 1});
+const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
 
 describe('#unit Check spool changes', function() {
   it('should terminate on request error', function(done) {
@@ -31,7 +31,7 @@ describe('#unit Check spool changes', function() {
       .get(`/${dbName}/_changes`)
       .query(true)
       .times(3)
-      .replyWithError({code: 'ECONNRESET', message: 'socket hang up'});
+      .replyWithError({ code: 'ECONNRESET', message: 'socket hang up' });
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'SpoolChangesError');
@@ -45,7 +45,7 @@ describe('#unit Check spool changes', function() {
       .get(`/${dbName}/_changes`)
       .query(true)
       .times(3)
-      .reply(500, {error: 'foo', reason: 'bar'});
+      .reply(500, { error: 'foo', reason: 'bar' });
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'HTTPFatalError');

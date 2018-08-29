@@ -19,7 +19,7 @@ const assert = require('assert');
 const fs = require('fs');
 const u = require('./citestutils.js');
 
-[{useApi: true}, {useApi: false}].forEach(function(params) {
+[{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Resume tests', params), function() {
     it('should create a log file', function(done) {
       // Allow up to 90 s for this test
@@ -29,7 +29,7 @@ const u = require('./citestutils.js');
       const logFile = `./${this.fileName}` + '.log';
       // Use abort parameter to terminate the backup a given number of ms after
       // the first data write to the output file.
-      const p = u.p(params, {opts: {log: logFile}});
+      const p = u.p(params, { opts: { log: logFile } });
       u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
         if (err) {
           done(err);
@@ -90,7 +90,7 @@ describe('Resume tests', function() {
     const logFile = `./${this.fileName}` + '.log';
     // Use abort parameter to terminate the backup a given number of ms after
     // the first data write to the output file.
-    const p = u.p(params, {abort: true}, {opts: {log: logFile}});
+    const p = u.p(params, { abort: true }, { opts: { log: logFile } });
     const restoreDb = this.dbName;
     // Set the database doc count as fewer than this should be written during
     // resumed backup.
@@ -99,7 +99,7 @@ describe('Resume tests', function() {
     u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
   });
   // Note --output is only valid for CLI usage, this test should only run for CLI
-  const params = {useApi: false};
+  const params = { useApi: false };
   it('should correctly backup and restore backup10m using --output', function(done) {
     // Allow up to 90 s for this test
     u.setTimeout(this, 90);
@@ -108,7 +108,7 @@ describe('Resume tests', function() {
     const logFile = `./${this.fileName}` + '.log';
     // Use abort parameter to terminate the backup a given number of ms after
     // the first data write to the output file.
-    const p = u.p(params, {abort: true}, {opts: {output: actualBackup, log: logFile}});
+    const p = u.p(params, { abort: true }, { opts: { output: actualBackup, log: logFile } });
     const restoreDb = this.dbName;
     // Set the database doc count as fewer than this should be written during
     // resumed backup.
