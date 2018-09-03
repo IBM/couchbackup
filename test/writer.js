@@ -20,6 +20,16 @@ const fs = require('fs');
 const nock = require('nock');
 const request = require('../includes/request.js');
 const writer = require('../includes/writer.js');
+const noopEmitter = new (require('events')).EventEmitter();
+const liner = require('../includes/liner.js');
+
+// The writer expects a line-by-line stream so this utility function does that
+// processing for the tests (which normally happens in the internal restore
+// function).
+function testLinestream() {
+  return fs.createReadStream('./test/fixtures/animaldb_expected.json')
+    .pipe(liner());
+}
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
@@ -34,8 +44,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, { ok: true }); // success
 
-    fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(db, 500, 1, null))
+    testLinestream()
+      .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         done(err);
       })
@@ -51,8 +61,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(401, { error: 'Unauthorized' }); // fatal error
 
-    fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(db, 500, 1, null))
+    testLinestream()
+      .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         assert.strictEqual(err.name, 'Unauthorized');
         assert.strictEqual(err.message, `401 : POST ${dbUrl}/_bulk_docs`);
@@ -70,8 +80,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, { ok: true }); // third time lucky success
 
-    fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(db, 500, 1, null))
+    testLinestream()
+      .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         done(err);
       })
@@ -91,8 +101,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(503, { error: 'Service Unavailable' }); // Final transient error
 
-    fs.createReadStream('./test/fixtures/animaldb_expected.json')
-      .pipe(writer(db, 500, 1, null))
+    testLinestream()
+      .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 : POST ${dbUrl}/_bulk_docs`);
