@@ -22,7 +22,7 @@
   "dependencies": {
     "async": "2.6.1",
     "commander": "^2.9.0",
-    "debug": "~4.0.1",
+    "debug": "~4.1.0",
     "@cloudant/cloudant": "^2.2.0",
     "tmp": "0.0.33"
   },
