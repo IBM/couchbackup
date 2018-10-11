@@ -53,6 +53,9 @@ function parseBackupArgs() {
     .option('-r, --resume',
       cliutils.getUsage('continue a previous backup from its last known position', defaults.resume),
       defaults.resume)
+    .option('-t, --request-timeout <n>',
+      cliutils.getUsage('milliseconds to wait for a response to a HTTP request before retrying the request', defaults.requestTimeout),
+      Number, defaults.requestTimeout)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
       defaults.url)
@@ -92,6 +95,9 @@ function parseRestoreArgs() {
     .option('-p, --parallelism <n>',
       cliutils.getUsage('number of HTTP requests to perform in parallel when restoring a backup', defaults.parallelism),
       Number, defaults.parallelism)
+    .option('-t, --request-timeout <n>',
+      cliutils.getUsage('milliseconds to wait for a response to a HTTP request before retrying the request', defaults.requestTimeout),
+      Number, defaults.requestTimeout)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url),
       defaults.url)

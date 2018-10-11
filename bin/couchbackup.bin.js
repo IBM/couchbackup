@@ -30,6 +30,7 @@ var opts = {
   log: program.log,
   mode: program.mode,
   parallelism: program.parallelism,
+  requestTimeout: program.requestTimeout,
   resume: program.resume,
   iamApiKey: program.iamApiKey,
   iamTokenUrl: program.iamTokenUrl

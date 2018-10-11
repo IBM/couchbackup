@@ -32,6 +32,7 @@ describe('#unit Default parameters', function() {
     process.env.COUCH_DATABASE = 'mydb';
     process.env.COUCH_BUFFER_SIZE = '1000';
     process.env.COUCH_PARALLELISM = '20';
+    process.env.COUCH_REQUEST_TIMEOUT = '20000';
     process.env.COUCH_LOG = 'my.log';
     process.env.COUCH_RESUME = 'true';
     process.env.COUCH_OUTPUT = 'myfile.txt';
@@ -78,6 +79,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
+      done();
+    });
+
+    it('respects the COUCH_REQUEST_TIMEOUT env variable if the --request-timeout backup command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.requestTimeout, 'number');
+      assert.strictEqual(program.requestTimeout, parseInt(process.env.COUCH_REQUEST_TIMEOUT, 10));
       done();
     });
 
@@ -146,6 +155,15 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parallelism);
+      done();
+    });
+
+    it('respects the backup --request-timeout command-line parameter', function(done) {
+      var requestTimeout = 10000;
+      process.argv = ['node', 'test', '--request-timeout', requestTimeout];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.requestTimeout, 'number');
+      assert.strictEqual(program.requestTimeout, requestTimeout);
       done();
     });
 
@@ -226,6 +244,14 @@ describe('#unit Default parameters', function() {
       done();
     });
 
+    it('respects the COUCH_REQUEST_TIMEOUT env variable if the --request-timeout restore command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseRestoreArgs();
+      assert.strictEqual(typeof program.requestTimeout, 'number');
+      assert.strictEqual(program.requestTimeout, parseInt(process.env.COUCH_REQUEST_TIMEOUT, 10));
+      done();
+    });
+
     it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseRestoreArgs();
@@ -267,6 +293,15 @@ describe('#unit Default parameters', function() {
       var program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parallelism);
+      done();
+    });
+
+    it('respects the restore --request-timeout command-line parameter', function(done) {
+      var requestTimeout = 10000;
+      process.argv = ['node', 'test', '--request-timeout', requestTimeout];
+      var program = parser.parseRestoreArgs();
+      assert.strictEqual(typeof program.requestTimeout, 'number');
+      assert.strictEqual(program.requestTimeout, requestTimeout);
       done();
     });
 

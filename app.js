@@ -84,6 +84,10 @@ function validateArgs(url, opts, cb) {
     cb(new error.BackupError('InvalidOption', 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
     return;
   }
+  if (opts && typeof opts.requestTimeout !== 'undefined' && !isSafePositiveInteger(opts.requestTimeout)) {
+    cb(new error.BackupError('InvalidOption', 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
+    return;
+  }
   if (opts && typeof opts.resume !== 'undefined' && typeof opts.resume !== 'boolean') {
     cb(new error.BackupError('InvalidOption', 'Invalid resume option, must be type boolean'), null);
     return;
@@ -174,6 +178,7 @@ module.exports = {
    * @param {object} opts - Backup options.
    * @param {number} [opts.parallelism=5] - Number of parallel HTTP requests to use.
    * @param {number} [opts.bufferSize=500] - Number of documents per batch request.
+   * @param {number} [opts.requestTimeout=300000] - Milliseconds to wait before retrying a HTTP request.
    * @param {string} [opts.iamApiKey] - IAM API key to use to access Cloudant database.
    * @param {string} [opts.log] - Log file name. Default uses a temporary file.
    * @param {boolean} [opts.resume] - Whether to resume from existing log.
@@ -295,6 +300,7 @@ module.exports = {
    * @param {object} opts - Restore options.
    * @param {number} opts.parallelism - Number of parallel HTTP requests to use. Default 5.
    * @param {number} opts.bufferSize - Number of documents per batch request. Default 500.
+   * @param {number} opts.requestTimeout - Milliseconds to wait before retrying a HTTP request. Default 300000.
    * @param {string} opts.iamApiKey - IAM API key to use to access Cloudant database.
    * @param {backupRestoreCallback} callback - Called on completion.
    */

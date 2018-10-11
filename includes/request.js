@@ -49,7 +49,8 @@ module.exports = {
       requestDefaults: {
         agent: keepAliveAgent,
         headers: { 'User-Agent': userAgent },
-        gzip: true
+        gzip: true,
+        timeout: opts.requestTimeout
       } }).use(dbName);
   }
 };

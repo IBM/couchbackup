@@ -26,6 +26,7 @@ var databaseUrl = cliutils.databaseUrl(program.url, program.db);
 var opts = {
   bufferSize: program.bufferSize,
   parallelism: program.parallelism,
+  requestTimeout: program.requestTimeout,
   iamApiKey: program.iamApiKey,
   iamTokenUrl: program.iamTokenUrl
 };
