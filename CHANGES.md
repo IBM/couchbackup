@@ -1,3 +1,7 @@
+# 2.4.0
+
+- [NEW] Added request timeout option
+
 # 2.3.1 (2018-06-15)
 
 - [FIXED] Concurrent database backups use the same default log file.
