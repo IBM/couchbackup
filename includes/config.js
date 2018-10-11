@@ -23,7 +23,7 @@ function apiDefaults() {
   return {
     parallelism: 5,
     bufferSize: 500,
-    requestTimeout: 300000,
+    requestTimeout: 120000,
     log: tmp.fileSync().name,
     resume: false,
     mode: 'full'
