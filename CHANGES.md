@@ -1,6 +1,8 @@
 # 2.4.0
 
-- [NEW] Added request timeout option
+- [NEW] Added request timeout option. Set via env var `COUCH_REQUEST_TIMEOUT`,
+ as CLI option `--request-timeout`, or prograimmatically via
+ `options.requestTimeout`
 
 # 2.3.1 (2018-06-15)
 
