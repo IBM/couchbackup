@@ -188,6 +188,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_DATABASE` - the name of the database to act upon e.g. `mydb` (default `test`)
 * `COUCH_PARALLELISM` - the number of HTTP requests to perform in parallel when restoring a backup e.g. `10` (Default `5`)
 * `COUCH_BUFFER_SIZE` - the number of documents fetched and restored at once e.g. `100` (default `500`)
+* `COUCH_REQUEST_TIMEOUT` - the number of milliseconds to wait for a respose to a HTTP request before retrying the request e.g. `10000` (Default `120000`)
 * `COUCH_LOG` - the file to store logging information during backup
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
@@ -207,6 +208,7 @@ used.
 * `--db` - same as `COUCH_DATABASE`
 * `--parallelism` - same as `COUCH_PARALLELISM`
 * `--buffer-size` - same as `COUCH_BUFFER_SIZE`
+* `--request-timeout` - same as `COUCH_REQUEST_TIMEOUT`
 * `--log` - same as `COUCH_LOG`
 * `--resume` - same as `COUCH_RESUME`
 * `--output` - same as `COUCH_OUTPUT`
@@ -248,6 +250,7 @@ target locations are not required.
 
 * `parallelism`: see `COUCH_PARALLELISM`.
 * `bufferSize`: see `COUCH_BUFFER_SIZE`.
+* `requestTimeout`: see `COUCH_REQUEST_TIMEOUT`.
 * `log`: see `COUCH_LOG`.
 * `resume`: see `COUCH_RESUME`.
 * `mode`: see `COUCH_MODE`.
@@ -312,6 +315,7 @@ target locations are not required.
 
 * `parallelism`: see `COUCH_PARALLELISM`.
 * `bufferSize`: see `COUCH_BUFFER_SIZE`.
+* `requestTimeout`: see `COUCH_REQUEST_TIMEOUT`.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
 * `iamTokenUrl`: may be used with `iamApiKey` to override the default URL for
  retrieving IAM tokens.

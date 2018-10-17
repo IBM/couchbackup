@@ -22,6 +22,7 @@ var error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
 const db = request.client(url, { parallelism: 1 });
+const timeoutDb = request.client(url, { parallelism: 1, requestTimeout: 500 });
 
 describe('#unit Check request response error callback', function() {
   beforeEach('Clean nock', function() {
@@ -116,5 +117,44 @@ describe('#unit Check request response error callback', function() {
       assert.ok(couch.isDone());
       done();
     });
+  });
+
+  it('should retry request if HTTP request gets timed out', function(done) {
+    var couch = nock(url)
+      .post('/good')
+      .query(true)
+      .delay(1000)
+      .reply(200, { ok: true, replyNumber: 1 })
+      .post('/good')
+      .query(true)
+      .reply(200, { ok: true, replyNumber: 2 });
+
+    timeoutDb.server.request(
+      { method: 'POST', db: timeoutDb.config.db, path: 'good', qs: { revs: true }, body: {} },
+      function(err, body, h) {
+        assert.ok(body);
+        assert.strictEqual(body.replyNumber, 2);
+        assert.ok(couch.isDone());
+        done();
+      });
+  });
+
+  it('should callback with error code ESOCKETTIMEDOUT if 3 HTTP requests gets timed out', function(done) {
+    var couch = nock(url)
+      .post('/good')
+      .query(true)
+      .delay(1000)
+      .times(3)
+      .reply(200, { ok: true });
+
+    timeoutDb.server.request(
+      { method: 'POST', db: timeoutDb.config.db, path: 'good', qs: { revs: true }, body: {} },
+      function(err, body, h) {
+        assert.ok(error);
+        err = error.convertResponseError(err);
+        assert.strictEqual(err.code, 'ESOCKETTIMEDOUT');
+        assert.ok(couch.isDone());
+        done();
+      });
   });
 });

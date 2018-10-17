@@ -90,6 +90,18 @@ describe('#unit Validate arguments', function() {
   it('returns no error for valid parallelism type', function() {
     validateArgs(goodUrl, { parallelism: 123 }, (err, data) => assert.fail('Unexpected error: ' + err.message));
   });
+  it('returns error for invalid request timeout type', function() {
+    validateArgs(goodUrl, { requestTimeout: '123' }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  });
+  it('returns error for zero request timeout', function() {
+    validateArgs(goodUrl, { requestTimeout: 0 }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  });
+  it('returns error for float request timout', function() {
+    validateArgs(goodUrl, { requestTimeout: 1.23 }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  });
+  it('returns no error for valid request timeout type', function() {
+    validateArgs(goodUrl, { requestTimeout: 123 }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  });
   it('returns error for invalid resume type', function() {
     validateArgs(goodUrl, { resume: 'true' }, (err, data) => assert.strictEqual(err.message, 'Invalid resume option, must be type boolean'));
   });

@@ -296,6 +296,10 @@ function testRestore(params, inputStream, databaseName, callback) {
         args.push('--parallelism');
         args.push(params.opts.parallelism);
       }
+      if (params.opts.requestTimeout) {
+        args.push('--request-timeout');
+        args.push(params.opts.requestTimeout);
+      }
       if (params.opts.iamApiKey) {
         args.push('--iam-api-key');
         args.push(params.opts.iamApiKey);

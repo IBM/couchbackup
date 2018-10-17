@@ -23,6 +23,7 @@ function apiDefaults() {
   return {
     parallelism: 5,
     bufferSize: 500,
+    requestTimeout: 120000,
     log: tmp.fileSync().name,
     resume: false,
     mode: 'full'
@@ -64,6 +65,11 @@ function applyEnvironmentVariables(opts) {
   // if we have a specified parallelism
   if (typeof process.env.COUCH_PARALLELISM !== 'undefined') {
     opts.parallelism = parseInt(process.env.COUCH_PARALLELISM);
+  }
+
+  // if we have a specified request timeout
+  if (typeof process.env.COUCH_REQUEST_TIMEOUT !== 'undefined') {
+    opts.requestTimeout = parseInt(process.env.COUCH_REQUEST_TIMEOUT);
   }
 
   // if we have a specified log file

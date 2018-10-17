@@ -66,6 +66,15 @@ describe('#unit Configuration', function() {
     done();
   });
 
+  it('respects the COUCH_REQUEST_TIMEOUT env variable', function(done) {
+    process.env.COUCH_REQUEST_TIMEOUT = '10000';
+    var config = {};
+    applyEnvVars(config);
+    assert.strictEqual(typeof config.requestTimeout, 'number');
+    assert.strictEqual(config.requestTimeout, 10000);
+    done();
+  });
+
   it('respects the CLOUDANT_IAM_API_KEY env variable', function(done) {
     const key = 'ABC123-ZYX987_cba789-xyz321';
     process.env.CLOUDANT_IAM_API_KEY = key;
