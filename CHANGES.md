@@ -2,7 +2,9 @@
 
 - [NEW] Added request timeout option. Set via env var `COUCH_REQUEST_TIMEOUT`,
  as CLI option `--request-timeout`, or programmatically via
- `options.requestTimeout`
+ `options.requestTimeout`.
+- [IMPROVED] Replaced usages of Node.js legacy URL API. Note this changes some
+  URL validation error messages.
 
 # 2.3.1 (2018-06-15)
 
