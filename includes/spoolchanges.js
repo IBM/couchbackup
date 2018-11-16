@@ -62,7 +62,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
   };
 
   // stream the changes feed to disk
-  var changesRequest = db.changes({ seq_interval: 10000 })
+  var changesRequest = db.changesAsStream({ seq_interval: 10000 })
     .on('error', function(err) {
       callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
     })
