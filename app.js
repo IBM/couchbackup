@@ -95,7 +95,7 @@ function validateArgs(url, opts, cb) {
 
   // Validate URL and ensure no auth if using key
   try {
-    const urlObject = legacyUrl.parse(url);
+    const urlObject = new legacyUrl.URL(url);
     // We require a protocol, host and path (for db), fail if any is missing.
     if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
       cb(new error.BackupError('InvalidOption', 'Invalid URL protocol.'));
@@ -105,7 +105,7 @@ function validateArgs(url, opts, cb) {
       cb(new error.BackupError('InvalidOption', 'Invalid URL host.'));
       return;
     }
-    if (!urlObject.path) {
+    if (!urlObject.pathname) {
       cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
       return;
     }

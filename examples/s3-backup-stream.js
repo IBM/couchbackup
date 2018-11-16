@@ -47,7 +47,7 @@ function main() {
     .argv;
 
   const sourceUrl = argv.source;
-  const backupName = url.parse(sourceUrl).pathname.split('/').filter(function(x) { return x; }).join('-');
+  const backupName = new url.URL(sourceUrl).pathname.split('/').filter(function(x) { return x; }).join('-');
   const backupBucket = argv.bucket;
   const backupKeyPrefix = `${argv.prefix}-${backupName}`;
   const shallow = argv.shallow;
@@ -168,7 +168,7 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, shallow) {
  * @param {string} url URL to safen
  */
 function s(originalUrl) {
-  var parts = url.parse(originalUrl);
+  var parts = new url.URL(originalUrl);
   delete parts.auth;
   return url.format(parts);
 }

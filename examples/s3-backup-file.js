@@ -50,7 +50,7 @@ function main() {
 
   const sourceUrl = argv.source;
   const backupBucket = argv.bucket;
-  const backupName = url.parse(sourceUrl).pathname.split('/').filter(function(x) { return x; }).join('-');
+  const backupName = new url.URL(sourceUrl).pathname.split('/').filter(function(x) { return x; }).join('-');
   const backupKeyPrefix = `${argv.prefix}-${backupName}`;
 
   const backupKey = `${backupKeyPrefix}-${new Date().toISOString()}`;
@@ -183,7 +183,7 @@ function uploadNewBackup(s3, backupTmpFilePath, bucket, key) {
  * @param {string} url URL to safen
  */
 function s(originalUrl) {
-  var parts = url.parse(originalUrl);
+  var parts = new url.URL(originalUrl);
   delete parts.auth;
   return url.format(parts);
 }

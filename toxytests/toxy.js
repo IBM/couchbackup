@@ -25,7 +25,7 @@ const trules = toxy.rules;
 
 function setupProxy(poison) {
   var proxy = toxy({
-    auth: url.parse(process.env.COUCH_BACKEND_URL).auth,
+    auth: new url.URL(process.env.COUCH_BACKEND_URL).auth,
     changeOrigin: true
   });
 
@@ -97,7 +97,7 @@ poisons.forEach(function(poison) {
 
       // For these tests COUCH_URL points to the toxy proxy on localhost whereas
       // COUCH_BACKEND_URL is the real CouchDb instance.
-      const toxyUrl = url.parse(process.env.COUCH_URL);
+      const toxyUrl = new url.URL(process.env.COUCH_URL);
       // Listen on the specified hostname only, so if using localhost we don't
       // need external connections.
       proxy.listen(toxyUrl.port, toxyUrl.hostname);

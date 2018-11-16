@@ -31,10 +31,10 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, {}, (err, data) => assert.fail('Unexpected error: ' + err.message));
   });
   it('returns error for invalid (no host) URL', function() {
-    validateArgs('http://', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL host.'));
+    validateArgs('http://', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
   });
   it('returns error for invalid (no protocol) URL', function() {
-    validateArgs('invalid', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL protocol.'));
+    validateArgs('invalid', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
   });
   it('returns error for invalid (wrong protocol) URL', function() {
     validateArgs('ftp://invalid.example.com', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL protocol.'));
@@ -43,7 +43,7 @@ describe('#unit Validate arguments', function() {
     validateArgs('https://invalid.example.com', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL, missing path element (no database).'));
   });
   it('returns error for invalid (no protocol, no host) URL', function() {
-    validateArgs('invalid', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL protocol.'));
+    validateArgs('invalid', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
   });
   it('returns error for invalid buffer size type', function() {
     validateArgs(goodUrl, { bufferSize: '123' }, (err, data) => assert.strictEqual(err.message, 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));

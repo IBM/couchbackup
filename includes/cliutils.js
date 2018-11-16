@@ -37,7 +37,7 @@ module.exports = {
     if (!root.endsWith('/')) {
       root = root + '/';
     }
-    return url.resolve(root, encodeURIComponent(databaseName));
+    return new url.URL(encodeURIComponent(databaseName), root).toString();
   },
 
   /**
