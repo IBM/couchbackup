@@ -24,8 +24,9 @@ const tpoisons = toxy.poisons;
 const trules = toxy.rules;
 
 function setupProxy(poison) {
+  const backendUrl = new url.URL(process.env.COUCH_BACKEND_URL);
   var proxy = toxy({
-    auth: new url.URL(process.env.COUCH_BACKEND_URL).auth,
+    auth: `${backendUrl.username}:${backendUrl.password}`,
     changeOrigin: true
   });
 
