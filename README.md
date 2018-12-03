@@ -172,6 +172,8 @@ When you run `couchbackup` with `--mode shallow` a simpler backup is performed, 
 of the database. No revision tokens are saved and any conflicting revisions are ignored. This is a faster, but less
 complete backup. Shallow backups cannot be resumed because they do not produce a log file.
 
+NOTE: Parallellism will not be in effect if `--mode shallow` is defined.
+
 ## Why use CouchBackup?
 
 The easiest way to backup a CouchDB database is to copy the ".couch" file. This is fine on a single-node instance, but when running multi-node
