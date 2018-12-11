@@ -21,6 +21,20 @@ const app = rewire('../app.js');
 
 const validateArgs = app.__get__('validateArgs');
 
+const stderrWriteFun = process.stderr.write;
+var capturedStderr;
+
+function captureStderr() {
+  process.stderr.write = function(string, encoding, fd) {
+    capturedStderr += string;
+  };
+}
+
+function releaseStderr() {
+  process.stderr.write = stderrWriteFun;
+  capturedStderr = null;
+}
+
 function assertErrorMessage(msg, done) {
   return function(err, data) {
     try {
@@ -151,5 +165,44 @@ describe('#unit Validate arguments', function() {
   });
   it('returns error for key and URL credentials supplied', function(done) {
     validateArgs('https://a:b@example.com/db', { iamApiKey: 'abc123' }, assertErrorMessage('URL user information must not be supplied when using IAM API key.', done));
+  });
+  it('warns for log arg in shallow mode', function(done) {
+    captureStderr();
+    try {
+      assert(validateArgs(goodUrl, { mode: 'shallow', log: 'test' }, function(err, data) {
+        assert(capturedStderr.indexOf('The options "log" and "resume" are invalid when using shallow mode.') > -1, 'Log warning message was not present');
+      }), 'validateArgs should return true');
+      done();
+    } catch (e) {
+      done(e);
+    } finally {
+      releaseStderr();
+    }
+  });
+  it('warns for resume arg in shallow mode', function(done) {
+    captureStderr();
+    try {
+      assert(validateArgs(goodUrl, { mode: 'shallow', log: 'test', resume: true }, function(err, data) {
+        assert(capturedStderr.indexOf('The options "log" and "resume" are invalid when using shallow mode.') > -1, 'Log warning message was not present');
+      }), 'validateArgs should return true');
+      done();
+    } catch (e) {
+      done(e);
+    } finally {
+      releaseStderr();
+    }
+  });
+  it('warns for parallism arg in shallow mode', function(done) {
+    captureStderr();
+    try {
+      assert(validateArgs(goodUrl, { mode: 'shallow', parallelsim: 10 }, function(err, data) {
+        assert(capturedStderr.indexOf('The option "parallelism" has no effect when using shallow mode.') > -1, 'Log warning message was not present');
+      }), 'validateArgs should return true');
+      done();
+    } catch (e) {
+      done(e);
+    } finally {
+      releaseStderr();
+    }
   });
 });

@@ -61,6 +61,13 @@ function parseBackupArgs() {
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url))
     .parse(process.argv);
 
+  // Remove defaults that don't apply when using shallow mode
+  if (program.mode === 'shallow' || envVarOptions.mode === 'shallow') {
+    delete defaults.parallelism;
+    delete defaults.log;
+    delete defaults.resume;
+  }
+
   // Apply the options in order so that the CLI overrides env vars and env variables
   // override defaults.
   const opts = Object.assign({}, defaults, envVarOptions, program);

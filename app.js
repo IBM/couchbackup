@@ -118,6 +118,18 @@ function validateArgs(url, opts, cb) {
     return;
   }
 
+  // Perform validation of invalid options for shallow mode and WARN
+  // We don't error for backwards compatibility with scripts that may have been
+  // written passing complete sets of options through
+  if (opts && opts.mode === 'shallow') {
+    if (opts.log || opts.resume) {
+      console.warn('WARNING: the options "log" and "resume" are invalid when using shallow mode.');
+    }
+    if (opts.parallelism) {
+      console.warn('WARNING: the option "parallelism" has no effect when using shallow mode.');
+    }
+  }
+
   if (opts && opts.resume) {
     if (!opts.log) {
       // This is the second place we check for the presence of the log option in conjunction with resume
