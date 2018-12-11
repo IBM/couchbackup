@@ -28,7 +28,7 @@ const backupShallow = require('./includes/shallowbackup.js');
 const debug = require('debug')('couchbackup:app');
 const events = require('events');
 const fs = require('fs');
-const legacyUrl = require('url');
+const URL = require('url').URL;
 
 /**
  * Test for a positive, safe integer.
@@ -95,7 +95,7 @@ function validateArgs(url, opts, cb) {
 
   // Validate URL and ensure no auth if using key
   try {
-    const urlObject = new legacyUrl.URL(url);
+    const urlObject = new URL(url);
     // We require a protocol, host and path (for db), fail if any is missing.
     if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
       cb(new error.BackupError('InvalidOption', 'Invalid URL protocol.'));
@@ -105,11 +105,11 @@ function validateArgs(url, opts, cb) {
       cb(new error.BackupError('InvalidOption', 'Invalid URL host.'));
       return;
     }
-    if (!urlObject.pathname) {
+    if (!urlObject.pathname || urlObject.pathname === '/') {
       cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
       return;
     }
-    if (opts && opts.iamApiKey && urlObject.auth) {
+    if (opts && opts.iamApiKey && (urlObject.username || url.password)) {
       cb(new error.BackupError('InvalidOption', 'URL user information must not be supplied when using IAM API key.'));
       return;
     }

@@ -21,97 +21,135 @@ const app = rewire('../app.js');
 
 const validateArgs = app.__get__('validateArgs');
 
+function assertErrorMessage(msg, done) {
+  return function(err, data) {
+    try {
+      assert(err.message, 'There should be an error message');
+      assert(err.message.indexOf(msg) >= 0);
+      assert(data === null || data === undefined, 'There should only be an error.');
+      done();
+    } catch (e) {
+      done(e);
+    }
+  };
+}
+
+function assertNoError(done) {
+  return function(err, data) {
+    try {
+      assert(err === null, 'There should be no error message.');
+      done();
+    } catch (e) {
+      done(e);
+    }
+  };
+}
+
 describe('#unit Validate arguments', function() {
   const goodUrl = 'http://localhost:5984/db';
 
-  it('returns error for invalid URL type', function() {
-    validateArgs(true, {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL, must be type string'));
+  // Note that the validateArgs function returns undefined when it fails and
+  // true when it passes. The callback is only called in failure cases because
+  // in real usage it is the main callback so calling back when validateArgs
+  // completed would terminate the program early. So for testing we assert the
+  // callback for error cases and assert no callback and a return of true for
+  // success cases.
+  it('returns error for invalid URL type', function(done) {
+    validateArgs(true, {}, assertErrorMessage('Invalid URL, must be type string', done));
   });
-  it('returns no error for valid URL type', function() {
-    validateArgs(goodUrl, {}, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid URL type', function(done) {
+    assert(validateArgs(goodUrl, {}, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid (no host) URL', function() {
-    validateArgs('http://', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
+  it('returns error for invalid (no host) URL', function(done) {
+    validateArgs('http://', {}, assertErrorMessage('Invalid URL', done));
   });
-  it('returns error for invalid (no protocol) URL', function() {
-    validateArgs('invalid', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
+  it('returns error for invalid (no protocol) URL', function(done) {
+    validateArgs('invalid', {}, assertErrorMessage('Invalid URL', done));
   });
-  it('returns error for invalid (wrong protocol) URL', function() {
-    validateArgs('ftp://invalid.example.com', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL protocol.'));
+  it('returns error for invalid (wrong protocol) URL', function(done) {
+    validateArgs('ftp://invalid.example.com', {}, assertErrorMessage('Invalid URL protocol.', done));
   });
-  it('returns error for invalid (no path) URL', function() {
-    validateArgs('https://invalid.example.com', {}, (err, data) => assert.strictEqual(err.message, 'Invalid URL, missing path element (no database).'));
+  it('returns error for invalid (no path) URL', function(done) {
+    validateArgs('https://invalid.example.com', {}, assertErrorMessage('Invalid URL, missing path element (no database).', done));
   });
-  it('returns error for invalid (no protocol, no host) URL', function() {
-    validateArgs('invalid', {}, (err, data) => assert.ok(err.message.startsWith('Invalid URL')));
+  it('returns error for invalid (no protocol, no host) URL', function(done) {
+    validateArgs('invalid', {}, assertErrorMessage('Invalid URL', done));
   });
-  it('returns error for invalid buffer size type', function() {
-    validateArgs(goodUrl, { bufferSize: '123' }, (err, data) => assert.strictEqual(err.message, 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for invalid buffer size type', function(done) {
+    validateArgs(goodUrl, { bufferSize: '123' }, assertErrorMessage('Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for zero buffer size', function() {
-    validateArgs(goodUrl, { bufferSize: 0 }, (err, data) => assert.strictEqual(err.message, 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for zero buffer size', function(done) {
+    validateArgs(goodUrl, { bufferSize: 0 }, assertErrorMessage('Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for float buffer size', function() {
-    validateArgs(goodUrl, { bufferSize: 1.23 }, (err, data) => assert.strictEqual(err.message, 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for float buffer size', function(done) {
+    validateArgs(goodUrl, { bufferSize: 1.23 }, assertErrorMessage('Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns no error for valid buffer size type', function() {
-    validateArgs(goodUrl, { bufferSize: 123 }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid buffer size type', function(done) {
+    assert(validateArgs(goodUrl, { bufferSize: 123 }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid log type', function() {
-    validateArgs(goodUrl, { log: true }, (err, data) => assert.strictEqual(err.message, 'Invalid log option, must be type string'));
+  it('returns error for invalid log type', function(done) {
+    validateArgs(goodUrl, { log: true }, assertErrorMessage('Invalid log option, must be type string', done));
   });
-  it('returns no error for valid log type', function() {
-    validateArgs(goodUrl, { log: 'log.txt' }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid log type', function(done) {
+    assert(validateArgs(goodUrl, { log: 'log.txt' }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid mode type', function() {
-    validateArgs(goodUrl, { mode: true }, (err, data) => assert.strictEqual(err.message, 'Invalid mode option, must be either "full" or "shallow"'));
+  it('returns error for invalid mode type', function(done) {
+    validateArgs(goodUrl, { mode: true }, assertErrorMessage('Invalid mode option, must be either "full" or "shallow"', done));
   });
-  it('returns error for invalid mode string', function() {
-    validateArgs(goodUrl, { mode: 'foobar' }, (err, data) => assert.strictEqual(err.message, 'Invalid mode option, must be either "full" or "shallow"'));
+  it('returns error for invalid mode string', function(done) {
+    validateArgs(goodUrl, { mode: 'foobar' }, assertErrorMessage('Invalid mode option, must be either "full" or "shallow"', done));
   });
-  it('returns no error for valid mode type', function() {
-    validateArgs(goodUrl, { mode: 'full' }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid mode type', function(done) {
+    assert(validateArgs(goodUrl, { mode: 'full' }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid output type', function() {
-    validateArgs(goodUrl, { output: true }, (err, data) => assert.strictEqual(err.message, 'Invalid output option, must be type string'));
+  it('returns error for invalid output type', function(done) {
+    validateArgs(goodUrl, { output: true }, assertErrorMessage('Invalid output option, must be type string', done));
   });
-  it('returns no error for valid output type', function() {
-    validateArgs(goodUrl, { output: 'output.txt' }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid output type', function(done) {
+    assert(validateArgs(goodUrl, { output: 'output.txt' }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid parallelism type', function() {
-    validateArgs(goodUrl, { parallelism: '123' }, (err, data) => assert.strictEqual(err.message, 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for invalid parallelism type', function(done) {
+    validateArgs(goodUrl, { parallelism: '123' }, assertErrorMessage('Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for zero parallelism', function() {
-    validateArgs(goodUrl, { parallelism: 0 }, (err, data) => assert.strictEqual(err.message, 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for zero parallelism', function(done) {
+    validateArgs(goodUrl, { parallelism: 0 }, assertErrorMessage('Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for float parallelism', function() {
-    validateArgs(goodUrl, { parallelism: 1.23 }, (err, data) => assert.strictEqual(err.message, 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for float parallelism', function(done) {
+    validateArgs(goodUrl, { parallelism: 1.23 }, assertErrorMessage('Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns no error for valid parallelism type', function() {
-    validateArgs(goodUrl, { parallelism: 123 }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid parallelism type', function(done) {
+    assert(validateArgs(goodUrl, { parallelism: 123 }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid request timeout type', function() {
-    validateArgs(goodUrl, { requestTimeout: '123' }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for invalid request timeout type', function(done) {
+    validateArgs(goodUrl, { requestTimeout: '123' }, assertErrorMessage('Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for zero request timeout', function() {
-    validateArgs(goodUrl, { requestTimeout: 0 }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for zero request timeout', function(done) {
+    validateArgs(goodUrl, { requestTimeout: 0 }, assertErrorMessage('Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns error for float request timout', function() {
-    validateArgs(goodUrl, { requestTimeout: 1.23 }, (err, data) => assert.strictEqual(err.message, 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));
+  it('returns error for float request timout', function(done) {
+    validateArgs(goodUrl, { requestTimeout: 1.23 }, assertErrorMessage('Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
-  it('returns no error for valid request timeout type', function() {
-    validateArgs(goodUrl, { requestTimeout: 123 }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid request timeout type', function(done) {
+    assert(validateArgs(goodUrl, { requestTimeout: 123 }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid resume type', function() {
-    validateArgs(goodUrl, { resume: 'true' }, (err, data) => assert.strictEqual(err.message, 'Invalid resume option, must be type boolean'));
+  it('returns error for invalid resume type', function(done) {
+    validateArgs(goodUrl, { resume: 'true' }, assertErrorMessage('Invalid resume option, must be type boolean', done));
   });
-  it('returns no error for valid resume type', function() {
-    validateArgs(goodUrl, { resume: false }, (err, data) => assert.fail('Unexpected error: ' + err.message));
+  it('returns no error for valid resume type', function(done) {
+    assert(validateArgs(goodUrl, { resume: false }, assertNoError(done)), 'validateArgs should return true');
+    done();
   });
-  it('returns error for invalid key type', function() {
-    validateArgs(goodUrl, { iamApiKey: true }, (err, data) => assert.strictEqual(err.message, 'Invalid iamApiKey option, must be type string'));
+  it('returns error for invalid key type', function(done) {
+    validateArgs(goodUrl, { iamApiKey: true }, assertErrorMessage('Invalid iamApiKey option, must be type string', done));
   });
-  it('returns error for key and URL credentials supplied', function() {
-    validateArgs('https://a:b@example.com', { iamApiKey: 'abc123' }, (err, data) => assert.strictEqual(err.message, 'URL user information must not be supplied when using IAM API key.'));
+  it('returns error for key and URL credentials supplied', function(done) {
+    validateArgs('https://a:b@example.com/db', { iamApiKey: 'abc123' }, assertErrorMessage('URL user information must not be supplied when using IAM API key.', done));
   });
 });
