@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2018 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -184,8 +184,7 @@ function uploadNewBackup(s3, backupTmpFilePath, bucket, key) {
  */
 function s(originalUrl) {
   var parts = new url.URL(originalUrl);
-  delete parts.auth;
-  return url.format(parts);
+  return url.format(parts, { auth: false });
 }
 
 main();

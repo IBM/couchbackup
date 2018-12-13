@@ -5,6 +5,8 @@
  `options.requestTimeout`.
 - [IMPROVED] Replaced usages of Node.js legacy URL API. Note this changes some
   URL validation error messages.
+- [IMPROVED] Documentation, help text and log warnings for invalid options in
+  "shallow" mode.
 - [UPGRADED] Increased nodejs-cloudant dependency to 3.x.x.
 
 # 2.3.1 (2018-06-15)
