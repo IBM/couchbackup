@@ -36,29 +36,57 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     }
 
     // Stream the payload through a zip stream to the server
-    var payloadStream = new stream.PassThrough();
+    const payloadStream = new stream.PassThrough();
     payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
-    var zipstream = zlib.createGzip();
+    const zipstream = zlib.createGzip();
+
+    // Class for streaming _bulk_docs responses into
+    // In general the response is [] or a small error/reason JSON object
+    // so it is OK to have this in memory.
+    class ResponseWriteable extends stream.Writable {
+      constructor(options) {
+        super(options);
+        this.data = [];
+      }
+
+      _write(chunk, encoding, callback) {
+        this.data.push(chunk);
+        callback();
+      }
+
+      asJson() {
+        return JSON.parse(Buffer.concat(this.data).toString());
+      }
+    }
 
     if (!didError) {
-      var req = db.server.request({
+      var response;
+      const responseBody = new ResponseWriteable();
+      const req = db.server.request({
         db: db.config.db,
         path: '_bulk_docs',
         method: 'POST',
         headers: { 'content-encoding': 'gzip' },
         stream: true
-      }, function(err) {
-        err = error.convertResponseError(err);
-        if (err) {
-          debug(`Error writing docs ${err.name} ${err.message}`);
-          cb(err, payload);
-        } else {
-          written += payload.docs.length;
-          writer.emit('restored', { documents: payload.docs.length, total: written });
-          cb();
-        }
-      });
+      })
+        .on('response', function(resp) {
+          response = resp;
+        })
+        .on('end', function() {
+          if (response.statusCode >= 400) {
+            const err = error.convertResponseError(Object.assign({}, response, responseBody.asJson()));
+            debug(`Error writing docs ${err.name} ${err.message}`);
+            cb(err, payload);
+          } else {
+            written += payload.docs.length;
+            writer.emit('restored', { documents: payload.docs.length, total: written });
+            cb();
+          }
+        });
+      // Pipe the payload into the request object to POST to _bulk_docs
       payloadStream.pipe(zipstream).pipe(req);
+      // Pipe the request object's response into our bulkDocsResponse
+      req.pipe(responseBody);
     }
   }, parallelism);
 
