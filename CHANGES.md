@@ -1,4 +1,4 @@
-# 2.4.0
+# UNRELEASED
 
 - [NEW] Added request timeout option. Set via env var `COUCH_REQUEST_TIMEOUT`,
  as CLI option `--request-timeout`, or programmatically via
@@ -7,7 +7,7 @@
   URL validation error messages.
 - [IMPROVED] Documentation, help text and log warnings for invalid options in
   "shallow" mode.
-- [UPGRADED] Increased nodejs-cloudant dependency to 3.x.x.
+- [UPGRADED] Moved nodejs-cloudant dependency to 4.x.x.
 
 # 2.3.1 (2018-06-15)
 
