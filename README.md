@@ -19,7 +19,9 @@
 CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed up to a text file.
 It comes with a companion command-line utility that can restore the backed up data.
 
-**N.B.**
+## Limitations
+
+Couchbackup has some restrictions in the data it's able to backup:
 
 * **couchbackup does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
 * **couchbackup does not support backing up or restoring databases containing documents with attachments. It is recommended to store attachments directly in an object store. DO NOT USE THIS TOOL FOR DATABASES CONTAINING ATTACHMENTS.** [Note](#note-on-attachments)
