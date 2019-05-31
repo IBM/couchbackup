@@ -1,3 +1,7 @@
+# Unreleased
+
+- [FIXED] Removed inadvertent npm-cli-login dependency.
+
 # 2.4.0 (2019-03-15)
 
 - [NEW] Added request timeout option. Set via env var `COUCH_REQUEST_TIMEOUT`,
