@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2019 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,18 +125,17 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       async.until(
         // wait until the queue length drops to twice the paralellism
         // or until empty on the last write
-        function() {
+        function(callback) {
           // if we encountered an error, stop this until loop
           if (didError) {
-            return true;
+            return callback(null, true);
           }
           if (flush) {
-            return q.idle() && q.length() === 0;
+            callback(null, q.idle() && q.length() === 0);
           } else {
-            return q.length() <= parallelism * 2;
+            callback(null, q.length() <= parallelism * 2);
           }
         },
-
         function(cb) {
           setTimeout(cb, 20);
         },

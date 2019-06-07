@@ -143,7 +143,7 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
   }
 
   // Return true if all batches in log file have been downloaded
-  function isFinished() { return noRemainingBatches; }
+  function isFinished(callback) { callback(null, noRemainingBatches); }
 
   function onComplete() {
     ee.emit('finished', { total: total });

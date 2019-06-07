@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2019 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ module.exports = function(db, options) {
         }
       });
     },
-    function() { return hasErrored || startKey == null; },
+    function(callback) { callback(null, hasErrored || startKey == null); },
     function() { ee.emit('finished', { total: total }); }
   );
 
