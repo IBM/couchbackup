@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2019 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
   }
 
   // Return true if all batches in log file have been downloaded
-  function isFinished() { return noRemainingBatches; }
+  function isFinished(callback) { callback(null, noRemainingBatches); }
 
   function onComplete() {
     ee.emit('finished', { total: total });
@@ -254,9 +254,9 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
     q.push(batches[i]);
   }
 
-  q.drain = function() {
+  q.drain(function() {
     callback(null, { total: total });
-  };
+  });
 }
 
 /**
