@@ -1,6 +1,8 @@
-# Unreleased
+# 2.4.1 (2019-06-18)
 
 - [FIXED] Removed inadvertent npm-cli-login dependency.
+- [UPGRADED] Upgraded @cloudant/cloudant dependency to version 4.1.1.
+- [UPGRADED] Upgraded async dependency to version 3.0.1.
 
 # 2.4.0 (2019-03-15)
 
