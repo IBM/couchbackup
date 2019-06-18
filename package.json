@@ -20,10 +20,10 @@
     "node": ">=6.13.0"
   },
   "dependencies": {
+    "@cloudant/cloudant": "^4.1.1",
     "async": "3.0.1",
     "commander": "^2.9.0",
     "debug": "~4.1.0",
-    "@cloudant/cloudant": "^4.0.0",
     "tmp": "0.1.0"
   },
   "main": "app.js",
