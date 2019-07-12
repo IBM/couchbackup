@@ -35,6 +35,7 @@
     "eslint": "^5.15.1",
     "eslint-config-semistandard": "^14.0.0",
     "eslint-config-standard": "^12.0.0",
+    "eslint-config-standard": "^13.0.1",
     "eslint-plugin-header": "^2.0.0",
     "eslint-plugin-import": "^2.8.0",
     "eslint-plugin-node": "^9.0.0",
