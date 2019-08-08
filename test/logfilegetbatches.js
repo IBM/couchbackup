@@ -23,9 +23,9 @@ describe('#unit Fetching batches from a log file', function() {
     logfilegetbatches('./test/fixtures/test.log', [1, 4], function(err, data) {
       assert.strictEqual(typeof data, 'object');
       assert.strictEqual(Object.keys(data).length, 2);
-      assert.deepStrictEqual(data['1'].docs, [{ 'id': '6' }, { 'id': '7' }, { 'id': '8' }, { 'id': '9' }, { 'id': '10' }]);
+      assert.deepStrictEqual(data['1'].docs, [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }]);
       assert.strictEqual(data['1'].batch, 1);
-      assert.deepStrictEqual(data['4'].docs, [{ 'id': '21' }, { 'id': '22' }]);
+      assert.deepStrictEqual(data['4'].docs, [{ id: '21' }, { id: '22' }]);
       assert.strictEqual(data['4'].batch, 4);
       done();
     });

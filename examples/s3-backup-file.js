@@ -38,11 +38,11 @@ function main() {
     .usage('Usage: $0 [options]')
     .example('$0 -s https://user:pass@host/db -b <bucket>', 'Backup db to bucket')
     .options({
-      'source': { alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL' },
-      'bucket': { alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket' },
-      'prefix': { alias: 'p', nargs: 1, describe: 'Prefix for backup object key', default: 'couchbackup' },
-      's3url': { nargs: 1, describe: 'S3 endpoint URL' },
-      'awsprofile': { nargs: 1, describe: 'The profile section to use in the ~/.aws/credentials file', default: 'default' }
+      source: { alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL' },
+      bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket' },
+      prefix: { alias: 'p', nargs: 1, describe: 'Prefix for backup object key', default: 'couchbackup' },
+      s3url: { nargs: 1, describe: 'S3 endpoint URL' },
+      awsprofile: { nargs: 1, describe: 'The profile section to use in the ~/.aws/credentials file', default: 'default' }
     })
     .help('h').alias('h', 'help')
     .epilog('Copyright (C) IBM 2017')
