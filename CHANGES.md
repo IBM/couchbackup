@@ -1,3 +1,7 @@
+# UNRELEASED
+
+- [FIXED] Preserve document revisions in shallow backup.
+
 # 2.4.1 (2019-06-18)
 
 - [FIXED] Removed inadvertent npm-cli-login dependency.

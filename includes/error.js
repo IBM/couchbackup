@@ -15,17 +15,17 @@
 
 // fatal errors
 const codes = {
-  'Error': 1,
-  'InvalidOption': 2,
-  'DatabaseNotFound': 10,
-  'Unauthorized': 11,
-  'Forbidden': 12,
-  'NoLogFileName': 20,
-  'LogDoesNotExist': 21,
-  'IncompleteChangesInLogFile': 22,
-  'SpoolChangesError': 30,
-  'HTTPFatalError': 40,
-  'BulkGetError': 50
+  Error: 1,
+  InvalidOption: 2,
+  DatabaseNotFound: 10,
+  Unauthorized: 11,
+  Forbidden: 12,
+  NoLogFileName: 20,
+  LogDoesNotExist: 21,
+  IncompleteChangesInLogFile: 22,
+  SpoolChangesError: 30,
+  HTTPFatalError: 40,
+  BulkGetError: 50
 };
 
 class BackupError extends Error {

@@ -55,7 +55,6 @@ module.exports = function(db, options) {
 
           var docs = [];
           body.rows.forEach(function(doc) {
-            delete doc.doc._rev;
             docs.push(doc.doc);
           });
 

@@ -34,7 +34,6 @@
   "devDependencies": {
     "eslint": "^5.15.1",
     "eslint-config-semistandard": "^14.0.0",
-    "eslint-config-standard": "^12.0.0",
     "eslint-config-standard": "^13.0.1",
     "eslint-plugin-header": "^2.0.0",
     "eslint-plugin-import": "^2.8.0",
@@ -43,7 +42,7 @@
     "eslint-plugin-react": "^7.14.2",
     "eslint-plugin-standard": "^4.0.0",
     "http-proxy": "^1.16.2",
-    "jsdoc": "^3.6.2",
+    "jsdoc": "^3.6.3",
     "mocha": "^6.1.4",
     "nock": "^10.0.0",
     "rewire": "^4.0.0",
