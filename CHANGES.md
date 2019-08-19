@@ -1,4 +1,4 @@
-# UNRELEASED
+# 2.4.2 (2019-08-20)
 
 - [FIXED] Preserve document revisions in shallow backup.
 
