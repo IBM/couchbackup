@@ -1,6 +1,7 @@
 # 2.4.2 (2019-08-20)
 
 - [FIXED] Preserve document revisions in shallow backup.
+- [UPGRADED] Upgraded commander dependency to version 3.0.0.
 
 # 2.4.1 (2019-06-18)
 
