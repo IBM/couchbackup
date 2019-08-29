@@ -84,7 +84,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
             if (!lastSeq) {
               logStream.end();
               debug('changes request terminated before last_seq was sent');
-              callback(new error.BackupError('SpoolChangesError', `Changes request terminated before last_seq was sent`));
+              callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
             } else {
               debug('finished streaming database changes');
               logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);

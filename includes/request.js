@@ -44,13 +44,15 @@ module.exports = {
     } else {
       pluginsToUse.push('cookieauth');
     }
-    return cloudant({ url: actUrl,
+    return cloudant({
+      url: actUrl,
       plugins: pluginsToUse,
       requestDefaults: {
         agent: keepAliveAgent,
         headers: { 'User-Agent': userAgent },
         gzip: true,
         timeout: opts.requestTimeout
-      } }).use(dbName);
+      }
+    }).use(dbName);
   }
 };
