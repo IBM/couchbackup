@@ -185,10 +185,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a changes without a last_seq
         n.get('/fakenockdb/_changes').query(true).reply(200,
-          { results: [{ seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',
-            id: 'badger',
-            changes: [{ rev: '4-51aa94e4b0ef37271082033bba52b850' }]
-          }] });
+          {
+            results: [{
+              seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',
+              id: 'badger',
+              changes: [{ rev: '4-51aa94e4b0ef37271082033bba52b850' }]
+            }]
+          });
         backupHttpError(params, 'SpoolChangesError', 30, done);
       });
     });

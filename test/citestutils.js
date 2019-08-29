@@ -112,7 +112,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       if (err) {
         if (params.expectedBackupError) {
           try {
-            assert.strictEqual(err.name, params.expectedBackupError.name, `The backup should receive the expected error.`);
+            assert.strictEqual(err.name, params.expectedBackupError.name, 'The backup should receive the expected error.');
             // Got the expected error, so wipe it for the callback
             err = null;
           } catch (caught) {
@@ -271,7 +271,7 @@ function testRestore(params, inputStream, databaseName, callback) {
       if (err) {
         if (params.expectedRestoreError) {
           try {
-            assert.strictEqual(err.name, params.expectedRestoreError.name, `The restore should receive the expected error.`);
+            assert.strictEqual(err.name, params.expectedRestoreError.name, 'The restore should receive the expected error.');
             err = null;
           } catch (caught) {
             err = caught;
