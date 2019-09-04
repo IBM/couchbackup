@@ -17,7 +17,7 @@
   },
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=6.13.0"
+    "node": ">=8.16.1"
   },
   "dependencies": {
     "@cloudant/cloudant": "^4.1.1",
@@ -44,7 +44,7 @@
     "http-proxy": "^1.16.2",
     "jsdoc": "^3.6.3",
     "mocha": "^6.1.4",
-    "nock": "^10.0.0",
+    "nock": "^11.3.2",
     "rewire": "^4.0.0",
     "tail": "^2.0.0",
     "toxy": "^0.3.16",
