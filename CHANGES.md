@@ -1,3 +1,6 @@
+# UNRELEASED
+- [NOTE] Updated minimum supported engine to Node.js 8 “Carbon” LTS.
+
 # 2.4.2 (2019-08-20)
 
 - [FIXED] Preserve document revisions in shallow backup.
