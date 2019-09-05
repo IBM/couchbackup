@@ -37,7 +37,7 @@
     "eslint-config-standard": "^14.0.0",
     "eslint-plugin-header": "^2.0.0",
     "eslint-plugin-import": "^2.8.0",
-    "eslint-plugin-node": "^9.2.0",
+    "eslint-plugin-node": "^10.0.0",
     "eslint-plugin-promise": "^4.0.0",
     "eslint-plugin-react": "^7.14.2",
     "eslint-plugin-standard": "^4.0.0",
