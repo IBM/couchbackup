@@ -42,7 +42,7 @@ module.exports = {
       }
       pluginsToUse.push({ iamauth: iamPluginConfig });
     } else {
-      pluginsToUse.push('cookieauth');
+      pluginsToUse.push({ cookieauth: { errorOnNoCreds: false } });
     }
     return cloudant({
       url: actUrl,
