@@ -61,6 +61,19 @@ export COUCH_URL=https://myusername:mypassword@myhost.cloudant.com
 
 Alternatively we can use the `--url` command-line parameter.
 
+When passing credentials in the user information subcomponent of the URL
+they must be [percent encoded](https://tools.ietf.org/html/rfc3986#section-3.2.1).
+Specifically, within either the username or password, the characters `: / ? # [ ] @ %`
+_MUST_ be precent-encoded, other characters _MAY_ be percent encoded.
+
+For example, for the username `user123` and password `colon:at@321`:
+```
+https://user123:colon%3aat%40321@localhost:5984
+```
+
+Note that additional care must be taken to escape shell reserved characters when
+setting the environment variable or command-line parameter.
+
 ### The Database name
 
 To define the name of the database to backup or restore, set the `COUCH_DATABASE` environment variable:

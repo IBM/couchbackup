@@ -1,3 +1,10 @@
+# Unreleased
+- [FIXED] Issue with incorrect handling of percent-encoded user info characters
+  via @cloudant/cloudant dependency.
+- [UPGRADED] Upgraded @cloudant/cloudant dependency to minimum version 4.2.3
+- [IMPROVED] Added documentation around encoding of characters in the user info
+  subcomponent of the URL.
+
 # 2.5.0 (2019-10-24)
 - [UPGRADED] Upgraded @cloudant/cloudant dependency to version 4.2.2.
 - [NOTE] Updated minimum supported engine to Node.js 8 “Carbon” LTS.
