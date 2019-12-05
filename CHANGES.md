@@ -1,3 +1,6 @@
+# Unreleased
+- [UPGRADED] Upgraded @cloudant/cloudant dependency to minimum version 4.2.3
+
 # 2.5.0 (2019-10-24)
 - [UPGRADED] Upgraded @cloudant/cloudant dependency to version 4.2.2.
 - [NOTE] Updated minimum supported engine to Node.js 8 “Carbon” LTS.
