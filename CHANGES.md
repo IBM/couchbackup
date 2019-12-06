@@ -1,4 +1,4 @@
-# Unreleased
+# 2.5.1 (2019-12-06)
 - [FIXED] Issue with incorrect handling of percent-encoded user info characters
   via @cloudant/cloudant dependency.
 - [UPGRADED] Upgraded @cloudant/cloudant dependency to minimum version 4.2.3
