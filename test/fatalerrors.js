@@ -113,13 +113,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for backup', function() {
       it('should terminate when DB does not exist', function(done) {
         // Simulate existence check
-        nock(url).head('/fakenockdb').reply(404, { error: 'not_found', reason: 'missing' });
+        nock(url).get('/fakenockdb').reply(404, { error: 'not_found', reason: 'missing' });
         backupHttpError(params, 'DatabaseNotFound', 10, done);
       });
 
       it('should terminate on BulkGetError', function(done) {
         // Simulate existence check
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         // Simulate _bulk_get not available
         n.head('/fakenockdb/_bulk_get').reply(404, { error: 'not_found', reason: 'missing' });
         backupHttpError(params, 'BulkGetError', 50, done);
@@ -127,13 +127,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on Unauthorized existence check', function(done) {
         // Simulate a 401
-        nock(url).head('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
+        nock(url).get('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
         backupHttpError(params, 'Unauthorized', 11, done);
       });
 
       it('should terminate on Forbidden no _reader', function(done) {
         // Simulate a 403
-        nock(url).head('/fakenockdb').reply(403, { error: 'forbidden', reason: '_reader access is required for this request' });
+        nock(url).get('/fakenockdb').reply(403, { error: 'forbidden', reason: '_reader access is required for this request' });
         backupHttpError(params, 'Forbidden', 12, done);
       });
 
@@ -141,7 +141,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Provide a mock complete changes log to allow a resume to skip ahead
         const p = u.p(params, { opts: { resume: true, log: './test/fixtures/test.log' } });
         // Allow the existence and _bulk_get checks to pass
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
         n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, { error: 'bad_request', reason: 'testing bad response' });
@@ -164,7 +164,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Use an incomplete changes log file
         const p = u.p(params, { opts: { resume: true, log: './test/fixtures/incomplete_changes.log' } });
         // Allow the existence and _bulk_get checks to pass
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Should fail when it reads the incomplete changes
         backupHttpError(p, 'IncompleteChangesInLogFile', 22, done);
@@ -172,7 +172,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on _changes HTTPFatalError', function(done) {
         // Allow the existence and _bulk_get checks to pass
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
         n.get('/fakenockdb/_changes').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
@@ -181,7 +181,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on SpoolChangesError', function(done) {
         // Allow the existence and _bulk_get checks to pass
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
         // Simulate a changes without a last_seq
         n.get('/fakenockdb/_changes').query(true).reply(200,
@@ -199,13 +199,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for restore', function() {
       it('should terminate on Unauthorized db existence check', function(done) {
         // Simulate a 401
-        nock(url).head('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
+        nock(url).get('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
         restoreHttpError(params, 'Unauthorized', 11, done);
       });
 
       it('should terminate on Forbidden no _writer', function(done) {
         // Simulate the DB exists (i.e. you can read it)
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         // Simulate a 403 trying to write
         n.post('/fakenockdb/_bulk_docs').reply(403, { error: 'forbidden', reason: '_writer access is required for this request' });
         restoreHttpError(params, 'Forbidden', 12, done);
@@ -213,13 +213,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on RestoreDatabaseNotFound', function(done) {
         // Simulate the DB does not exist
-        nock(url).head('/fakenockdb').reply(404, { error: 'not_found', reason: 'Database does not exist.' });
+        nock(url).get('/fakenockdb').reply(404, { error: 'not_found', reason: 'Database does not exist.' });
         restoreHttpError(params, 'DatabaseNotFound', 10, done);
       });
 
       it('should terminate on _bulk_docs HTTPFatalError', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         // Use a parallelism of one and mock one response
         const p = u.p(params, { opts: { parallelism: 1 } });
         // Simulate a 400 trying to write
@@ -229,7 +229,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on _bulk_docs HTTPFatalError large stream', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         // Simulate a 400 trying to write
         // Provide a body function to handle the stream, but allow any body
         n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, { error: 'bad_request', reason: 'testing bad response' });
@@ -246,7 +246,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on multiple _bulk_docs HTTPFatalError', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200);
         // Simulate a 400 trying to write docs, 5 times because of default parallelism
         // Provide a body function to handle the stream, but allow any body
         n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(5).reply(400, { error: 'bad_request', reason: 'testing bad response' });

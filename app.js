@@ -160,7 +160,7 @@ function addEventListener(indicator, emitter, event, f) {
   @param {function(err)} callback - error is undefined if DB exists
 */
 function proceedIfDbValid(db, callback) {
-  db.head('', function(err) {
+  db.info(function(err, data) {
     err = error.convertResponseError(err, function(err) {
       if (err && err.statusCode === 404) {
         // Override the error type and mesasge for the DB not found case
