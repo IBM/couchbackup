@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2020 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ function addEventListener(indicator, emitter, event, f) {
   @param {function(err)} callback - error is undefined if DB exists
 */
 function proceedIfDbValid(db, callback) {
-  db.head('', function(err) {
+  db.server.request({ db: db.config.db, method: 'HEAD' }, function(err) {
     err = error.convertResponseError(err, function(err) {
       if (err && err.statusCode === 404) {
         // Override the error type and mesasge for the DB not found case

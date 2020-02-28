@@ -1,3 +1,6 @@
+# 2.5.2-SNAPSHOT (2020-02-28)
+- [FIXED] Issue with compatibility with Nano 8.2.0. 
+
 # 2.5.1 (2019-12-06)
 - [FIXED] Issue with incorrect handling of percent-encoded user info characters
   via @cloudant/cloudant dependency.
