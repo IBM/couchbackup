@@ -48,7 +48,7 @@
     "rewire": "^5.0.0",
     "tail": "^2.0.0",
     "toxy": "^0.3.16",
-    "uuid": "^7.0.0"
+    "uuid": "^8.1.0"
   },
   "scripts": {
     "test": "eslint --ignore-path .gitignore . && mocha --grep \"#unit\""
