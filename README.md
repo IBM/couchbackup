@@ -204,7 +204,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_URL` - the URL of the CouchDB/Cloudant server e.g. `http://127.0.0.1:5984`
 * `COUCH_DATABASE` - the name of the database to act upon e.g. `mydb` (default `test`)
 * `COUCH_PARALLELISM` - the number of HTTP requests to perform in parallel when restoring a backup e.g. `10` (Default `5`)
-* `COUCH_BUFFER_SIZE` - the number of documents fetched and restored at once e.g. `100` (default `500`)
+* `COUCH_BUFFER_SIZE` - the number of documents fetched and restored at once e.g. `100` (default `500`). At using CouchBackup with [Transaction Engine](https://www.ibm.com/cloud/blog/announcements/ibm-cloudant-on-transaction-engine) `COUCH_BUFFER_SIZE` must be less than `2000` to avoid bad request errors.
 * `COUCH_REQUEST_TIMEOUT` - the number of milliseconds to wait for a respose to a HTTP request before retrying the request e.g. `10000` (Default `120000`)
 * `COUCH_LOG` - the file to store logging information during backup
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
