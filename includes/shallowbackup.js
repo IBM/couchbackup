@@ -29,14 +29,14 @@ module.exports = function(db, options) {
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      var opts = { limit: options.bufferSize };
+      var opts = { limit: options.bufferSize, include_docs: true };
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
       // last ID of the current page and append the lowest unicode sort
       // character.
       if (startKey) opts.startkey = `${startKey}\0`;
-      db.fetch({}, opts, function(err, body) {
+      db.list(opts, function(err, body) {
         if (err) {
           err = error.convertResponseError(err);
           ee.emit('error', err);
