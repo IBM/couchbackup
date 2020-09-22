@@ -1,4 +1,4 @@
-# Unreleased
+# 2.6.0 (2020-09-22)
 - [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.3.0`.
 - [NOTE] Updated minimum supported engine to Node.js 10 "dubnium" LTS.
 
