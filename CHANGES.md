@@ -1,3 +1,7 @@
+# Unreleased
+- [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.3.0`.
+- [NOTE] Updated minimum supported engine to Node.js 10 "dubnium" LTS.
+
 # 2.5.2 (2020-03-02)
 - [FIXED] Issue with compatibility with Nano 8.2.0.
 
