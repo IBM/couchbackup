@@ -212,7 +212,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
 * `CLOUDANT_IAM_API_KEY` - optional [IAM API key](https://console.bluemix.net/docs/services/Cloudant/guides/iam.html#ibm-cloud-identity-and-access-management)
  to use to access the Cloudant database instead of user information credentials in the URL. The endpoint used to retrieve the token defaults to
- `https://iam.bluemix.net/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
+ `https://iam.cloud.ibm.com/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
 * `DEBUG` - if set to `couchbackup`, all debug messages will be sent to `stderr` during a backup or restore process
 
 _Note:_ These environment variables can only be used with the CLI. When
