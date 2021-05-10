@@ -120,8 +120,6 @@ stage('QA') {
 
 // Publish the master branch
 stage('Publish') {
-  // Update the package-lock for greenkeeper branches
-  gkLockfile {}
   if (env.BRANCH_NAME == "master") {
     node {
       unstash 'built'
