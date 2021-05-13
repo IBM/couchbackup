@@ -1,3 +1,6 @@
+# Unreleased
+- [FIXED] Async queue pause/resume behaviour to avoid exhausting listener handles.
+
 # 2.6.0 (2020-09-22)
 - [FIXED] Invalid parameters error when using shallow mode.
 - [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.3.0`.
