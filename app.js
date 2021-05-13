@@ -270,7 +270,7 @@ module.exports = {
         if (!continueWriting) {
           // The buffer was full, pause the queue to stop the writes until we
           // get a drain event
-          if (q && !q.isPaused) {
+          if (q && !q.paused) {
             q.pause();
             targetStream.once('drain', function() {
               q.resume();
