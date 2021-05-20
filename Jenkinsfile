@@ -34,6 +34,7 @@ def getEnvForSuite(suiteName) {
       case 'test-iam':
         envVars.add("COUCH_URL=${SDKS_TEST_SERVER_URL}")
         envVars.add("COUCHBACKUP_TEST_IAM_API_KEY=${env.IAM_API_KEY}")
+        envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
         break
     default:
       error("Unknown test suite environment ${suiteName}")
