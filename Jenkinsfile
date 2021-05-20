@@ -16,7 +16,7 @@
 def getEnvForSuite(suiteName) {
   // Base environment variables
   def envVars = [
-    "COUCH_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com",
+    "COUCH_BACKEND_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${SDKS_TEST_SERVER_HOST}",
     "DBCOMPARE_NAME=DatabaseCompare",
     "DBCOMPARE_VERSION=1.0.1",
     "NVM_DIR=${env.HOME}/.nvm"
@@ -25,14 +25,14 @@ def getEnvForSuite(suiteName) {
   // Add test suite specific environment variables
   switch(suiteName) {
     case 'test':
-      envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_USER}.cloudant.com")
+      envVars.add("COUCH_URL=https://${env.DB_USER}:${env.DB_PASSWORD}@${SDKS_TEST_SERVER_HOST}")
       break
     case 'toxytests/toxy':
       envVars.add("COUCH_URL=http://localhost:3000") // proxy
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
       break
       case 'test-iam':
-        envVars.add("COUCH_URL=https://${env.DB_USER}.cloudant.com")
+        envVars.add("COUCH_URL=${SDKS_TEST_SERVER_URL}")
         envVars.add("COUCHBACKUP_TEST_IAM_API_KEY=${env.IAM_API_KEY}")
         break
     default:
@@ -50,9 +50,9 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
     unstash name: 'built'
 
     // Run tests using creds
-    withCredentials([usernamePassword(credentialsId: 'clientlibs-test', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+    withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
                       usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
-                      string(credentialsId: 'clientlibs-test-iam', variable: 'IAM_API_KEY')]) {
+                      string(credentialsId: 'testServerIamApiKey', variable: 'IAM_API_KEY')]) {
       withEnv(getEnvForSuite("${testSuite}")) {
         try {
           // For the IAM tests we want to run the normal 'test' suite, but we
