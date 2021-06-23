@@ -1,5 +1,6 @@
-# Unreleased
+# 2.6.1 (2021-06-23)
 - [FIXED] Async queue pause/resume behaviour to avoid exhausting listener handles.
+- [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.4.0`.
 
 # 2.6.0 (2020-09-22)
 - [FIXED] Invalid parameters error when using shallow mode.
@@ -72,7 +73,7 @@
 - [IMPROVED] Enhanced resilience of backup and restore processes by enabling the
   nodejs-cloudant retry plugin.
 - [IMPROVED] Added URL validation for presence of host and database elements.
-- [UPGRADED] Increased nodejs-cloudant dependency to 2.x.  
+- [UPGRADED] Increased nodejs-cloudant dependency to 2.x.
 
 # 2.0.1 (2018-01-11)
 
