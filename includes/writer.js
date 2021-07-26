@@ -35,9 +35,30 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       payload.new_edits = false;
     }
 
+    // if the payload documents have attachments, we need to remove them or restoring will fail
+    const attachmentData = [];
+
+    for (const key of Object.keys(payload.docs)) {
+      if (typeof payload.docs[key]._attachments !== 'undefined' && payload.docs[key]._attachments !== null) {
+        const attachments = Object.keys(payload.docs[key]._attachments);
+        
+        for(var i = 0; i < attachments.length; i++){
+          attachmentData.push({
+            id: payload.docs[key]._id,
+            filename: attachments[i],
+            rev: payload.docs[key]._rev,
+            contentType: JSON.parse(JSON.stringify(payload.docs[key]._attachments[attachments[i]])).content_type
+          });
+        }
+
+        delete payload.docs[key]._attachments;
+      }
+    }
+
     // Stream the payload through a zip stream to the server
     const payloadStream = new stream.PassThrough();
     payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
+
     const zipstream = zlib.createGzip();
 
     // Class for streaming _bulk_docs responses into
@@ -79,7 +100,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
             cb(err, payload);
           } else {
             written += payload.docs.length;
-            writer.emit('restored', { documents: payload.docs.length, total: written });
+            writer.emit('restored', { documents: payload.docs.length, total: written, attachmentData: attachmentData });
             cb();
           }
         });
