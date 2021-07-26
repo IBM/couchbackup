@@ -257,7 +257,18 @@ module.exports = {
         // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
         // Callback to emit the written event when the content is flushed
         function writeFlushed() {
-          ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch });
+          const attachmentData = [];
+
+          for (const key of obj.data){
+            if(typeof key._attachments !== 'undefined' && key._attachments !== null) {
+              const attachments = Object.keys(key._attachments);
+              for(var i = 0; i < attachments.length; i++) {
+                attachmentData.push({id: key._id, filename: attachments[i]})
+              }
+            }
+          }
+
+          ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch, attachmentData: attachmentData });
           if (logCompletedBatch) {
             logCompletedBatch(obj.batch);
           }
@@ -354,7 +365,7 @@ module.exports = {
           if (writer != null) {
             addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
               debug(' restored ', obj.total);
-              ee.emit('restored', { documents: obj.documents, total: obj.total });
+              ee.emit('restored', { documents: obj.documents, total: obj.total, attachmentData: obj.attachmentData });
             });
             addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
               debug('Error ' + JSON.stringify(err));
@@ -367,7 +378,7 @@ module.exports = {
             addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
               debug('restore complete');
               ee.emit('finished', { total: obj.total });
-              callback(null, obj);
+              if (callback) callback(null, obj);
             });
           }
         }
