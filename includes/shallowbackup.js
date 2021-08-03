@@ -1,4 +1,4 @@
-// Copyright © 2017, 2019 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,20 +29,16 @@ module.exports = function(db, options) {
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      var opts = { limit: options.bufferSize, include_docs: true };
+      var opts = { db: db.db, limit: options.bufferSize, includeDocs: true };
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
       // last ID of the current page and append the lowest unicode sort
       // character.
       if (startKey) opts.startkey = `${startKey}\0`;
-      db.list(opts, function(err, body) {
-        if (err) {
-          err = error.convertResponseError(err);
-          ee.emit('error', err);
-          hasErrored = true;
-          callback();
-        } else if (!body.rows) {
+      db.service.postAllDocs(opts).then(response => {
+        const body = response.result;
+        if (!body.rows) {
           ee.emit('error', new error.BackupError(
             'AllDocsError', 'ERROR: Invalid all docs response'));
           callback();
@@ -69,6 +65,11 @@ module.exports = function(db, options) {
           }
           callback();
         }
+      }).catch(err => {
+        err = error.convertResponseError(err);
+        ee.emit('error', err);
+        hasErrored = true;
+        callback();
       });
     },
     function(callback) { callback(null, hasErrored || startKey == null); },

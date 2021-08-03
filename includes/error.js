@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,13 +37,15 @@ class BackupError extends Error {
 
 class HTTPError extends BackupError {
   constructor(responseError, name) {
-    var errMsg = `${responseError.statusCode} ${responseError.statusMessage || ''}: ` +
-     `${responseError.request.method} ${(typeof responseError.request.uri === 'object') ? responseError.request.uri.href : responseError.request.uri}`;
-    if (responseError.error && responseError.reason) {
-      errMsg += ` - Error: ${responseError.error}, Reason: ${responseError.reason}`;
+    var errMsg = `${responseError.code} ${responseError.message || ''}`;
+    if (responseError.body && responseError.headers['content-type'] === 'application/json' && typeof responseError.body === 'string') {
+      const errorObj = JSON.parse(responseError.body);
+      if (errorObj.error && errorObj.reason) {
+        errMsg += ` - Error: ${errorObj.error}, Reason: ${errorObj.reason}`;
+      }
     }
     // Special case some names for more useful error messages
-    switch (responseError.statusCode) {
+    switch (responseError.code) {
       case 401:
         name = 'Unauthorized';
         break;
@@ -65,7 +67,7 @@ function checkResponse(err) {
   if (err) {
     // Construct an HTTPError if there is request information on the error
     // Codes < 400 are considered OK
-    if (err.statusCode >= 400) {
+    if (err.code >= 400) {
       return new HTTPError(err);
     } else {
       // Send it back again if there was no status code, e.g. a cxn error
@@ -101,11 +103,9 @@ module.exports = {
   convertResponseError: convertResponseError,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
-      process.on('uncaughtException', function(err) {
-        console.error(`ERROR: ${err.message}`);
-        process.exitCode = codes[err.name] || 1;
-      });
-      throw err;
+      console.error(`ERROR: ${err.message}`);
+      process.exitCode = codes[err.name] || 1;
+      process.exit();
     }
   }
 };

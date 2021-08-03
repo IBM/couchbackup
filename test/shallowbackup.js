@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ const nock = require('nock');
 // This is normally done by app.js
 function shallowBackup(dbUrl, opts) {
   const db = request.client(dbUrl, opts);
+  // Disable compression to make body assertions easier
+  db.service.setEnableGzipCompression(false);
   return backup(db, opts);
 }
 
@@ -34,9 +36,9 @@ function shallowBackup(dbUrl, opts) {
 describe('#unit Perform backup using shallow backup', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
   // Query string keys are stringified by Nano
-  const badgerKey = JSON.stringify('badger\0');
-  const kookaburraKey = JSON.stringify('kookaburra\0');
-  const snipeKey = JSON.stringify('snipe\0');
+  const badgerKey = 'badger\0';
+  const kookaburraKey = 'kookaburra\0';
+  const snipeKey = 'snipe\0';
 
   beforeEach('Reset nocks', function() {
     nock.cleanAll();
@@ -45,20 +47,16 @@ describe('#unit Perform backup using shallow backup', function() {
   it('should perform a shallow backup', function(done) {
     var couch = nock(dbUrl)
       // batch 1
-      .get('/_all_docs')
-      .query({ limit: 3, include_docs: true })
+      .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: snipeKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
     shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
@@ -82,24 +80,19 @@ describe('#unit Perform backup using shallow backup', function() {
   it('should perform a shallow backup with transient error', function(done) {
     var couch = nock(dbUrl)
       // batch 1
-      .get('/_all_docs')
-      .query({ limit: 3, include_docs: true })
+      .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - transient error
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(500, { error: 'Internal Server Error' })
       // batch 3 - retry
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
-      .get('/_all_docs')
-      .query({ limit: 3, startkey: snipeKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
     shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
@@ -123,13 +116,13 @@ describe('#unit Perform backup using shallow backup', function() {
   it('should fail to perform a shallow backup on fatal error', function(done) {
     var couch = nock(dbUrl)
       // batch 1
-      .get('/_all_docs').query({ limit: 3, include_docs: true })
+      .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .get('/_all_docs').query({ limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - fatal error
-      .get('/_all_docs').query({ limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(401, { error: 'Unauthorized' });
 
     var errCount = 0;

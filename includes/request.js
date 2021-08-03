@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,43 +16,59 @@
 const pkg = require('../package.json');
 const http = require('http');
 const https = require('https');
-const cloudant = require('@cloudant/cloudant');
+const { CloudantV1, CouchdbSessionAuthenticator } = require('@ibm-cloud/cloudant');
+const { IamAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
 
 module.exports = {
-  client: function(url, opts) {
-    var protocol = (url.match(/^https/)) ? https : http;
+  client: function(rawUrl, opts) {
+    const url = new URL(rawUrl);
+    var protocol = (url.protocol.match(/^https/)) ? https : http;
     const keepAliveAgent = new protocol.Agent({
       keepAlive: true,
       keepAliveMsecs: 30000,
       maxSockets: opts.parallelism
     });
-    // Split the URL for use with nodejs-cloudant
-    var actUrl = url.substr(0, url.lastIndexOf('/'));
-    var dbName = url.substr(url.lastIndexOf('/') + 1);
-    // Default set of plugins includes retry
-    var pluginsToUse = ['retry'];
+    // Split the URL to separate service from database
+    // Use origin as the "base" to remove auth elements
+    const actUrl = new URL(url.pathname.substr(0, url.pathname.lastIndexOf('/')), url.origin);
+    const dbName = url.pathname.substr(url.pathname.lastIndexOf('/') + 1);
+    let authenticator;
     // Default to cookieauth unless an IAM key is provided
     if (opts.iamApiKey) {
-      const iamPluginConfig = { iamApiKey: opts.iamApiKey };
+      const iamAuthOpts = { apikey: opts.iamApiKey };
       if (opts.iamTokenUrl) {
-        iamPluginConfig.iamTokenUrl = opts.iamTokenUrl;
+        iamAuthOpts.url = opts.iamTokenUrl;
       }
-      pluginsToUse.push({ iamauth: iamPluginConfig });
+      authenticator = new IamAuthenticator(iamAuthOpts);
+    } else if (url.username) {
+      authenticator = new CouchdbSessionAuthenticator({
+        username: url.username,
+        password: url.password
+      });
     } else {
-      pluginsToUse.push({ cookieauth: { errorOnNoCreds: false } });
+      authenticator = new NoAuthAuthenticator();
     }
-    return cloudant({
-      url: actUrl,
-      plugins: pluginsToUse,
-      requestDefaults: {
-        agent: keepAliveAgent,
-        headers: { 'User-Agent': userAgent },
-        gzip: true,
-        timeout: opts.requestTimeout
-      }
-    }).use(dbName);
+    const serviceOpts = {
+      authenticator: authenticator,
+      timeout: opts.requestTimeout,
+      headers: { 'User-Agent': userAgent }
+    };
+    if (url.protocol === 'https') {
+      serviceOpts.httpsAgent = keepAliveAgent;
+    } else {
+      serviceOpts.httpAgent = keepAliveAgent;
+    }
+    const service = new CloudantV1(serviceOpts);
+    service.setServiceUrl(actUrl.toString());
+    if (authenticator instanceof CouchdbSessionAuthenticator) {
+      // Awkward workaround for known Couch issue with compression on _session requests
+      // It is not feasible to disable compression on all requests with the amount of
+      // data this lib needs to move, so override the property in the tokenManager instance.
+      authenticator.tokenManager.requestWrapperInstance.compressRequestData = false;
+    }
+    return { service: service, db: dbName, url: actUrl.toString() };
   }
 };

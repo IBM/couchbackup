@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
 describe('#unit Check spool changes', function() {
   it('should terminate on request error', function(done) {
     nock(url)
-      .get(`/${dbName}/_changes`)
+      .post(`/${dbName}/_changes`)
       .query(true)
       .times(3)
       .replyWithError({ code: 'ECONNRESET', message: 'socket hang up' });
@@ -36,20 +36,25 @@ describe('#unit Check spool changes', function() {
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'SpoolChangesError');
       assert.strictEqual(err.message, 'Failed changes request - socket hang up');
+      assert.ok(nock.isDone());
       done();
     });
   });
 
   it('should terminate on bad HTTP status code repsonse', function(done) {
     nock(url)
-      .get(`/${dbName}/_changes`)
+      .post(`/${dbName}/_changes`)
       .query(true)
       .times(3)
-      .reply(500, { error: 'foo', reason: 'bar' });
+      .reply(500, function(uri, requestBody) {
+        this.req.response.statusMessage = 'Internal Server Error';
+        return { error: 'foo', reason: 'bar' };
+      });
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'HTTPFatalError');
-      assert.strictEqual(err.message, `500 : GET ${url}/${dbName}/_changes?seq_interval=10000`);
+      assert.strictEqual(err.message, '500 Internal Server Error - Error: foo, Reason: bar');
+      assert.ok(nock.isDone());
       done();
     });
   });
