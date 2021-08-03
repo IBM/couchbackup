@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,34 +62,31 @@ module.exports = function(db, log, bufferSize, ee, callback) {
   };
 
   // stream the changes feed to disk
-  var changesRequest = db.changesAsStream({ seq_interval: 10000 })
-    .on('error', function(err) {
+  db.service.postChangesAsStream({ db: db.db, seq_interval: 10000 }).then(response => {
+    response.result.pipe(liner())
+      .on('error', function(err) {
+        callback(err);
+      })
+      .pipe(change(onChange))
+      .on('error', function(err) {
+        callback(err);
+      })
+      .on('finish', function() {
+        processBuffer(true);
+        if (!lastSeq) {
+          logStream.end();
+          debug('changes request terminated before last_seq was sent');
+          callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
+        } else {
+          debug('finished streaming database changes');
+          logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
+        }
+      });
+  }).catch(err => {
+    if (err.status && err.status >= 400) {
+      callback(error.convertResponseError(err));
+    } else {
       callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-    })
-    .on('response', function(resp) {
-      if (resp.statusCode >= 400) {
-        changesRequest.abort();
-        callback(error.convertResponseError(resp));
-      } else {
-        changesRequest.pipe(liner())
-          .on('error', function(err) {
-            callback(err);
-          })
-          .pipe(change(onChange))
-          .on('error', function(err) {
-            callback(err);
-          })
-          .on('finish', function() {
-            processBuffer(true);
-            if (!lastSeq) {
-              logStream.end();
-              debug('changes request terminated before last_seq was sent');
-              callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
-            } else {
-              debug('finished streaming database changes');
-              logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
-            }
-          });
-      }
-    });
+    }
+  });
 };

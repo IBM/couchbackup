@@ -1,4 +1,4 @@
-// Copyright © 2017, 2020 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ function validateArgs(url, opts, cb) {
       cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
       return;
     }
-    if (opts && opts.iamApiKey && (urlObject.username || url.password)) {
+    if (opts && opts.iamApiKey && (urlObject.username || urlObject.password)) {
       cb(new error.BackupError('InvalidOption', 'URL user information must not be supplied when using IAM API key.'));
       return;
     }
@@ -160,12 +160,12 @@ function addEventListener(indicator, emitter, event, f) {
   @param {function(err)} callback - error is undefined if DB exists
 */
 function proceedIfDbValid(db, callback) {
-  db.server.request({ db: db.config.db, method: 'HEAD' }, function(err) {
+  db.service.headDatabase({ db: db.db }).then(() => callback()).catch(err => {
     err = error.convertResponseError(err, function(err) {
-      if (err && err.statusCode === 404) {
+      if (err && err.status === 404) {
         // Override the error type and mesasge for the DB not found case
-        var msg = `Database ${db.config.url.replace(/\/\/.+@/g, '//****:****@')}` +
-        `/${db.config.db} does not exist. ` +
+        var msg = `Database ${db.url}` +
+        `${db.db} does not exist. ` +
         'Check the URL and database name have been specified correctly.';
         var noDBErr = new Error(msg);
         noDBErr.name = 'DatabaseNotFound';
@@ -175,7 +175,6 @@ function proceedIfDbValid(db, callback) {
         return error.convertResponseError(err);
       }
     });
-    // Callback with or without (i.e. undefined) error
     callback(err);
   });
 }

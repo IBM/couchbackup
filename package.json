@@ -20,7 +20,8 @@
     "node": ">=12"
   },
   "dependencies": {
-    "@cloudant/cloudant": "^4.5.0",
+    "@ibm-cloud/cloudant": "0.0.18",
+    "tough-cookie": "^4.0.0",
     "async": "^3.1.0",
     "commander": "^5.0.0",
     "debug": "~4.1.0",

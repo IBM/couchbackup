@@ -1,4 +1,4 @@
-// Copyright © 2017, 2019 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 
 const async = require('async');
 const stream = require('stream');
-const zlib = require('zlib');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:writer');
 
@@ -35,58 +34,22 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       payload.new_edits = false;
     }
 
-    // Stream the payload through a zip stream to the server
-    const payloadStream = new stream.PassThrough();
-    payloadStream.end(Buffer.from(JSON.stringify(payload), 'utf8'));
-    const zipstream = zlib.createGzip();
-
-    // Class for streaming _bulk_docs responses into
-    // In general the response is [] or a small error/reason JSON object
-    // so it is OK to have this in memory.
-    class ResponseWriteable extends stream.Writable {
-      constructor(options) {
-        super(options);
-        this.data = [];
-      }
-
-      _write(chunk, encoding, callback) {
-        this.data.push(chunk);
-        callback();
-      }
-
-      asJson() {
-        return JSON.parse(Buffer.concat(this.data).toString());
-      }
-    }
-
     if (!didError) {
-      var response;
-      const responseBody = new ResponseWriteable();
-      const req = db.server.request({
-        db: db.config.db,
-        path: '_bulk_docs',
-        method: 'POST',
-        headers: { 'content-encoding': 'gzip' },
-        stream: true
-      })
-        .on('response', function(resp) {
-          response = resp;
-        })
-        .on('end', function() {
-          if (response.statusCode >= 400) {
-            const err = error.convertResponseError(Object.assign({}, response, responseBody.asJson()));
-            debug(`Error writing docs ${err.name} ${err.message}`);
-            cb(err, payload);
-          } else {
-            written += payload.docs.length;
-            writer.emit('restored', { documents: payload.docs.length, total: written });
-            cb();
-          }
-        });
-      // Pipe the payload into the request object to POST to _bulk_docs
-      payloadStream.pipe(zipstream).pipe(req);
-      // Pipe the request object's response into our bulkDocsResponse
-      req.pipe(responseBody);
+      db.service.postBulkDocs({
+        db: db.db,
+        bulkDocs: payload
+      }).then(response => {
+        if (!response.result || response.result.length > 0) {
+          throw new Error('Error writing batch.');
+        }
+        written += payload.docs.length;
+        writer.emit('restored', { documents: payload.docs.length, total: written });
+        cb();
+      }).catch(err => {
+        err = error.convertResponseError(err);
+        debug(`Error writing docs ${err.name} ${err.message}`);
+        cb(err, payload);
+      });
     }
   }, parallelism);
 
