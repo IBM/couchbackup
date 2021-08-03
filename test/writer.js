@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ describe('#unit Check database restore writer', function() {
   it('should complete successfully', function(done) {
     nock(dbUrl)
       .post('/_bulk_docs')
-      .reply(200, { ok: true }); // success
+      .reply(200, []); // success
 
     testLinestream()
       .pipe(writer(db, 500, 1, noopEmitter))
@@ -65,7 +65,7 @@ describe('#unit Check database restore writer', function() {
       .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         assert.strictEqual(err.name, 'Unauthorized');
-        assert.strictEqual(err.message, `401 : POST ${dbUrl}/_bulk_docs`);
+        assert.strictEqual(err.message, '401 Access is denied due to invalid credentials.');
         assert.ok(nock.isDone());
         done();
       });
@@ -105,7 +105,7 @@ describe('#unit Check database restore writer', function() {
       .pipe(writer(db, 500, 1, noopEmitter))
       .on('error', function(err) {
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `503 : POST ${dbUrl}/_bulk_docs`);
+        assert.strictEqual(err.message, '503 Service Unavailable');
         assert.ok(nock.isDone());
         done();
       });

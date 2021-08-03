@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,30 @@
 'use strict';
 
 const fs = require('fs');
+const stream = require('stream');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:spoolchanges');
+
+// Class for streaming _changes error responses into
+// In general the response is a small error/reason JSON object
+// so it is OK to have this in memory.
+class ResponseWriteable extends stream.Writable {
+  constructor(options) {
+    super(options);
+    this.data = [];
+  }
+
+  _write(chunk, encoding, callback) {
+    this.data.push(chunk);
+    callback();
+  }
+
+  stringBody() {
+    return Buffer.concat(this.data).toString();
+  }
+}
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -62,34 +82,40 @@ module.exports = function(db, log, bufferSize, ee, callback) {
   };
 
   // stream the changes feed to disk
-  var changesRequest = db.changesAsStream({ seq_interval: 10000 })
-    .on('error', function(err) {
-      callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-    })
-    .on('response', function(resp) {
-      if (resp.statusCode >= 400) {
-        changesRequest.abort();
-        callback(error.convertResponseError(resp));
+  db.service.postChangesAsStream({ db: db.db, seq_interval: 10000 }).then(response => {
+    response.result.pipe(liner())
+      .on('error', function(err) {
+        callback(err);
+      })
+      .pipe(change(onChange))
+      .on('error', function(err) {
+        callback(err);
+      })
+      .on('finish', function() {
+        processBuffer(true);
+        if (!lastSeq) {
+          logStream.end();
+          debug('changes request terminated before last_seq was sent');
+          callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
+        } else {
+          debug('finished streaming database changes');
+          logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
+        }
+      });
+  }).catch(err => {
+    if (err.code && err.code >= 400) {
+      if (err.body) {
+        const errorBody = new ResponseWriteable();
+        err.body.pipe(errorBody).on('finish', () => {
+          const changesResponseError = Object.assign({}, err);
+          changesResponseError.body = errorBody.stringBody();
+          callback(error.convertResponseError(changesResponseError));
+        });
       } else {
-        changesRequest.pipe(liner())
-          .on('error', function(err) {
-            callback(err);
-          })
-          .pipe(change(onChange))
-          .on('error', function(err) {
-            callback(err);
-          })
-          .on('finish', function() {
-            processBuffer(true);
-            if (!lastSeq) {
-              logStream.end();
-              debug('changes request terminated before last_seq was sent');
-              callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
-            } else {
-              debug('finished streaming database changes');
-              logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
-            }
-          });
+        callback(error.convertResponseError(err));
       }
-    });
+    } else {
+      callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
+    }
+  });
 };

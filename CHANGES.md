@@ -1,4 +1,5 @@
 # Unreleased
+- [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.
 - [NOTE] Updated minimum supported engine to Node.js 12 `erbium` LTS.
 
 # 2.6.1 (2021-06-23)
