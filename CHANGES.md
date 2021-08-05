@@ -1,3 +1,6 @@
+# Unreleased
+- [NOTE] Updated minimum supported engine to Node.js 12 `erbium` LTS.
+
 # 2.6.1 (2021-06-23)
 - [FIXED] Async queue pause/resume behaviour to avoid exhausting listener handles.
 - [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.4.0`.
