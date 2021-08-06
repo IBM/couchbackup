@@ -48,7 +48,10 @@ describe('#unit Check request response error callback', function() {
     var couch = nock(url)
       .get('/bad')
       .times(3)
-      .reply(500, { error: 'foo', reason: 'bar' });
+      .reply(500, function(uri, requestBody) {
+        this.req.response.statusMessage = 'Internal Server Error';
+        return { error: 'foo', reason: 'bar' };
+      });
 
     db.service.getDocument({ db: db.db, docId: 'bad' }).then(response => {
       done(new Error('Successful response when error expected.'));
@@ -176,6 +179,8 @@ describe('#unit Check request response error callback', function() {
   });
 
   it('should callback with error code ESOCKETTIMEDOUT if 3 HTTP requests gets timed out', function(done) {
+    // Increase the timeout for this test to allow for the delays
+    this.timeout(3000);
     var couch = nock(url)
       .post('/_bulk_get')
       .query(true)
@@ -187,6 +192,8 @@ describe('#unit Check request response error callback', function() {
       done(new Error('Successful response when error expected.'));
     }).catch(err => {
       err = error.convertResponseError(err);
+      // Note axios returns ECONNABORTED rather than ESOCKETTIMEDOUT
+      // See https://github.com/axios/axios/issues/2710 via https://github.com/axios/axios/issues/1543`
       assert.strictEqual(err.statusText, 'ECONNABORTED');
       assert.strictEqual(err.message, `timeout of 500ms exceeded: post ${url}/_bulk_get ECONNABORTED`);
       assert.ok(couch.isDone());

@@ -22,6 +22,7 @@
   "dependencies": {
     "@ibm-cloud/cloudant": "0.0.18",
     "tough-cookie": "^4.0.0",
+    "retry-axios": "^2.4.0",
     "async": "^3.1.0",
     "commander": "^5.0.0",
     "debug": "~4.1.0",

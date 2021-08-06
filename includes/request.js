@@ -19,6 +19,7 @@ const https = require('https');
 const stream = require('stream');
 const { CloudantV1, CouchdbSessionAuthenticator } = require('@ibm-cloud/cloudant');
 const { IamAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
+const retryPlugin = require('retry-axios');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
@@ -140,6 +141,32 @@ module.exports = {
       serviceOpts.httpAgent = keepAliveAgent;
     }
     const service = new CloudantV1(serviceOpts);
+    // Configure retries
+    const maxRetries = 2; // for 3 total attempts
+    service.getHttpClient().defaults.raxConfig = {
+      // retries for status codes
+      retry: maxRetries,
+      // retries for non-response e.g. ETIMEDOUT
+      noResponseRetries: maxRetries,
+      backoffType: 'exponential',
+      httpMethodsToRetry: ['GET', 'HEAD', 'POST'],
+      statusCodesToRetry: [
+        [429, 429],
+        [500, 599]
+      ],
+      shouldRetry: err => {
+        const cfg = retryPlugin.getConfig(err);
+        // cap at max retries regardless of response/non-response type
+        if (cfg.currentRetryAttempt >= maxRetries) {
+          return false;
+        } else {
+          return retryPlugin.shouldRetryRequest(err);
+        }
+      },
+      instance: service.getHttpClient()
+    };
+    retryPlugin.attach(service.getHttpClient());
+
     service.setServiceUrl(actUrl.toString());
     if (authenticator instanceof CouchdbSessionAuthenticator) {
       // Awkward workaround for known Couch issue with compression on _session requests
