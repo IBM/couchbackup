@@ -1,4 +1,4 @@
-// Copyright © 2018 IBM Corp. All rights reserved.
+// Copyright © 2018, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const u = require('./citestutils.js');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 
 const params = { useApi: true };
 
