@@ -25,7 +25,7 @@ const serviceOpts = {
 const cloudant = new CloudantV1(serviceOpts);
 // Remove auth from URL before using for service
 cloudant.setServiceUrl(new URL(url.pathname, url.origin).toString());
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 const fs = require('fs');
 
 // Mocha hooks that will be at the root context so run for all tests

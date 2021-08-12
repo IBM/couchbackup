@@ -18,7 +18,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const u = require('./citestutils.js');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 
 const params = { useApi: true };
 
