@@ -1,4 +1,4 @@
-# Unreleased
+# 2.6.2 (2021-08-27)
 - [FIXED] `Invalid document ID: _bulk_get` error when using `@cloudant/cloudant`
   version `4.5.0`.
 - [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.5.0`.
