@@ -20,7 +20,7 @@
     "node": ">=12"
   },
   "dependencies": {
-    "@cloudant/cloudant": "^4.4.0",
+    "@cloudant/cloudant": "^4.5.0",
     "async": "^3.1.0",
     "commander": "^5.0.0",
     "debug": "~4.1.0",

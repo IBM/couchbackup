@@ -73,7 +73,7 @@ module.exports = function(db, options) {
  * @param {function} callback - called on completion with signature (err)
  */
 function validateBulkGetSupport(db, callback) {
-  db.head('_bulk_get',
+  db.server.request({ method: 'HEAD', db: db.config.db, path: '_bulk_get' },
     function(err) {
       err = error.convertResponseError(err, function(err) {
         switch (err.statusCode) {

@@ -1,4 +1,7 @@
 # Unreleased
+- [FIXED] `Invalid document ID: _bulk_get` error when using `@cloudant/cloudant`
+  version `4.5.0`.
+- [UPGRADED] Upgraded `@cloudant/cloudant` dependency to version `4.5.0`.
 - [NOTE] Updated minimum supported engine to Node.js 12 `erbium` LTS.
 
 # 2.6.1 (2021-06-23)
