@@ -67,7 +67,7 @@ module.exports = {
     const service = new CloudantV1(serviceOpts);
     // Configure retries
     const maxRetries = 2; // for 3 total attempts
-    service.requestWrapperInstance.axiosInstance.defaults.raxConfig = {
+    service.getHttpClient().defaults.raxConfig = {
       // retries for status codes
       retry: maxRetries,
       // retries for non-response e.g. ETIMEDOUT
@@ -87,9 +87,9 @@ module.exports = {
           return retryPlugin.shouldRetryRequest(err);
         }
       },
-      instance: service.requestWrapperInstance.axiosInstance
+      instance: service.getHttpClient()
     };
-    retryPlugin.attach(service.requestWrapperInstance.axiosInstance);
+    retryPlugin.attach(service.getHttpClient());
 
     service.setServiceUrl(actUrl.toString());
     if (authenticator instanceof CouchdbSessionAuthenticator) {
