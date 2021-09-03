@@ -16,12 +16,32 @@
 const pkg = require('../package.json');
 const http = require('http');
 const https = require('https');
+const stream = require('stream');
 const { CloudantV1, CouchdbSessionAuthenticator } = require('@ibm-cloud/cloudant');
 const { IamAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
 const retryPlugin = require('retry-axios');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
+
+// Class for streaming _changes error responses into
+// In general the response is a small error/reason JSON object
+// so it is OK to have this in memory.
+class ResponseWriteable extends stream.Writable {
+  constructor(options) {
+    super(options);
+    this.data = [];
+  }
+
+  _write(chunk, encoding, callback) {
+    this.data.push(chunk);
+    callback();
+  }
+
+  stringBody() {
+    return Buffer.concat(this.data).toString();
+  }
+}
 
 // An interceptor function to help augment error bodies with a little
 // extra information so we can continue to use consistent messaging
@@ -38,8 +58,22 @@ const errorHelper = async function(err) {
     let errorMsg = `${err.response.status} ${err.response.statusText || ''}: ` +
     `${method} ${requestUrl}`;
     if (err.response.data) {
+      // Check if we have a JSON response and try to get the error/reason
       if (err.response.headers['content-type'] === 'application/json') {
-        // Append error/reason if available
+        if (!err.response.data.error && err.response.data.pipe) {
+          // If we didn't find a JSON object with `error` then we might have a stream response.
+          // Detect the stream by the presence of `pipe` and use it to get the body and parse
+          // the error information.
+          const p = new Promise((resolve, reject) => {
+            const errorBody = new ResponseWriteable();
+            err.response.data.pipe(errorBody)
+              .on('finish', () => { resolve(JSON.parse(errorBody.stringBody())); })
+              .on('error', () => { reject(err); });
+          });
+          // Replace the stream on the response with the parsed object
+          err.response.data = await p;
+        }
+        // Append the error/reason if available
         if (err.response.data.error) {
           // Override the status text with our more complete message
           errorMsg += ` - Error: ${err.response.data.error}`;

@@ -14,30 +14,10 @@
 'use strict';
 
 const fs = require('fs');
-const stream = require('stream');
 const liner = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:spoolchanges');
-
-// Class for streaming _changes error responses into
-// In general the response is a small error/reason JSON object
-// so it is OK to have this in memory.
-class ResponseWriteable extends stream.Writable {
-  constructor(options) {
-    super(options);
-    this.data = [];
-  }
-
-  _write(chunk, encoding, callback) {
-    this.data.push(chunk);
-    callback();
-  }
-
-  stringBody() {
-    return Buffer.concat(this.data).toString();
-  }
-}
 
 /**
  * Write log file for all changes from a database, ready for downloading
@@ -104,16 +84,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
       });
   }).catch(err => {
     if (err.status && err.status >= 400) {
-      if (err.body) {
-        const errorBody = new ResponseWriteable();
-        err.body.pipe(errorBody).on('finish', () => {
-          const changesResponseError = Object.assign({}, err);
-          changesResponseError.body = errorBody.stringBody();
-          callback(error.convertResponseError(changesResponseError));
-        });
-      } else {
-        callback(error.convertResponseError(err));
-      }
+      callback(error.convertResponseError(err));
     } else {
       callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
     }
