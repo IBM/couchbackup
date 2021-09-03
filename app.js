@@ -162,7 +162,7 @@ function addEventListener(indicator, emitter, event, f) {
 function proceedIfDbValid(db, callback) {
   db.service.headDatabase({ db: db.db }).then(() => callback()).catch(err => {
     err = error.convertResponseError(err, function(err) {
-      if (err && err.code === 404) {
+      if (err && err.status === 404) {
         // Override the error type and mesasge for the DB not found case
         var msg = `Database ${db.url}` +
         `${db.db} does not exist. ` +

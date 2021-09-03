@@ -35,7 +35,7 @@ describe('#unit Check spool changes', function() {
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'SpoolChangesError');
-      assert.strictEqual(err.message, 'Failed changes request - socket hang up');
+      assert.strictEqual(err.message, `Failed changes request - socket hang up: post ${url}/${dbName}/_changes`);
       assert.ok(nock.isDone());
       done();
     });
@@ -53,7 +53,7 @@ describe('#unit Check spool changes', function() {
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'HTTPFatalError');
-      assert.strictEqual(err.message, '500 Internal Server Error - Error: foo, Reason: bar');
+      assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes`);
       assert.ok(nock.isDone());
       done();
     });

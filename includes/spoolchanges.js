@@ -103,7 +103,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
         }
       });
   }).catch(err => {
-    if (err.code && err.code >= 400) {
+    if (err.status && err.status >= 400) {
       if (err.body) {
         const errorBody = new ResponseWriteable();
         err.body.pipe(errorBody).on('finish', () => {

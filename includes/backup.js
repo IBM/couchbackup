@@ -75,7 +75,7 @@ module.exports = function(db, options) {
 function validateBulkGetSupport(db, callback) {
   db.service.postBulkGet({ db: db.db, docs: [] }).then(() => { callback(); }).catch(err => {
     err = error.convertResponseError(err, function(err) {
-      switch (err.code) {
+      switch (err.status) {
         case undefined:
           // There was no status code on the error
           return err;

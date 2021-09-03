@@ -23,6 +23,48 @@ const retryPlugin = require('retry-axios');
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
 
+// An interceptor function to help augment error bodies with a little
+// extra information so we can continue to use consistent messaging
+// after the ugprade to @ibm-cloud/cloudant
+const errorHelper = async function(err) {
+  let method;
+  let requestUrl;
+  if (err.response) {
+    if (err.response.config.url) {
+      requestUrl = err.response.config.url;
+      method = err.response.config.method;
+    }
+    // Override the status text with an improved message
+    let errorMsg = `${err.response.status} ${err.response.statusText || ''}: ` +
+    `${method} ${requestUrl}`;
+    if (err.response.data) {
+      if (err.response.headers['content-type'] === 'application/json') {
+        // Append error/reason if available
+        if (err.response.data.error) {
+          // Override the status text with our more complete message
+          errorMsg += ` - Error: ${err.response.data.error}`;
+          if (err.response.data.reason) {
+            errorMsg += `, Reason: ${err.response.data.reason}`;
+          }
+        }
+      } else {
+        errorMsg += err.response.data;
+      }
+      // Set a new message for use by the node-sdk-core
+      // We use the errors array because it gets processed
+      // ahead of all other service errors.
+      err.response.data.errors = [{ message: errorMsg }];
+    }
+  } else if (err.request) {
+    if (!err.message.includes(err.config.url)) {
+      // Augment the message with the URL and method
+      // but don't do it again if we already have the URL.
+      err.message = `${err.message}: ${err.config.method} ${err.config.url}`;
+    }
+  }
+  return Promise.reject(err);
+};
+
 module.exports = {
   client: function(rawUrl, opts) {
     const url = new URL(rawUrl);
@@ -98,6 +140,12 @@ module.exports = {
       // data this lib needs to move, so override the property in the tokenManager instance.
       authenticator.tokenManager.requestWrapperInstance.compressRequestData = false;
     }
+    if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
+      authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
+    }
+    // Add error interceptors to put URLs in error messages
+    service.getHttpClient().interceptors.response.use(null, errorHelper);
+
     return { service: service, db: dbName, url: actUrl.toString() };
   }
 };
