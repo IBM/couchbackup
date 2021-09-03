@@ -37,15 +37,8 @@ class BackupError extends Error {
 
 class HTTPError extends BackupError {
   constructor(responseError, name) {
-    var errMsg = `${responseError.code} ${responseError.message || ''}`;
-    if (responseError.body && responseError.headers['content-type'] === 'application/json' && typeof responseError.body === 'string') {
-      const errorObj = JSON.parse(responseError.body);
-      if (errorObj.error && errorObj.reason) {
-        errMsg += ` - Error: ${errorObj.error}, Reason: ${errorObj.reason}`;
-      }
-    }
     // Special case some names for more useful error messages
-    switch (responseError.code) {
+    switch (responseError.status) {
       case 401:
         name = 'Unauthorized';
         break;
@@ -55,7 +48,7 @@ class HTTPError extends BackupError {
       default:
         name = name || 'HTTPFatalError';
     }
-    super(name, errMsg);
+    super(name, responseError.message);
   }
 }
 
@@ -67,7 +60,7 @@ function checkResponse(err) {
   if (err) {
     // Construct an HTTPError if there is request information on the error
     // Codes < 400 are considered OK
-    if (err.code >= 400) {
+    if (err.status >= 400) {
       return new HTTPError(err);
     } else {
       // Send it back again if there was no status code, e.g. a cxn error
@@ -86,10 +79,9 @@ function convertResponseError(responseError, errorFactory) {
 function augmentMessage(err) {
   // For errors that don't have a status code, we are likely looking at a cxn
   // error.
-  // Try to augment the message with more detail
-  // TODO add this extra message detail to nano?
-  if (err && err.code) {
-    err.message = `${err.message} ${err.code}`;
+  // Try to augment the message with more detail (core puts the code in statusText)
+  if (err && err.statusText) {
+    err.message = `${err.message} ${err.statusText}`;
   }
   if (err && err.description) {
     err.message = `${err.message} ${err.description}`;
