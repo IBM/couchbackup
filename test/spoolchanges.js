@@ -41,7 +41,7 @@ describe('#unit Check spool changes', function() {
     });
   });
 
-  it('should terminate on bad HTTP status code repsonse', function(done) {
+  it('should terminate on bad HTTP status code response', function(done) {
     nock(url)
       .post(`/${dbName}/_changes`)
       .query(true)
@@ -53,7 +53,7 @@ describe('#unit Check spool changes', function() {
 
     changes(db, '/dev/null', 500, null, function(err) {
       assert.strictEqual(err.name, 'HTTPFatalError');
-      assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes`);
+      assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes - Error: foo, Reason: bar`);
       assert.ok(nock.isDone());
       done();
     });
