@@ -131,9 +131,7 @@ module.exports = {
     const serviceOpts = {
       authenticator: authenticator,
       timeout: opts.requestTimeout,
-      headers: { 'User-Agent': userAgent },
-      // Axios performance options
-      maxContentLength: -1
+      headers: { 'User-Agent': userAgent }
     };
     if (url.protocol === 'https') {
       serviceOpts.httpsAgent = keepAliveAgent;
