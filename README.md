@@ -122,7 +122,7 @@ couchbackup --db animaldb --log animaldb.log --resume true --output animaldb.txt
 
 ## Restore
 
-Now we have our backup text file, we can restore it to an existing database using the `couchrestore`:
+Now that we have our backup text file, we can restore it to a new, empty, existing database using the `couchrestore`:
 
 ```sh
 cat animaldb.txt | couchrestore
@@ -245,7 +245,7 @@ Then you can import the library into your code:
 The library exports two main functions:
 
 1. `backup` - backup from a database to a writable stream.
-2. `restore` - restore from a readable stream to a database.
+2. `restore` - restore from a readable stream to an empty database.
 
 ### Examples
 
@@ -319,8 +319,9 @@ couchbackup.backup(
 ### Restore
 
 The `restore` function takes a readable stream containing the data emitted
-by the `backup` function. It uploads that to a Cloudant database, which
-should be a **new** database.
+by the `backup` function and uploads that to a Cloudant database.
+
+_Note:_ A target database must be a **new and empty** database.
 
 ```javascript
 restore: function(srcStream, targetUrl, opts, callback) { /* ... */ }
