@@ -319,7 +319,7 @@ couchbackup.backup(
 ### Restore
 
 The `restore` function takes a readable stream containing the data emitted
-by the `backup` function and uploads that to a Cloudant database
+by the `backup` function and uploads that to a Cloudant database.
 
 _Note:_ A target database should be a **new and empty** database to avoid
 possible documents' update conflicts.
