@@ -1,4 +1,4 @@
-# Unreleased
+# 2.7.0 (2021-09-14)
 - [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.
 
 # 2.6.2 (2021-08-27)
