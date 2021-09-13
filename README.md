@@ -321,8 +321,7 @@ couchbackup.backup(
 The `restore` function takes a readable stream containing the data emitted
 by the `backup` function and uploads that to a Cloudant database.
 
-_Note:_ A target database should be a **new and empty** database to avoid
-possible documents' update conflicts.
+_Note:_ A target database must be a **new and empty** database.
 
 ```javascript
 restore: function(srcStream, targetUrl, opts, callback) { /* ... */ }
