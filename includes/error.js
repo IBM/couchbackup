@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,13 +37,8 @@ class BackupError extends Error {
 
 class HTTPError extends BackupError {
   constructor(responseError, name) {
-    var errMsg = `${responseError.statusCode} ${responseError.statusMessage || ''}: ` +
-     `${responseError.request.method} ${(typeof responseError.request.uri === 'object') ? responseError.request.uri.href : responseError.request.uri}`;
-    if (responseError.error && responseError.reason) {
-      errMsg += ` - Error: ${responseError.error}, Reason: ${responseError.reason}`;
-    }
     // Special case some names for more useful error messages
-    switch (responseError.statusCode) {
+    switch (responseError.status) {
       case 401:
         name = 'Unauthorized';
         break;
@@ -53,7 +48,7 @@ class HTTPError extends BackupError {
       default:
         name = name || 'HTTPFatalError';
     }
-    super(name, errMsg);
+    super(name, responseError.message);
   }
 }
 
@@ -65,7 +60,7 @@ function checkResponse(err) {
   if (err) {
     // Construct an HTTPError if there is request information on the error
     // Codes < 400 are considered OK
-    if (err.statusCode >= 400) {
+    if (err.status >= 400) {
       return new HTTPError(err);
     } else {
       // Send it back again if there was no status code, e.g. a cxn error
@@ -84,10 +79,9 @@ function convertResponseError(responseError, errorFactory) {
 function augmentMessage(err) {
   // For errors that don't have a status code, we are likely looking at a cxn
   // error.
-  // Try to augment the message with more detail
-  // TODO add this extra message detail to nano?
-  if (err && err.code) {
-    err.message = `${err.message} ${err.code}`;
+  // Try to augment the message with more detail (core puts the code in statusText)
+  if (err && err.statusText) {
+    err.message = `${err.message} ${err.statusText}`;
   }
   if (err && err.description) {
     err.message = `${err.message} ${err.description}`;
@@ -101,11 +95,9 @@ module.exports = {
   convertResponseError: convertResponseError,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
-      process.on('uncaughtException', function(err) {
-        console.error(`ERROR: ${err.message}`);
-        process.exitCode = codes[err.name] || 1;
-      });
-      throw err;
+      console.error(`ERROR: ${err.message}`);
+      process.exitCode = codes[err.name] || 1;
+      process.exit();
     }
   }
 };

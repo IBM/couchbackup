@@ -1,3 +1,6 @@
+# Unreleased
+- [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.
+
 # 2.6.2 (2021-08-27)
 - [FIXED] `Invalid document ID: _bulk_get` error when using `@cloudant/cloudant`
   version `4.5.0`.

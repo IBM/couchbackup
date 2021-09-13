@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Simulate existence check
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate _bulk_get not available
-        n.head('/fakenockdb/_bulk_get').reply(404, { error: 'not_found', reason: 'missing' });
+        n.post('/fakenockdb/_bulk_get').reply(404, { error: 'not_found', reason: 'missing' });
         backupHttpError(params, 'BulkGetError', 50, done);
       });
 
@@ -142,7 +142,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const p = u.p(params, { opts: { resume: true, log: './test/fixtures/test.log' } });
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
-        n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
         n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(p, 'HTTPFatalError', 40, done);
@@ -165,7 +165,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const p = u.p(params, { opts: { resume: true, log: './test/fixtures/incomplete_changes.log' } });
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
-        n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
         // Should fail when it reads the incomplete changes
         backupHttpError(p, 'IncompleteChangesInLogFile', 22, done);
       });
@@ -173,18 +173,18 @@ function restoreHttpError(opts, errorName, errorCode, done) {
       it('should terminate on _changes HTTPFatalError', function(done) {
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
-        n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
         // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
-        n.get('/fakenockdb/_changes').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        n.post('/fakenockdb/_changes').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(params, 'HTTPFatalError', 40, done);
       });
 
       it('should terminate on SpoolChangesError', function(done) {
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
-        n.head('/fakenockdb/_bulk_get').reply(405, 'method not_allowed');
+        n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
         // Simulate a changes without a last_seq
-        n.get('/fakenockdb/_changes').query(true).reply(200,
+        n.post('/fakenockdb/_changes').query(true).reply(200,
           {
             results: [{
               seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',

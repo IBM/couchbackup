@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,17 @@
 /* global beforeEach afterEach */
 'use strict';
 
-const cloudant = require('@cloudant/cloudant')(
-  (process.env.COUCH_BACKEND_URL) ? { url: process.env.COUCH_BACKEND_URL } : 'https://no-couch-backend-url-set.test');
-const uuid = require('uuid/v4');
+const { CloudantV1 } = require('@ibm-cloud/cloudant');
+const url = new URL((process.env.COUCH_BACKEND_URL) ? process.env.COUCH_BACKEND_URL : 'https://no-couch-backend-url-set.test');
+const { BasicAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
+const authenticator = (url.username) ? new BasicAuthenticator({ username: url.username, password: url.password }) : new NoAuthAuthenticator();
+const serviceOpts = {
+  authenticator: authenticator
+};
+const cloudant = new CloudantV1(serviceOpts);
+// Remove auth from URL before using for service
+cloudant.setServiceUrl(new URL(url.pathname, url.origin).toString());
+const uuid = require('uuid').v4;
 const fs = require('fs');
 
 // Mocha hooks that will be at the root context so run for all tests
@@ -30,13 +38,7 @@ beforeEach('Create test database', function(done) {
     const unique = uuid();
     this.fileName = `${unique}`;
     this.dbName = 'couchbackup_test_' + unique;
-    cloudant.db.create(this.dbName, function(err) {
-      if (err) {
-        done(err);
-      } else {
-        done();
-      }
-    });
+    cloudant.putDatabase({ db: this.dbName }).then(() => { done(); }).catch((err) => { done(err); });
   } else {
     done();
   }
@@ -49,13 +51,7 @@ afterEach('Delete test database', function(done) {
     this.timeout(10 * 1000);
     deleteIfExists(this.fileName);
     deleteIfExists(`${this.fileName}.log`);
-    cloudant.db.destroy(this.dbName, function(err) {
-      if (err) {
-        done(err);
-      } else {
-        done();
-      }
-    });
+    cloudant.deleteDatabase({ db: this.dbName }).then(() => { done(); }).catch((err) => { done(err); });
   } else {
     done();
   }

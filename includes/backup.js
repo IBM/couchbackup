@@ -1,4 +1,4 @@
-// Copyright © 2017, 2019 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,24 +73,20 @@ module.exports = function(db, options) {
  * @param {function} callback - called on completion with signature (err)
  */
 function validateBulkGetSupport(db, callback) {
-  db.server.request({ method: 'HEAD', db: db.config.db, path: '_bulk_get' },
-    function(err) {
-      err = error.convertResponseError(err, function(err) {
-        switch (err.statusCode) {
-          case undefined:
-            // There was no status code on the error
-            return err;
-          case 404:
-            return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
-          case 405:
-            // => supports /_bulk_get endpoint
-            return;
-          default:
-            return new error.HTTPError(err);
-        }
-      });
-      callback(err);
+  db.service.postBulkGet({ db: db.db, docs: [] }).then(() => { callback(); }).catch(err => {
+    err = error.convertResponseError(err, function(err) {
+      switch (err.status) {
+        case undefined:
+          // There was no status code on the error
+          return err;
+        case 404:
+          return new error.BackupError('BulkGetError', 'Database does not support /_bulk_get endpoint');
+        default:
+          return new error.HTTPError(err);
+      }
     });
+    callback(err);
+  });
 }
 
 /**
@@ -211,43 +207,40 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
     }
 
     // do the /db/_bulk_get request
-    // Note: this should use built-in _bulk_get, but revs is not accepted as
-    // part of the request body by the server yet. Working around using request
-    // method to POST with a query string.
-    db.server.request(
-      { method: 'POST', db: db.config.db, path: '_bulk_get', qs: { revs: true }, body: payload },
-      function(err, body) {
-        if (err) {
-          if (!hasErrored) {
-            hasErrored = true;
-            err = error.convertResponseError(err);
-            // Kill the queue for fatal errors
-            q.kill();
-            ee.emit('error', err);
-          }
-          done();
-        } else {
-          // create an output array with the docs returned
-          body.results.forEach(function(d) {
-            if (d.docs) {
-              d.docs.forEach(function(doc) {
-                if (doc.ok) {
-                  output.push(doc.ok);
-                }
-              });
+    db.service.postBulkGet({
+      db: db.db,
+      revs: true,
+      docs: payload.docs
+    }).then(response => {
+      // create an output array with the docs returned
+      response.result.results.forEach(function(d) {
+        if (d.docs) {
+          d.docs.forEach(function(doc) {
+            if (doc.ok) {
+              output.push(doc.ok);
             }
           });
-          total += output.length;
-          var t = (new Date().getTime() - start) / 1000;
-          ee.emit('received', {
-            batch: thisBatch,
-            data: output,
-            length: output.length,
-            time: t,
-            total: total
-          }, q, logCompletedBatch);
         }
       });
+      total += output.length;
+      var t = (new Date().getTime() - start) / 1000;
+      ee.emit('received', {
+        batch: thisBatch,
+        data: output,
+        length: output.length,
+        time: t,
+        total: total
+      }, q, logCompletedBatch);
+    }).catch(err => {
+      if (!hasErrored) {
+        hasErrored = true;
+        err = error.convertResponseError(err);
+        // Kill the queue for fatal errors
+        q.kill();
+        ee.emit('error', err);
+      }
+      done();
+    });
   }, parallelism);
 
   for (var i in batches) {
