@@ -122,7 +122,7 @@ couchbackup --db animaldb --log animaldb.log --resume true --output animaldb.txt
 
 ## Restore
 
-Now we have our backup text file, we can restore it to a new, empty, existing database using the `couchrestore`:
+Now that we have our backup text file, we can restore it to a new, empty, existing database using the `couchrestore`:
 
 ```sh
 cat animaldb.txt | couchrestore
