@@ -24,11 +24,27 @@ const url = 'http://localhost:7777/testdb';
 const db = request.client(url, { parallelism: 1 });
 const timeoutDb = request.client(url, { parallelism: 1, requestTimeout: 500 });
 
-describe('#unit Check request response error callback', function() {
-  beforeEach('Clean nock', function() {
-    nock.cleanAll();
-  });
+beforeEach('Clean nock', function() {
+  nock.cleanAll();
+});
 
+describe('#unit Check request headers', function() {
+  it('should have a couchbackup user-agent', function(done) {
+    var couch = nock(url)
+      .matchHeader('user-agent', /couchbackup-cloudant\/\d+\.\d+\.\d+(?:-SNAPSHOT)? \(Node.js v\d+\.\d+\.\d+\)/)
+      .head('/good')
+      .reply(200);
+
+    db.service.headDocument({ db: db.db, docId: 'good' }).then(response => {
+      assert.ok(couch.isDone());
+      done();
+    }).catch(err => {
+      done(err);
+    });
+  });
+});
+
+describe('#unit Check request response error callback', function() {
   it('should not callback with error for 200 response', function(done) {
     var couch = nock(url)
       .get('/good')
