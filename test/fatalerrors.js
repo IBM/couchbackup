@@ -143,8 +143,10 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
         n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
-        // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
-        n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        // Simulate a fatal HTTP error when trying to fetch docs
+        // Note: 2 outstanding batches, so 2 responses, 1 mock is optional because we can't guarantee timing
+        n.post('/fakenockdb/_bulk_get').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        n.post('/fakenockdb/_bulk_get').query(true).optionally().reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(p, 'HTTPFatalError', 40, done);
       });
 
