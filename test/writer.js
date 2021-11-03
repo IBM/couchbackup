@@ -26,8 +26,8 @@ const liner = require('../includes/liner.js');
 // The writer expects a line-by-line stream so this utility function does that
 // processing for the tests (which normally happens in the internal restore
 // function).
-function testLinestream() {
-  return fs.createReadStream('./test/fixtures/animaldb_expected.json')
+function testLinestream(fixture = './test/fixtures/animaldb_expected.json') {
+  return fs.createReadStream(fixture)
     .pipe(liner());
 }
 
@@ -106,6 +106,38 @@ describe('#unit Check database restore writer', function() {
       .on('error', function(err) {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 : post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
+        assert.ok(nock.isDone());
+        done();
+      });
+  });
+
+  it('should restore shallow backups without rev info successfully', function(done) {
+    nock(dbUrl)
+      .post('/_bulk_docs')
+      .reply(200, [{ ok: true, id: 'foo', rev: '1-abc' }]); // success
+
+    testLinestream('./test/fixtures/animaldb_old_shallow.json')
+      .pipe(writer(db, 500, 1, noopEmitter))
+      .on('error', function(err) {
+        done(err);
+      })
+      .on('finished', function(data) {
+        assert.strictEqual(data.total, 11);
+        assert.ok(nock.isDone());
+        done();
+      });
+  });
+
+  it('should get a batch error for non-empty array response with new_edits false', function(done) {
+    nock(dbUrl)
+      .post('/_bulk_docs')
+      .reply(200, [{ id: 'foo', error: 'foo', reason: 'bar' }]);
+
+    testLinestream()
+      .pipe(writer(db, 500, 1, noopEmitter))
+      .on('error', function(err) {
+        assert.strictEqual(err.name, 'Error');
+        assert.strictEqual(err.message, 'Error writing batch with new_edits:false and 1 items');
         assert.ok(nock.isDone());
         done();
       });
