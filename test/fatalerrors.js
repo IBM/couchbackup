@@ -143,8 +143,10 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
         n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
-        // Simulate a fatal HTTP error when trying to fetch docs (note 2 outstanding batches)
-        n.post('/fakenockdb/_bulk_get').query(true).times(2).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        // Simulate a fatal HTTP error when trying to fetch docs
+        // Note: 2 outstanding batches, so 2 responses, 1 mock is optional because we can't guarantee timing
+        n.post('/fakenockdb/_bulk_get').query(true).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        n.post('/fakenockdb/_bulk_get').query(true).optionally().reply(400, { error: 'bad_request', reason: 'testing bad response' });
         backupHttpError(p, 'HTTPFatalError', 40, done);
       });
 
@@ -249,7 +251,10 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         const n = nock(url).head('/fakenockdb').reply(200);
         // Simulate a 400 trying to write docs, 5 times because of default parallelism
         // Provide a body function to handle the stream, but allow any body
-        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(5).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        // Four of the mocks are optional because of parallelism 5 we can't guarantee that the exit will happen
+        // after all 5 requests, but we must get at least one of them
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).times(4).optionally().reply(400, { error: 'bad_request', reason: 'testing bad response' });
         const q = u.p(params, { opts: { bufferSize: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
         restoreHttpError(q, 'HTTPFatalError', 40, done);
       });
