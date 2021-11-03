@@ -131,7 +131,6 @@ module.exports = {
     const serviceOpts = {
       authenticator: authenticator,
       timeout: opts.requestTimeout,
-      headers: { 'User-Agent': userAgent },
       // Axios performance options
       maxContentLength: -1
     };
@@ -179,6 +178,12 @@ module.exports = {
     }
     // Add error interceptors to put URLs in error messages
     service.getHttpClient().interceptors.response.use(null, errorHelper);
+
+    // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
+    service.getHttpClient().interceptors.request.use(function(requestConfig) {
+      requestConfig.headers['User-Agent'] = userAgent;
+      return requestConfig;
+    }, null);
 
     return { service: service, db: dbName, url: actUrl.toString() };
   }

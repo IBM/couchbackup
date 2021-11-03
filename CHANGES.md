@@ -1,3 +1,6 @@
+# Unreleased
+- [FIXED] Corrected `user-agent` header on requests.
+
 # 2.7.0 (2021-09-14)
 - [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.
 
