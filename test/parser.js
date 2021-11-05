@@ -107,6 +107,14 @@ describe('#unit Default parameters', function() {
       done();
     });
 
+    it('respects the COUCH_RESUME env variable if the --resume backup command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.resume, 'boolean');
+      assert.strictEqual(program.resume, true);
+      done();
+    });
+
     it('respects the COUCH_OUTPUT env variable if the --output backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
@@ -191,6 +199,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.log, 'string');
       assert.strictEqual(program.log, filename);
+      done();
+    });
+
+    it('respects the backup --resume command-line parameter', function(done) {
+      process.argv = ['node', 'test', '--resume'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.resume, 'boolean');
+      assert.strictEqual(program.resume, true);
       done();
     });
 
