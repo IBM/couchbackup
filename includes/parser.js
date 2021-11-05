@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,8 @@ function parseBackupArgs() {
     .option('-p, --parallelism <n>',
       cliutils.getUsage('number of HTTP requests to perform in parallel when performing a backup; ignored in "shallow" mode', defaults.parallelism),
       Number)
+    .option('-q, --quiet',
+      cliutils.getUsage('suppress batch messages', defaults.quiet))
     .option('-r, --resume',
       cliutils.getUsage('continue a previous backup from its last known position; invalid in "shallow" mode', defaults.resume))
     .option('-t, --request-timeout <n>',
@@ -105,6 +107,8 @@ function parseRestoreArgs() {
     .option('-p, --parallelism <n>',
       cliutils.getUsage('number of HTTP requests to perform in parallel when restoring a backup', defaults.parallelism),
       Number)
+    .option('-q, --quiet',
+      cliutils.getUsage('suppress batch messages', defaults.quiet))
     .option('-t, --request-timeout <n>',
       cliutils.getUsage('milliseconds to wait for a response to a HTTP request before retrying the request', defaults.requestTimeout),
       Number)
