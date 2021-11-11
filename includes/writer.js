@@ -32,6 +32,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     // if we are restoring known revisions, we need to supply new_edits=false
     if (payload.docs && payload.docs[0] && payload.docs[0]._rev) {
       payload.new_edits = false;
+      debug('Using new_edits false mode.');
     }
 
     if (!didError) {
@@ -39,8 +40,9 @@ module.exports = function(db, bufferSize, parallelism, ee) {
         db: db.db,
         bulkDocs: payload
       }).then(response => {
-        if (!response.result || response.result.length > 0) {
-          throw new Error('Error writing batch.');
+        if (!response.result || (payload.new_edits === false && response.result.length > 0)) {
+          throw new Error(`Error writing batch with new_edits:${payload.new_edits !== false}` +
+            ` and ${response.result ? response.result.length : 'unavailable'} items`);
         }
         written += payload.docs.length;
         writer.emit('restored', { documents: payload.docs.length, total: written });
