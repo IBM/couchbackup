@@ -22,6 +22,7 @@ const changes = require('../includes/spoolchanges.js');
 
 const url = 'http://localhost:7777';
 const dbName = 'fakenockdb';
+const longTestTimeout = 3000;
 
 const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
 
@@ -39,7 +40,7 @@ describe('#unit Check spool changes', function() {
       assert.ok(nock.isDone());
       done();
     });
-  });
+  }).timeout(longTestTimeout);
 
   it('should terminate on bad HTTP status code response', function(done) {
     nock(url)
@@ -57,5 +58,5 @@ describe('#unit Check spool changes', function() {
       assert.ok(nock.isDone());
       done();
     });
-  });
+  }).timeout(longTestTimeout);
 });

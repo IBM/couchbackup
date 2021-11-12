@@ -23,6 +23,8 @@ const writer = require('../includes/writer.js');
 const noopEmitter = new (require('events')).EventEmitter();
 const liner = require('../includes/liner.js');
 
+const longTestTimeout = 3000;
+
 // The writer expects a line-by-line stream so this utility function does that
 // processing for the tests (which normally happens in the internal restore
 // function).
@@ -90,7 +92,7 @@ describe('#unit Check database restore writer', function() {
         assert.ok(nock.isDone());
         done();
       });
-  });
+  }).timeout(longTestTimeout);
 
   it('should fail after 3 transient errors', function(done) {
     nock(dbUrl)
@@ -109,7 +111,7 @@ describe('#unit Check database restore writer', function() {
         assert.ok(nock.isDone());
         done();
       });
-  });
+  }).timeout(longTestTimeout);
 
   it('should restore shallow backups without rev info successfully', function(done) {
     nock(dbUrl)
