@@ -64,7 +64,7 @@ function parseBackupArgs() {
     .parse(process.argv);
 
   // Remove defaults that don't apply when using shallow mode
-  if (program.mode === 'shallow' || envVarOptions.mode === 'shallow') {
+  if (program.opts().mode === 'shallow' || envVarOptions.mode === 'shallow') {
     delete defaults.parallelism;
     delete defaults.log;
     delete defaults.resume;
@@ -72,7 +72,7 @@ function parseBackupArgs() {
 
   // Apply the options in order so that the CLI overrides env vars and env variables
   // override defaults.
-  const opts = Object.assign({}, defaults, envVarOptions, program);
+  const opts = Object.assign({}, defaults, envVarOptions, program.opts());
 
   if (opts.resume && (opts.log === defaults.log)) {
     // If resuming and the log file arg is the newly generated tmp name from defaults then we know that --log wasn't specified.
@@ -118,7 +118,7 @@ function parseRestoreArgs() {
 
   // Apply the options in order so that the CLI overrides env vars and env variables
   // override defaults.
-  const opts = Object.assign({}, defaults, envVarOptions, program);
+  const opts = Object.assign({}, defaults, envVarOptions, program.opts());
 
   return opts;
 }
