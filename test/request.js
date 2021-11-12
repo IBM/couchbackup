@@ -23,6 +23,7 @@ var error = require('../includes/error.js');
 const url = 'http://localhost:7777/testdb';
 const db = request.client(url, { parallelism: 1 });
 const timeoutDb = request.client(url, { parallelism: 1, requestTimeout: 500 });
+const longTestTimeout = 3000;
 
 beforeEach('Clean nock', function() {
   nock.cleanAll();
@@ -81,7 +82,7 @@ describe('#unit Check request response error callback', function() {
       // Handle assertion errors
       done(err);
     });
-  });
+  }).timeout(longTestTimeout);
 
   it('should callback with error after 3 POST 503 responses', function(done) {
     var couch = nock(url)
@@ -105,7 +106,7 @@ describe('#unit Check request response error callback', function() {
       // Handle assertion errors
       done(err);
     });
-  });
+  }).timeout(longTestTimeout);
 
   it('should callback with error after 3 429 responses', function(done) {
     var couch = nock(url)
@@ -128,7 +129,7 @@ describe('#unit Check request response error callback', function() {
       // Handle assertion errors
       done(err);
     });
-  });
+  }).timeout(longTestTimeout);
 
   it('should callback with fatal error for 404 response', function(done) {
     var couch = nock(url)
@@ -169,7 +170,7 @@ describe('#unit Check request response error callback', function() {
       // Handle assertion errors
       done(err);
     });
-  });
+  }).timeout(longTestTimeout);
 
   it('should retry request if HTTP request gets timed out', function(done) {
     var couch = nock(url)
