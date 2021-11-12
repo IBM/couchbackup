@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,11 @@ const fs = require('fs');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
-const debug = require('debug')('couchbackup:backup');
-debug.enabled = true;
+const debug = require('debug');
+const backupDebug = debug('couchbackup:backup');
+const backupBatchDebug = debug('couchbackup:backup:batch');
+
+backupDebug.enabled = true;
 
 var program = parser.parseBackupArgs();
 
@@ -42,6 +45,8 @@ console.error('Performing backup on ' + databaseUrl.replace(/\/\/.+@/g, '//****:
 console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
 console.error('='.repeat(80));
 
+backupBatchDebug.enabled = !program.quiet;
+
 var ws = process.stdout;
 
 // open output file
@@ -54,7 +59,7 @@ if (program.output) {
   ws = fs.createWriteStream(null, { fd: fd });
 }
 
-debug('Fetching all database changes...');
+backupDebug('Fetching all database changes...');
 
 return couchbackup.backup(
   databaseUrl,
@@ -62,11 +67,11 @@ return couchbackup.backup(
   opts,
   error.terminationCallback
 ).on('changes', function(batch) {
-  debug('Total batches received:', batch + 1);
+  backupBatchDebug('Total batches received:', batch + 1);
 }).on('written', function(obj) {
-  debug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
+  backupBatchDebug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
 }).on('error', function(e) {
-  debug('ERROR', e);
+  backupDebug('ERROR', e);
 }).on('finished', function(obj) {
-  debug('Finished - Total document revisions written:', obj.total);
+  backupDebug('Finished - Total document revisions written:', obj.total);
 });

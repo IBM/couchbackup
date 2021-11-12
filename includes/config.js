@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,9 @@ function cliDefaults() {
   // add additional legacy settings
   defaults.db = 'test';
   defaults.url = 'http://localhost:5984';
+
+  // add CLI only option
+  defaults.quiet = false;
 
   return defaults;
 }
@@ -90,6 +93,11 @@ function applyEnvironmentVariables(opts) {
   // if we only want a shallow copy
   if (typeof process.env.COUCH_MODE !== 'undefined' && process.env.COUCH_MODE === 'shallow') {
     opts.mode = 'shallow';
+  }
+
+  // if we are instructed to be quiet
+  if (typeof process.env.COUCH_QUIET !== 'undefined' && process.env.COUCH_QUIET === 'true') {
+    opts.quiet = true;
   }
 
   // if we have a specified API key

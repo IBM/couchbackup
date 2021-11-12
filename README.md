@@ -210,6 +210,7 @@ This tool can be used to script the backup of your databases. Move the backup an
 * `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
 * `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
+* `COUCH_QUIET` - if `true`, suppresses the individual batch messages to the console during CLI backup and restore
 * `CLOUDANT_IAM_API_KEY` - optional [IAM API key](https://console.bluemix.net/docs/services/Cloudant/guides/iam.html#ibm-cloud-identity-and-access-management)
  to use to access the Cloudant database instead of user information credentials in the URL. The endpoint used to retrieve the token defaults to
  `https://iam.cloud.ibm.com/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
@@ -231,6 +232,7 @@ used.
 * `--output` - same as `COUCH_OUTPUT`
 * `--mode` - same as `COUCH_MODE`
 * `--iam-api-key` - same as `CLOUDANT_IAM_API_KEY`
+* `--quiet` - same as `COUCH_QUIET`
 
 ## Using programmatically
 

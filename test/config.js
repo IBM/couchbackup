@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,6 +128,15 @@ describe('#unit Configuration', function() {
     applyEnvVars(config);
     assert.strictEqual(typeof config.mode, 'string');
     assert.strictEqual(config.mode, 'shallow');
+    done();
+  });
+
+  it('respects the COUCH_QUIET env variable', function(done) {
+    process.env.COUCH_QUIET = 'true';
+    var config = {};
+    applyEnvVars(config);
+    assert.strictEqual(typeof config.quiet, 'boolean');
+    assert.strictEqual(config.quiet, true);
     done();
   });
 });

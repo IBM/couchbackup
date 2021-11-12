@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@ const error = require('../includes/error.js');
 const cliutils = require('../includes/cliutils.js');
 const couchbackup = require('../app.js');
 const parser = require('../includes/parser.js');
-const debug = require('debug')('couchbackup:restore');
-debug.enabled = true;
+const debug = require('debug');
+const restoreDebug = debug('couchbackup:restore');
+const restoreBatchDebug = debug('couchbackup:restore:batch');
+
+restoreDebug.enabled = true;
 
 var program = parser.parseRestoreArgs();
 var databaseUrl = cliutils.databaseUrl(program.url, program.db);
@@ -37,15 +40,17 @@ console.error('Performing restore on ' + databaseUrl.replace(/\/\/.+@/g, '//****
 console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
 console.error('='.repeat(80));
 
+restoreBatchDebug.enabled = !program.quiet;
+
 return couchbackup.restore(
   process.stdin, // restore from stdin
   databaseUrl,
   opts,
   error.terminationCallback
 ).on('restored', function(obj) {
-  debug('restored', obj.total);
+  restoreBatchDebug('restored', obj.total);
 }).on('error', function(e) {
-  debug('ERROR', e);
+  restoreDebug('ERROR', e);
 }).on('finished', function(obj) {
-  debug('finished', obj);
+  restoreDebug('finished', obj);
 });

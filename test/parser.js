@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2021 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ describe('#unit Default parameters', function() {
     process.env.COUCH_OUTPUT = 'myfile.txt';
     process.env.COUCH_MODE = 'shallow';
     process.env.CLOUDANT_IAM_API_KEY = 'ABC123-ZYX987_cba789-xyz321';
+    process.env.COUCH_QUIET = 'true';
   });
 
   after('Reset process data', function() {
@@ -106,6 +107,14 @@ describe('#unit Default parameters', function() {
       done();
     });
 
+    it('respects the COUCH_RESUME env variable if the --resume backup command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.resume, 'boolean');
+      assert.strictEqual(program.resume, true);
+      done();
+    });
+
     it('respects the COUCH_OUTPUT env variable if the --output backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
       var program = parser.parseBackupArgs();
@@ -119,6 +128,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.mode, 'string');
       assert.strictEqual(program.mode, process.env.COUCH_MODE);
+      done();
+    });
+
+    it('respects the COUCH_QUIET env variable if the --quiet backup command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.quiet, 'boolean');
+      assert.strictEqual(program.quiet, true);
       done();
     });
 
@@ -185,6 +202,14 @@ describe('#unit Default parameters', function() {
       done();
     });
 
+    it('respects the backup --resume command-line parameter', function(done) {
+      process.argv = ['node', 'test', '--resume'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.resume, 'boolean');
+      assert.strictEqual(program.resume, true);
+      done();
+    });
+
     it('respects the backup --output command-line parameter', function(done) {
       var filename = 'myfile2.txt';
       process.argv = ['node', 'test', '--output', filename];
@@ -207,6 +232,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.mode, 'string');
       assert.strictEqual(program.mode, 'shallow');
+      done();
+    });
+
+    it('respects the backup --quiet command-line parameter', function(done) {
+      process.argv = ['node', 'test', '--quiet'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.quiet, 'boolean');
+      assert.strictEqual(program.quiet, true);
       done();
     });
   });
@@ -257,6 +290,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
+      done();
+    });
+
+    it('respects the COUCH_QUIET env variable if the --quiet restorer command-line parameter is missing', function(done) {
+      process.argv = ['node', 'test'];
+      var program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.quiet, 'boolean');
+      assert.strictEqual(program.quiet, true);
       done();
     });
 
@@ -311,6 +352,14 @@ describe('#unit Default parameters', function() {
       var program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, key);
+      done();
+    });
+
+    it('respects the restore --quiet command-line parameter', function(done) {
+      process.argv = ['node', 'test', '--quiet'];
+      var program = parser.parseRestoreArgs();
+      assert.strictEqual(typeof program.quiet, 'boolean');
+      assert.strictEqual(program.quiet, true);
       done();
     });
   });
