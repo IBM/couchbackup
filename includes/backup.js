@@ -114,12 +114,18 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
     // Fetch the doc IDs for the batches in the current set to
     // download them.
     function batchSetComplete(err, data) {
-      total = data.total;
-      done();
+      if (!err) {
+        total = data.total;
+      }
+      done(err);
     }
     function processRetrievedBatches(err, batches) {
-      // process them in parallelised queue
-      processBatchSet(db, parallelism, log, batches, ee, startTime, total, batchSetComplete);
+      if (!err) {
+        // process them in parallelised queue
+        processBatchSet(db, parallelism, log, batches, ee, startTime, total, batchSetComplete);
+      } else {
+        batchSetComplete(err);
+      }
     }
 
     readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, function(err, batchSetIds) {
@@ -157,18 +163,22 @@ function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSess
  */
 function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, callback) {
   logfilesummary(log, function processSummary(err, summary) {
-    if (!summary.changesComplete) {
-      callback(new error.BackupError('IncompleteChangesInLogFile',
-        'WARNING: Changes did not finish spooling'));
-      return;
-    }
-    if (Object.keys(summary.batches).length === 0) {
-      return callback(null, []);
-    }
+    if (!err) {
+      if (!summary.changesComplete) {
+        callback(new error.BackupError('IncompleteChangesInLogFile',
+          'WARNING: Changes did not finish spooling'));
+        return;
+      }
+      if (Object.keys(summary.batches).length === 0) {
+        return callback(null, []);
+      }
 
-    // batch IDs are the property names of summary.batches
-    var batchSetIds = getPropertyNames(summary.batches, batchesPerDownloadSession);
-    callback(null, batchSetIds);
+      // batch IDs are the property names of summary.batches
+      var batchSetIds = getPropertyNames(summary.batches, batchesPerDownloadSession);
+      callback(null, batchSetIds);
+    } else {
+      callback(err);
+    }
   });
 }
 

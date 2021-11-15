@@ -3,6 +3,7 @@
 - [FIXED] Restore of shallow backups created with versions <=2.4.2.
 - [IMPROVED] Added quiet option to backup and restore to suppress batch messages.
 - [IMPROVED] Added a preflight check for restore function to make sure that a target database is new and empty.
+- [IMPROVED] Added handling for errors reading log file.
 
 # 2.7.0 (2021-09-14)
 - [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.

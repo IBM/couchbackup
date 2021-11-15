@@ -66,6 +66,9 @@ module.exports = function(log, batches, callback) {
   fs.createReadStream(log)
     .pipe(liner())
     .pipe(onLine(onCommand, batches))
+    .on('error', function(err) {
+      callback(err);
+    })
     .on('finish', function() {
       callback(null, retval);
     });
