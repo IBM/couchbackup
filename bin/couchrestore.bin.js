@@ -24,9 +24,9 @@ const restoreBatchDebug = debug('couchbackup:restore:batch');
 
 restoreDebug.enabled = true;
 
-var program = parser.parseRestoreArgs();
-var databaseUrl = cliutils.databaseUrl(program.url, program.db);
-var opts = {
+const program = parser.parseRestoreArgs();
+const databaseUrl = cliutils.databaseUrl(program.url, program.db);
+const opts = {
   bufferSize: program.bufferSize,
   parallelism: program.parallelism,
   requestTimeout: program.requestTimeout,

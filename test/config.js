@@ -19,7 +19,7 @@ const assert = require('assert');
 const applyEnvVars = require('../includes/config.js').applyEnvironmentVariables;
 
 describe('#unit Configuration', function() {
-  var processEnvCopy;
+  let processEnvCopy;
 
   before('Save env', function() {
     // Copy env so we can reset it after the tests
@@ -32,7 +32,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_URL env variable', function(done) {
     process.env.COUCH_URL = 'http://user:pass@myurl.com';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.url, 'string');
     assert.strictEqual(config.url, process.env.COUCH_URL);
@@ -41,7 +41,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_DATABASE env variable', function(done) {
     process.env.COUCH_DATABASE = 'mydb';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.db, 'string');
     assert.strictEqual(config.db, process.env.COUCH_DATABASE);
@@ -50,7 +50,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_BUFFER_SIZE env variable', function(done) {
     process.env.COUCH_BUFFER_SIZE = '1000';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.bufferSize, 'number');
     assert.strictEqual(config.bufferSize, 1000);
@@ -59,7 +59,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_PARALLELISM env variable', function(done) {
     process.env.COUCH_PARALLELISM = '20';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.parallelism, 'number');
     assert.strictEqual(config.parallelism, 20);
@@ -68,7 +68,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_REQUEST_TIMEOUT env variable', function(done) {
     process.env.COUCH_REQUEST_TIMEOUT = '10000';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.requestTimeout, 'number');
     assert.strictEqual(config.requestTimeout, 10000);
@@ -78,7 +78,7 @@ describe('#unit Configuration', function() {
   it('respects the CLOUDANT_IAM_API_KEY env variable', function(done) {
     const key = 'ABC123-ZYX987_cba789-xyz321';
     process.env.CLOUDANT_IAM_API_KEY = key;
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.iamApiKey, 'string');
     assert.strictEqual(config.iamApiKey, key);
@@ -88,7 +88,7 @@ describe('#unit Configuration', function() {
   it('respects the CLOUDANT_IAM_TOKEN_URL env variable', function(done) {
     const u = 'https://testhost.example:1234/identity/token';
     process.env.CLOUDANT_IAM_TOKEN_URL = u;
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.iamTokenUrl, 'string');
     assert.strictEqual(config.iamTokenUrl, u);
@@ -97,7 +97,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_LOG env variable', function(done) {
     process.env.COUCH_LOG = 'my.log';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.log, 'string');
     assert.strictEqual(config.log, process.env.COUCH_LOG);
@@ -106,7 +106,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_RESUME env variable', function(done) {
     process.env.COUCH_RESUME = 'true';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.resume, 'boolean');
     assert.strictEqual(config.resume, true);
@@ -115,7 +115,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_OUTPUT env variable', function(done) {
     process.env.COUCH_OUTPUT = 'myfile.txt';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.output, 'string');
     assert.strictEqual(config.output, process.env.COUCH_OUTPUT);
@@ -124,7 +124,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_MODE env variable', function(done) {
     process.env.COUCH_MODE = 'shallow';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.mode, 'string');
     assert.strictEqual(config.mode, 'shallow');
@@ -133,7 +133,7 @@ describe('#unit Configuration', function() {
 
   it('respects the COUCH_QUIET env variable', function(done) {
     process.env.COUCH_QUIET = 'true';
-    var config = {};
+    const config = {};
     applyEnvVars(config);
     assert.strictEqual(typeof config.quiet, 'boolean');
     assert.strictEqual(config.quiet, true);

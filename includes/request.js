@@ -102,7 +102,7 @@ const errorHelper = async function(err) {
 module.exports = {
   client: function(rawUrl, opts) {
     const url = new URL(rawUrl);
-    var protocol = (url.protocol.match(/^https/)) ? https : http;
+    const protocol = (url.protocol.match(/^https/)) ? https : http;
     const keepAliveAgent = new protocol.Agent({
       keepAlive: true,
       keepAliveMsecs: 30000,

@@ -20,7 +20,7 @@ const path = require('path');
 const pkg = require('../package.json');
 
 function parseBackupArgs() {
-  var program = require('commander');
+  const program = require('commander');
 
   // Option CLI defaults
   const defaults = config.cliDefaults();
@@ -84,7 +84,7 @@ function parseBackupArgs() {
 }
 
 function parseRestoreArgs() {
-  var program = require('commander');
+  const program = require('commander');
 
   // Option CLI defaults
   const defaults = config.cliDefaults();

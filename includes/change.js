@@ -14,13 +14,13 @@
 'use strict';
 
 // stolen from http://strongloop.com/strongblog/practical-examples-of-the-new-node-js-streams-api/
-var stream = require('stream');
+const stream = require('stream');
 
 module.exports = function(onChange) {
-  var change = new stream.Transform({ objectMode: true });
+  const change = new stream.Transform({ objectMode: true });
 
   change._transform = function(line, encoding, done) {
-    var obj = null;
+    let obj = null;
 
     // one change per line - remove the trailing comma
     line = line.trim().replace(/,$/, '');

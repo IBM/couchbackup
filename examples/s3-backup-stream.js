@@ -32,7 +32,7 @@ const VError = require('verror').VError;
   Main function, run from base of file.
 */
 function main() {
-  var argv = require('yargs')
+  const argv = require('yargs')
     .usage('Usage: $0 [options]')
     .example('$0 -s https://user:pass@host/db -b <bucket>', 'Backup db to bucket')
     .options({
@@ -91,7 +91,7 @@ function main() {
  */
 function bucketAccessible(s3, bucketName) {
   return new Promise(function(resolve, reject) {
-    var params = {
+    const params = {
       Bucket: bucketName
     };
     s3.headBucket(params, function(err, data) {
@@ -168,7 +168,7 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, shallow) {
  * @param {string} url URL to safen
  */
 function s(originalUrl) {
-  var parts = new url.URL(originalUrl);
+  const parts = new url.URL(originalUrl);
   return url.format(parts, { auth: false });
 }
 

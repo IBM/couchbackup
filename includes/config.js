@@ -13,8 +13,8 @@
 // limitations under the License.
 'use strict';
 
-var path = require('path');
-var tmp = require('tmp');
+const path = require('path');
+const tmp = require('tmp');
 
 /**
   Return API default settings.
@@ -34,7 +34,7 @@ function apiDefaults() {
   Return CLI default settings.
 */
 function cliDefaults() {
-  var defaults = apiDefaults();
+  const defaults = apiDefaults();
 
   // add additional legacy settings
   defaults.db = 'test';

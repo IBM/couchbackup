@@ -14,21 +14,21 @@
 'use strict';
 
 // stolen from http://strongloop.com/strongblog/practical-examples-of-the-new-node-js-streams-api/
-var stream = require('stream');
+const stream = require('stream');
 
 module.exports = function() {
-  var liner = new stream.Transform({ objectMode: true });
+  const liner = new stream.Transform({ objectMode: true });
 
   liner._transform = function(chunk, encoding, done) {
-    var data = chunk.toString();
+    let data = chunk.toString();
     if (this._lastLineData) {
       data = this._lastLineData + data;
     }
 
-    var lines = data.split('\n');
+    const lines = data.split('\n');
     this._lastLineData = lines.splice(lines.length - 1, 1)[0];
 
-    for (var i in lines) {
+    for (const i in lines) {
       this.push(lines[i]);
     }
     done();

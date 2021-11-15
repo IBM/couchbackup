@@ -45,7 +45,7 @@ describe('#unit Perform backup using shallow backup', function() {
   });
 
   it('should perform a shallow backup', function(done) {
-    var couch = nock(dbUrl)
+    const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
@@ -78,7 +78,7 @@ describe('#unit Perform backup using shallow backup', function() {
   });
 
   it('should perform a shallow backup with transient error', function(done) {
-    var couch = nock(dbUrl)
+    const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
@@ -114,7 +114,7 @@ describe('#unit Perform backup using shallow backup', function() {
   });
 
   it('should fail to perform a shallow backup on fatal error', function(done) {
-    var couch = nock(dbUrl)
+    const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
@@ -125,7 +125,7 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
       .reply(401, { error: 'Unauthorized' });
 
-    var errCount = 0;
+    let errCount = 0;
 
     shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
       .on('error', function(err) {

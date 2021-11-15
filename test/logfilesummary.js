@@ -15,8 +15,8 @@
 /* global describe it */
 'use strict';
 
-var assert = require('assert');
-var logfilesummary = require('../includes/logfilesummary.js');
+const assert = require('assert');
+const logfilesummary = require('../includes/logfilesummary.js');
 
 describe('#unit Fetching summary from the log file', function() {
   it('should fetch a summary correctly', function(done) {

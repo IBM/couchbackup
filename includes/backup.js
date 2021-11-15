@@ -105,8 +105,8 @@ function validateBulkGetSupport(db, callback) {
  *  (err, {batches: batch, docs: doccount}) {@see spoolchanges}.
  */
 function downloadRemainingBatches(log, db, ee, startTime, batchesPerDownloadSession, parallelism) {
-  var total = 0; // running total of documents downloaded so far
-  var noRemainingBatches = false;
+  let total = 0; // running total of documents downloaded so far
+  let noRemainingBatches = false;
 
   // Generate a set of batches (up to batchesPerDownloadSession) to download from the
   // log file and download them. Set noRemainingBatches to `true` for last batch.
@@ -174,7 +174,7 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, callback) {
       }
 
       // batch IDs are the property names of summary.batches
-      var batchSetIds = getPropertyNames(summary.batches, batchesPerDownloadSession);
+      const batchSetIds = getPropertyNames(summary.batches, batchesPerDownloadSession);
       callback(null, batchSetIds);
     } else {
       callback(err);
@@ -198,13 +198,13 @@ function readBatchSetIdsFromLogFile(log, batchesPerDownloadSession, callback) {
  * @param {any} callback - completion callback, (err, {total: number}).
  */
 function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, callback) {
-  var hasErrored = false;
-  var total = grandtotal;
+  let hasErrored = false;
+  let total = grandtotal;
 
   // queue to process the fetch requests in an orderly fashion using _bulk_get
-  var q = async.queue(function(payload, done) {
-    var output = [];
-    var thisBatch = payload.batch;
+  const q = async.queue(function(payload, done) {
+    const output = [];
+    const thisBatch = payload.batch;
     delete payload.batch;
     delete payload.command;
 
@@ -233,7 +233,7 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
         }
       });
       total += output.length;
-      var t = (new Date().getTime() - start) / 1000;
+      const t = (new Date().getTime() - start) / 1000;
       ee.emit('received', {
         batch: thisBatch,
         data: output,
@@ -253,7 +253,7 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
     });
   }, parallelism);
 
-  for (var i in batches) {
+  for (const i in batches) {
     q.push(batches[i]);
   }
 
@@ -270,9 +270,9 @@ function processBatchSet(db, parallelism, log, batches, ee, start, grandtotal, c
  */
 function getPropertyNames(obj, count) {
   // decide which batch numbers to deal with
-  var batchestofetch = [];
-  var j = 0;
-  for (var i in obj) {
+  const batchestofetch = [];
+  let j = 0;
+  for (const i in obj) {
     batchestofetch.push(parseInt(i));
     j++;
     if (j >= count) break;

@@ -20,15 +20,15 @@ const debug = require('debug')('couchbackup:writer');
 
 module.exports = function(db, bufferSize, parallelism, ee) {
   const writer = new stream.Transform({ objectMode: true });
-  var buffer = [];
-  var written = 0;
-  var linenumber = 0;
+  let buffer = [];
+  let written = 0;
+  let linenumber = 0;
 
   // this is the queue of chunks that are written to the database
   // the queue's payload will be an array of documents to be written,
   // the size of the array will be bufferSize. The variable parallelism
   // determines how many HTTP requests will occur at any one time.
-  var q = async.queue(function(payload, cb) {
+  const q = async.queue(function(payload, cb) {
     // if we are restoring known revisions, we need to supply new_edits=false
     if (payload.docs && payload.docs[0] && payload.docs[0]._rev) {
       payload.new_edits = false;
@@ -55,7 +55,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     }
   }, parallelism);
 
-  var didError = false;
+  let didError = false;
 
   // write the contents of the buffer to CouchDB in blocks of bufferSize
   function processBuffer(flush, callback) {
@@ -73,7 +73,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
       // and feed the chunks to the queue
       do {
         // split the buffer into bufferSize chunks
-        var toSend = buffer.splice(0, bufferSize);
+        const toSend = buffer.splice(0, bufferSize);
 
         // and add the chunk to the queue
         debug(`Adding ${toSend.length} to the write queue.`);
@@ -126,7 +126,7 @@ module.exports = function(db, bufferSize, parallelism, ee) {
     if (!didError && obj !== '') {
       // see if it parses as JSON
       try {
-        var arr = JSON.parse(obj);
+        const arr = JSON.parse(obj);
 
         // if it's an array with a length
         if (typeof arr === 'object' && arr.length > 0) {

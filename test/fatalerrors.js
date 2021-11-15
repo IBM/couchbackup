@@ -34,7 +34,7 @@ class InfiniteBackupStream extends Readable {
   }
 
   _read() {
-    var proceed;
+    let proceed;
     do {
       proceed = this.push(this.contents);
     } while (proceed);
@@ -80,8 +80,8 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('#unit Fatal errors', params), function() {
-    var processEnvCopy;
-    var proxy;
+    let processEnvCopy;
+    let proxy;
 
     before('Set process data for test', function() {
       // Copy env and argv so we can reset them after the tests

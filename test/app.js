@@ -49,7 +49,7 @@ const validateArgs = function(url, opts, callback) {
 };
 
 const stderrWriteFun = process.stderr.write;
-var capturedStderr;
+let capturedStderr;
 
 function captureStderr() {
   process.stderr.write = function(string, encoding, fd) {

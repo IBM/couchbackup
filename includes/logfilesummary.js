@@ -17,18 +17,18 @@ const fs = require('fs');
 const stream = require('stream');
 const liner = require('./liner.js');
 
-var onLine = function(onCommand, getDocs) {
-  var change = new stream.Transform({ objectMode: true });
+const onLine = function(onCommand, getDocs) {
+  const change = new stream.Transform({ objectMode: true });
 
   change._transform = function(line, encoding, done) {
     if (line && line[0] === ':') {
-      var obj = {
+      const obj = {
         command: null,
         batch: null,
         docs: []
       };
 
-      var matches;
+      let matches;
 
       // extract command
       matches = line.match(/^:([a-z_]+) ?/);
@@ -44,7 +44,7 @@ var onLine = function(onCommand, getDocs) {
 
       // extract doc ids
       if (getDocs && obj.command === 't') {
-        var json = line.replace(/^.* batch[0-9]+ /, '').trim();
+        const json = line.replace(/^.* batch[0-9]+ /, '').trim();
         obj.docs = JSON.parse(json);
       }
       onCommand(obj);
@@ -65,13 +65,13 @@ var onLine = function(onCommand, getDocs) {
  */
 module.exports = function(log, callback) {
   // our sense of state
-  var state = {
+  const state = {
 
   };
-  var changesComplete = false;
+  let changesComplete = false;
 
   // called with each line from the log file
-  var onCommand = function(obj) {
+  const onCommand = function(obj) {
     if (obj.command === 't') {
       state[obj.batch] = true;
     } else if (obj.command === 'd') {
@@ -86,7 +86,7 @@ module.exports = function(log, callback) {
     .pipe(liner())
     .pipe(onLine(onCommand, false))
     .on('finish', function() {
-      var obj = { changesComplete: changesComplete, batches: state };
+      const obj = { changesComplete: changesComplete, batches: state };
       callback(null, obj);
     });
 };

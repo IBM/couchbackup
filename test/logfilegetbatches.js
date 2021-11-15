@@ -15,8 +15,8 @@
 /* global describe it */
 'use strict';
 
-var assert = require('assert');
-var logfilegetbatches = require('../includes/logfilegetbatches.js');
+const assert = require('assert');
+const logfilegetbatches = require('../includes/logfilegetbatches.js');
 
 describe('#unit Fetching batches from a log file', function() {
   it('should fetch multiple batches correctly', function(done) {
