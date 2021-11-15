@@ -20,6 +20,7 @@ const codes = {
   DatabaseNotFound: 10,
   Unauthorized: 11,
   Forbidden: 12,
+  DatabaseNotEmpty: 13,
   NoLogFileName: 20,
   LogDoesNotExist: 21,
   IncompleteChangesInLogFile: 22,

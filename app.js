@@ -154,29 +154,58 @@ function addEventListener(indicator, emitter, event, f) {
 }
 
 /*
-  Check the referenced database exists and that the credentials used have
+  Check the backup database exists and that the credentials used have
   visibility. Callback with a fatal error if there is a problem with the DB.
   @param {string} db - database object
   @param {function(err)} callback - error is undefined if DB exists
 */
-function proceedIfDbValid(db, callback) {
+function proceedIfBackupDbValid(db, callback) {
   db.service.headDatabase({ db: db.db }).then(() => callback()).catch(err => {
-    err = error.convertResponseError(err, function(err) {
-      if (err && err.status === 404) {
-        // Override the error type and mesasge for the DB not found case
-        var msg = `Database ${db.url}` +
-        `${db.db} does not exist. ` +
-        'Check the URL and database name have been specified correctly.';
-        var noDBErr = new Error(msg);
-        noDBErr.name = 'DatabaseNotFound';
-        return noDBErr;
-      } else {
-        // Delegate to the default error factory if it wasn't a 404
-        return error.convertResponseError(err);
-      }
-    });
+    err = error.convertResponseError(err, err => parseIfDbValidResponseError(db, err));
     callback(err);
   });
+}
+
+/*
+  Check the restore database exists, new and empty and that the credentials used have
+  visibility. Callback with a fatal error if there is a problem with the DB.
+  @param {string} db - database object
+  @param {function(err)} callback - error is undefined if DB exists, new and empty
+*/
+function proceedIfRestoreDbValid(db, callback) {
+  db.service.getDatabaseInformation({ db: db.db }).then(response => {
+    const { doc_count: docCount, doc_del_count: deletedDocCount } = response.result;
+    if (docCount !== 0 || deletedDocCount !== 0) {
+      var notEmptyDBErr = new Error(`Database ${db.url} is not empty.`);
+      notEmptyDBErr.name = 'DatabaseNotEmpty';
+      callback(notEmptyDBErr);
+    } else {
+      callback();
+    }
+  }).catch(err => {
+    err = error.convertResponseError(err, err => parseIfDbValidResponseError(db, err));
+    callback(err);
+  });
+}
+
+/*
+  Convert the database validation response error to a special DatabaseNotFound error
+  in case the database is missing. Otherwise delegate to the default error factory.
+  @param {object} db - database object
+  @param {object} err - HTTP response error
+*/
+function parseIfDbValidResponseError(db, err) {
+  if (err && err.status === 404) {
+    // Override the error type and mesasge for the DB not found case
+    var msg = `Database ${db.url}` +
+    `${db.db} does not exist. ` +
+    'Check the URL and database name have been specified correctly.';
+    var noDBErr = new Error(msg);
+    noDBErr.name = 'DatabaseNotFound';
+    return noDBErr;
+  }
+  // Delegate to the default error factory if it wasn't a 404
+  return error.convertResponseError(err);
 }
 
 module.exports = {
@@ -222,7 +251,7 @@ module.exports = {
     const backupDB = request.client(srcUrl, opts);
 
     // Validate the DB exists, before proceeding to backup
-    proceedIfDbValid(backupDB, function(err) {
+    proceedIfBackupDbValid(backupDB, function(err) {
       if (err) {
         if (err.name === 'DatabaseNotFound') {
           err.message = `${err.message} Ensure the backup source database exists.`;
@@ -330,10 +359,12 @@ module.exports = {
     const restoreDB = request.client(targetUrl, opts);
 
     // Validate the DB exists, before proceeding to restore
-    proceedIfDbValid(restoreDB, function(err) {
+    proceedIfRestoreDbValid(restoreDB, function(err) {
       if (err) {
         if (err.name === 'DatabaseNotFound') {
           err.message = `${err.message} Create the target database before restoring.`;
+        } else if (err.name === 'DatabaseNotEmpty') {
+          err.message = `${err.message} A target database must be a new and empty database.`;
         }
         // Didn't exist, or another fatal error, exit
         callback(err);

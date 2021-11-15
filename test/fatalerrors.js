@@ -201,13 +201,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
     describe('for restore', function() {
       it('should terminate on Unauthorized db existence check', function(done) {
         // Simulate a 401
-        nock(url).head('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
+        nock(url).get('/fakenockdb').reply(401, { error: 'unauthorized', reason: '_reader access is required for this request' });
         restoreHttpError(params, 'Unauthorized', 11, done);
       });
 
       it('should terminate on Forbidden no _writer', function(done) {
         // Simulate the DB exists (i.e. you can read it)
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 0 });
         // Simulate a 403 trying to write
         n.post('/fakenockdb/_bulk_docs').reply(403, { error: 'forbidden', reason: '_writer access is required for this request' });
         restoreHttpError(params, 'Forbidden', 12, done);
@@ -215,13 +215,25 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on RestoreDatabaseNotFound', function(done) {
         // Simulate the DB does not exist
-        nock(url).head('/fakenockdb').reply(404, { error: 'not_found', reason: 'Database does not exist.' });
+        nock(url).get('/fakenockdb').reply(404, { error: 'not_found', reason: 'Database does not exist.' });
         restoreHttpError(params, 'DatabaseNotFound', 10, done);
+      });
+
+      it('should terminate on notEmptyDBErr when database is not empty', function(done) {
+        // Simulate the DB that does exist and not empty
+        nock(url).get('/fakenockdb').reply(200,  { doc_count: 10, doc_del_count: 0 });
+        restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
+      });
+
+      it('should terminate on notEmptyDBErr when database is not new', function(done) {
+        // Simulate the DB that does exist and not new
+        nock(url).get('/fakenockdb').reply(200,  { doc_count: 0, doc_del_count: 10 });
+        restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
       });
 
       it('should terminate on _bulk_docs HTTPFatalError', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 0 });
         // Use a parallelism of one and mock one response
         const p = u.p(params, { opts: { parallelism: 1 } });
         // Simulate a 400 trying to write
@@ -231,7 +243,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on _bulk_docs HTTPFatalError large stream', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 0 });
         // Simulate a 400 trying to write
         // Provide a body function to handle the stream, but allow any body
         n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, { error: 'bad_request', reason: 'testing bad response' });
@@ -248,7 +260,7 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on multiple _bulk_docs HTTPFatalError', function(done) {
         // Simulate the DB exists
-        const n = nock(url).head('/fakenockdb').reply(200);
+        const n = nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 0 });
         // Simulate a 400 trying to write docs, 5 times because of default parallelism
         // Provide a body function to handle the stream, but allow any body
         // Four of the mocks are optional because of parallelism 5 we can't guarantee that the exit will happen
