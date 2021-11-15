@@ -341,7 +341,11 @@ function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callba
       callback(err);
     } else {
       testRestoreFromFile(params, backupFile, targetDb, function(err) {
-        dbCompare(srcDb, targetDb, callback);
+        if (!err) {
+          dbCompare(srcDb, targetDb, callback);
+        } else {
+          callback(err);
+        }
       });
     }
   });
