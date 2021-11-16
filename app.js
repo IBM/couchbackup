@@ -176,7 +176,7 @@ function proceedIfRestoreDbValid(db, callback) {
   db.service.getDatabaseInformation({ db: db.db }).then(response => {
     const { doc_count: docCount, doc_del_count: deletedDocCount } = response.result;
     if (!db.db.startsWith("_") && (docCount !== 0 || deletedDocCount !== 0)) {
-      var notEmptyDBErr = new Error(`Database ${db.url} is not empty.`);
+      var notEmptyDBErr = new Error(`Target database ${db.url} is not empty.`);
       notEmptyDBErr.name = 'DatabaseNotEmpty';
       callback(notEmptyDBErr);
     } else {
