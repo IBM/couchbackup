@@ -16,10 +16,37 @@
 'use strict';
 
 const assert = require('assert');
-const rewire = require('rewire');
-const app = rewire('../app.js');
+const backup = require('../app.js').backup;
+const fs = require('fs');
+const nock = require('nock');
 
-const validateArgs = app.__get__('validateArgs');
+const goodUrl = 'http://localhost:5984/db';
+// The real validateArgs function of app.js isn't
+// exported - so we call the exported backup method
+// instead. We don't get as far as a real backup when
+// testing error cases. For success cases we nock the
+// goodUrl and
+const validateArgs = function(url, opts, callback) {
+  const nullStream = fs.createWriteStream('/dev/null');
+  let cb = callback;
+  if (url === goodUrl) {
+    // Nock the goodUrl
+    nock(goodUrl).head('').reply(404, { error: 'not_found', reason: 'missing' });
+    // replace the callback to handle the nock response
+    // to avoid attempting a real backup
+    cb = function(err) {
+      nullStream.end();
+      if (err.name === 'DatabaseNotFound') {
+        // This is what we expect if we reached the backup
+        // This is success for valid args cases.
+        err = null;
+      }
+      callback(err);
+    };
+  }
+  backup(url, nullStream, opts, cb);
+  return true;
+};
 
 const stderrWriteFun = process.stderr.write;
 var capturedStderr;
@@ -60,20 +87,11 @@ function assertNoError(done) {
 }
 
 describe('#unit Validate arguments', function() {
-  const goodUrl = 'http://localhost:5984/db';
-
-  // Note that the validateArgs function returns undefined when it fails and
-  // true when it passes. The callback is only called in failure cases because
-  // in real usage it is the main callback so calling back when validateArgs
-  // completed would terminate the program early. So for testing we assert the
-  // callback for error cases and assert no callback and a return of true for
-  // success cases.
   it('returns error for invalid URL type', function(done) {
     validateArgs(true, {}, assertErrorMessage('Invalid URL, must be type string', done));
   });
   it('returns no error for valid URL type', function(done) {
-    assert(validateArgs(goodUrl, {}, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, {}, assertNoError(done));
   });
   it('returns error for invalid (no host) URL', function(done) {
     validateArgs('http://', {}, assertErrorMessage('Invalid URL', done));
@@ -100,15 +118,13 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, { bufferSize: 1.23 }, assertErrorMessage('Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
   it('returns no error for valid buffer size type', function(done) {
-    assert(validateArgs(goodUrl, { bufferSize: 123 }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { bufferSize: 123 }, assertNoError(done));
   });
   it('returns error for invalid log type', function(done) {
     validateArgs(goodUrl, { log: true }, assertErrorMessage('Invalid log option, must be type string', done));
   });
   it('returns no error for valid log type', function(done) {
-    assert(validateArgs(goodUrl, { log: 'log.txt' }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { log: 'log.txt' }, assertNoError(done));
   });
   it('returns error for invalid mode type', function(done) {
     validateArgs(goodUrl, { mode: true }, assertErrorMessage('Invalid mode option, must be either "full" or "shallow"', done));
@@ -117,15 +133,13 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, { mode: 'foobar' }, assertErrorMessage('Invalid mode option, must be either "full" or "shallow"', done));
   });
   it('returns no error for valid mode type', function(done) {
-    assert(validateArgs(goodUrl, { mode: 'full' }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { mode: 'full' }, assertNoError(done));
   });
   it('returns error for invalid output type', function(done) {
     validateArgs(goodUrl, { output: true }, assertErrorMessage('Invalid output option, must be type string', done));
   });
   it('returns no error for valid output type', function(done) {
-    assert(validateArgs(goodUrl, { output: 'output.txt' }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { output: 'output.txt' }, assertNoError(done));
   });
   it('returns error for invalid parallelism type', function(done) {
     validateArgs(goodUrl, { parallelism: '123' }, assertErrorMessage('Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
@@ -137,8 +151,7 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, { parallelism: 1.23 }, assertErrorMessage('Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
   it('returns no error for valid parallelism type', function(done) {
-    assert(validateArgs(goodUrl, { parallelism: 123 }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { parallelism: 123 }, assertNoError(done));
   });
   it('returns error for invalid request timeout type', function(done) {
     validateArgs(goodUrl, { requestTimeout: '123' }, assertErrorMessage('Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
@@ -150,15 +163,13 @@ describe('#unit Validate arguments', function() {
     validateArgs(goodUrl, { requestTimeout: 1.23 }, assertErrorMessage('Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]', done));
   });
   it('returns no error for valid request timeout type', function(done) {
-    assert(validateArgs(goodUrl, { requestTimeout: 123 }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { requestTimeout: 123 }, assertNoError(done));
   });
   it('returns error for invalid resume type', function(done) {
     validateArgs(goodUrl, { resume: 'true' }, assertErrorMessage('Invalid resume option, must be type boolean', done));
   });
   it('returns no error for valid resume type', function(done) {
-    assert(validateArgs(goodUrl, { resume: false }, assertNoError(done)), 'validateArgs should return true');
-    done();
+    validateArgs(goodUrl, { resume: false }, assertNoError(done));
   });
   it('returns error for invalid key type', function(done) {
     validateArgs(goodUrl, { iamApiKey: true }, assertErrorMessage('Invalid iamApiKey option, must be type string', done));
@@ -169,9 +180,11 @@ describe('#unit Validate arguments', function() {
   it('warns for log arg in shallow mode', function(done) {
     captureStderr();
     try {
-      assert(validateArgs(goodUrl, { mode: 'shallow', log: 'test' }, function(err, data) {
+      validateArgs(goodUrl, { mode: 'shallow', log: 'test' }, function(err, data) {
+        assert.ok(err);
+        assert.ok(!data);
         assert(capturedStderr.indexOf('The options "log" and "resume" are invalid when using shallow mode.') > -1, 'Log warning message was not present');
-      }), 'validateArgs should return true');
+      });
       done();
     } catch (e) {
       done(e);
@@ -182,9 +195,11 @@ describe('#unit Validate arguments', function() {
   it('warns for resume arg in shallow mode', function(done) {
     captureStderr();
     try {
-      assert(validateArgs(goodUrl, { mode: 'shallow', log: 'test', resume: true }, function(err, data) {
+      validateArgs(goodUrl, { mode: 'shallow', log: 'test', resume: true }, function(err, data) {
+        assert.ok(err);
+        assert.ok(!data);
         assert(capturedStderr.indexOf('The options "log" and "resume" are invalid when using shallow mode.') > -1, 'Log warning message was not present');
-      }), 'validateArgs should return true');
+      });
       done();
     } catch (e) {
       done(e);
@@ -195,9 +210,11 @@ describe('#unit Validate arguments', function() {
   it('warns for parallism arg in shallow mode', function(done) {
     captureStderr();
     try {
-      assert(validateArgs(goodUrl, { mode: 'shallow', parallelsim: 10 }, function(err, data) {
+      validateArgs(goodUrl, { mode: 'shallow', parallelsim: 10 }, function(err, data) {
+        assert.ok(err);
+        assert.ok(!data);
         assert(capturedStderr.indexOf('The option "parallelism" has no effect when using shallow mode.') > -1, 'Log warning message was not present');
-      }), 'validateArgs should return true');
+      });
       done();
     } catch (e) {
       done(e);
