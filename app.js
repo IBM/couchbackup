@@ -167,7 +167,7 @@ function proceedIfBackupDbValid(db, callback) {
 }
 
 /*
-  Check the restore database exists, new and empty and that the credentials used have
+  Check that the restore database exists, is new and is empty. Also verify that the credentials used have
   visibility. Callback with a fatal error if there is a problem with the DB.
   @param {string} db - database object
   @param {function(err)} callback - error is undefined if DB exists, new and empty
