@@ -50,33 +50,44 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
     // Unstash the built content
     unstash name: 'built'
 
-    // Run tests using creds
-    withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
-                      usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
-                      string(credentialsId: 'testServerIamApiKey', variable: 'IAM_API_KEY')]) {
-      withEnv(getEnvForSuite("${testSuite}")) {
-        try {
-          // For the IAM tests we want to run the normal 'test' suite, but we
-          // want to keep the report named 'test-iam'
-          def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
+    withEnv(["NVM_DIR=${env.HOME}/.nvm"]) {
+      if (testSuite == 'lint') {
+        sh """
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm install ${version}
+          nvm use ${version}
+          npm run lint
+        """
+      } else {
+        // Run tests using creds
+        withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+                          usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
+                          string(credentialsId: 'testServerIamApiKey', variable: 'IAM_API_KEY')]) {
+          withEnv(getEnvForSuite("${testSuite}")) {
+            try {
+              // For the IAM tests we want to run the normal 'test' suite, but we
+              // want to keep the report named 'test-iam'
+              def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
 
-          // Actions:
-          //  1. Load NVM
-          //  2. Install/use required Node.js version
-          //  3. Install mocha-jenkins-reporter so that we can get junit style output
-          //  4. Fetch database compare tool for CI tests
-          //  5. Run tests using filter
-          sh """
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            nvm install ${version}
-            nvm use ${version}
-            npm install mocha-jenkins-reporter --save-dev
-            curl -O -u ${env.ARTIFACTORY_USER}:${env.ARTIFACTORY_PW} https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
-            unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
-            ./node_modules/mocha/bin/mocha --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
-          """
-        } finally {
-          junit '**/*test-results.xml'
+              // Actions:
+              //  1. Load NVM
+              //  2. Install/use required Node.js version
+              //  3. Install mocha-jenkins-reporter so that we can get junit style output
+              //  4. Fetch database compare tool for CI tests
+              //  5. Run tests using filter
+              sh """
+                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                nvm install ${version}
+                nvm use ${version}
+                npm install mocha-jenkins-reporter --save-dev
+                curl -O -u ${env.ARTIFACTORY_USER}:${env.ARTIFACTORY_PW} https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
+                unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
+                ./node_modules/mocha/bin/mocha --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
+              """
+            } finally {
+              junit '**/*test-results.xml'
+            }
+          }
         }
       }
     }
@@ -87,8 +98,8 @@ stage('Build') {
   // Checkout, build
   node {
     checkout scm
-    sh 'npm install'
-    stash name: 'built'
+    sh 'npm ci'
+    stash name: 'built', useDefaultExcludes: false
   }
 }
 
@@ -104,12 +115,13 @@ stage('QA') {
   }
 
   def axes = [
-    Node12x:{ setupNodeAndTest('lts/erbium', filter) }, // 12.x Maintenance LTS
-    Node14x:{ setupNodeAndTest('lts/fermium', filter) }, // 14.x Active LTS
-    Node:{ setupNodeAndTest('node', filter) }, // Current
+    Node12x:{ setupNodeAndTest('12', filter) }, // 12.x Maintenance LTS
+    Node14x:{ setupNodeAndTest('14', filter) }, // 14.x Active LTS
+    Node:{ setupNodeAndTest('16', filter) }, // Current
     // Test IAM on the current Node.js version. Filter out unit tests and the
     // slowest integration tests.
-    Iam: { setupNodeAndTest('node', '-i -g \'#unit|#slowe\'', 'test-iam') }
+    Iam: { setupNodeAndTest('16', '-i -g \'#unit|#slowe\'', 'test-iam') },
+    Lint: { setupNodeAndTest('12', '', 'lint') }
   ]
   // Add unreliable network tests if specified
   if (env.RUN_TOXY_TESTS && env.RUN_TOXY_TESTS.toBoolean()) {

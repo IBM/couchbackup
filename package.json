@@ -51,11 +51,8 @@
     "uuid": "^8.3.2"
   },
   "scripts": {
-    "test": "eslint --ignore-path .gitignore . && mocha --grep \"#unit\""
-  },
-  "greenkeeper": {
-    "ignore": [
-      "eslint"
-    ]
+    "lint": "eslint --ignore-path .gitignore .",
+    "unit": "mocha --grep \"#unit\"",
+    "test": "npm run lint && npm run unit"
   }
 }
