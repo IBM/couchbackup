@@ -241,6 +241,23 @@ function restoreHttpError(opts, errorName, errorCode, done) {
         restoreHttpError(p, 'HTTPFatalError', 40, done);
       });
 
+      it('should terminate on _bulk_docs HTTPFatalError from system database', function(done) {
+        // Simulate that target database exists and is _not_ empty.
+        // This should pass validator as we exclude system databases from the check.
+        const n = nock(url).get('/_replicator').reply(200, { doc_count: 1, doc_del_count: 0 });
+        // Simulate a 400 trying to write
+        n.post('/_replicator/_bulk_docs').reply(400, { error: 'bad_request', reason: 'testing bad response' });
+        // Use a parallelism of one and mock one response
+        const q = u.p(params, { opts: { parallelism: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
+        u.testRestore(q, new InfiniteBackupStream(), '_replicator', function(err) {
+          if (err) {
+            done(err);
+          } else {
+            assertNock(done);
+          }
+        });
+      });
+
       it('should terminate on _bulk_docs HTTPFatalError large stream', function(done) {
         // Simulate the DB exists
         const n = nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 0 });
