@@ -199,7 +199,7 @@ function proceedIfRestoreDbValid(db, callback) {
 */
 function parseIfDbValidResponseError(db, err) {
   if (err && err.status === 404) {
-    // Override the error type and mesasge for the DB not found case
+    // Override the error type and message for the DB not found case
     var msg = `Database ${db.url}` +
     `${db.db} does not exist. ` +
     'Check the URL and database name have been specified correctly.';
