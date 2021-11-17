@@ -425,6 +425,8 @@ details them.
 
 ### `couchrestore`
 
+* `13`: restore target database is not new and empty.
+
 ## Note on attachments
 
 TLDR; If you backup a database that contains attachments you will not be able to restore it.
