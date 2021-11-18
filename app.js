@@ -178,7 +178,7 @@ function proceedIfRestoreDbValid(db, callback) {
     // The system databases can have a validation ddoc(s) injected in them on creation.
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
-    if (!db.db.startsWith("_") && (docCount !== 0 || deletedDocCount !== 0)) {
+    if (!db.db.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
       const notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty.`);
       notEmptyDBErr.name = 'DatabaseNotEmpty';
       callback(notEmptyDBErr);

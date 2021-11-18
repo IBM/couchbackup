@@ -221,13 +221,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on notEmptyDBErr when database is not empty', function(done) {
         // Simulate the DB that does exist and not empty
-        nock(url).get('/fakenockdb').reply(200,  { doc_count: 10, doc_del_count: 0 });
+        nock(url).get('/fakenockdb').reply(200, { doc_count: 10, doc_del_count: 0 });
         restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
       });
 
       it('should terminate on notEmptyDBErr when database is not new', function(done) {
         // Simulate the DB that does exist and not new
-        nock(url).get('/fakenockdb').reply(200,  { doc_count: 0, doc_del_count: 10 });
+        nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 10 });
         restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
       });
 
