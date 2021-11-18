@@ -20,16 +20,16 @@ const events = require('events');
 module.exports = function(db, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
-  var batch = 0;
-  var hasErrored = false;
-  var startKey = null;
-  var total = 0;
+  let batch = 0;
+  let hasErrored = false;
+  let startKey = null;
+  let total = 0;
 
   async.doUntil(
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      var opts = { db: db.db, limit: options.bufferSize, includeDocs: true };
+      const opts = { db: db.db, limit: options.bufferSize, includeDocs: true };
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startkey for the next page we instead use the
@@ -49,7 +49,7 @@ module.exports = function(db, options) {
             startKey = body.rows[opts.limit - 1].id;
           }
 
-          var docs = [];
+          const docs = [];
           body.rows.forEach(function(doc) {
             docs.push(doc.doc);
           });

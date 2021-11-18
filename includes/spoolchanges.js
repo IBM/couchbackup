@@ -30,16 +30,16 @@ const debug = require('debug')('couchbackup:spoolchanges');
  */
 module.exports = function(db, log, bufferSize, ee, callback) {
   // list of document ids to process
-  var buffer = [];
-  var batch = 0;
-  var lastSeq = null;
-  var logStream = fs.createWriteStream(log);
+  const buffer = [];
+  let batch = 0;
+  let lastSeq = null;
+  const logStream = fs.createWriteStream(log);
 
   // send documents ids to the queue in batches of bufferSize + the last batch
-  var processBuffer = function(lastOne) {
+  const processBuffer = function(lastOne) {
     if (buffer.length >= bufferSize || (lastOne && buffer.length > 0)) {
       debug('writing', buffer.length, 'changes to the backup file');
-      var b = { docs: buffer.splice(0, bufferSize), batch: batch };
+      const b = { docs: buffer.splice(0, bufferSize), batch: batch };
       logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
       ee.emit('changes', batch);
       batch++;
@@ -47,12 +47,12 @@ module.exports = function(db, log, bufferSize, ee, callback) {
   };
 
   // called once per received change
-  var onChange = function(c) {
+  const onChange = function(c) {
     if (c) {
       if (c.error) {
         ee.emit('error', new error.BackupError('InvalidChange', `Received invalid change: ${c}`));
       } else if (c.changes) {
-        var obj = { id: c.id };
+        const obj = { id: c.id };
         buffer.push(obj);
         processBuffer(false);
       } else if (c.last_seq) {

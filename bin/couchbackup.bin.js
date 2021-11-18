@@ -25,10 +25,10 @@ const backupBatchDebug = debug('couchbackup:backup:batch');
 
 backupDebug.enabled = true;
 
-var program = parser.parseBackupArgs();
+const program = parser.parseBackupArgs();
 
-var databaseUrl = cliutils.databaseUrl(program.url, program.db);
-var opts = {
+const databaseUrl = cliutils.databaseUrl(program.url, program.db);
+const opts = {
   bufferSize: program.bufferSize,
   log: program.log,
   mode: program.mode,
@@ -47,11 +47,11 @@ console.error('='.repeat(80));
 
 backupBatchDebug.enabled = !program.quiet;
 
-var ws = process.stdout;
+let ws = process.stdout;
 
 // open output file
 if (program.output) {
-  var flags = 'w';
+  let flags = 'w';
   if (program.log && program.resume) {
     flags = 'a';
   }

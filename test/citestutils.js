@@ -30,7 +30,7 @@ function scenario(test, params) {
 
 function params() {
   const p = {};
-  for (var i = 0; i < arguments.length; i++) {
+  for (let i = 0; i < arguments.length; i++) {
     Object.assign(p, arguments[i]);
   }
   return p;
@@ -38,10 +38,10 @@ function params() {
 
 // Returns the event emitter for API calls, or the child process for CLI calls
 function testBackup(params, databaseName, outputStream, callback) {
-  var gzip;
-  var openssl;
-  var backup;
-  var backupStream = outputStream;
+  let gzip;
+  let openssl;
+  let backup;
+  let backupStream = outputStream;
 
   // Configure API key if needed
   augmentParamsWithApiKey(params);
@@ -84,7 +84,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   }
 
-  var tail;
+  let tail;
   if (params.abort) {
     // Create the log file for abort tests so we can tail it, other tests assert
     // the log file is usually created normally by the backup process.
@@ -132,7 +132,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   } else {
     // Default to pipe, but will use 'inherit' if using --output (see params.opts.output)
-    var destination = 'pipe';
+    let destination = 'pipe';
 
     // Set up default args
     const args = ['./bin/couchbackup.bin.js', '--db', databaseName];
@@ -233,7 +233,7 @@ function backupAbort(usingApi, backup) {
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
-  var restoreStream = inputStream;
+  let restoreStream = inputStream;
 
   // Configure API key if needed
   augmentParamsWithApiKey(params);
@@ -341,7 +341,11 @@ function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callba
       callback(err);
     } else {
       testRestoreFromFile(params, backupFile, targetDb, function(err) {
-        dbCompare(srcDb, targetDb, callback);
+        if (!err) {
+          dbCompare(srcDb, targetDb, callback);
+        } else {
+          callback(err);
+        }
       });
     }
   });

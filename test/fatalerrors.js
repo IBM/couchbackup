@@ -34,7 +34,7 @@ class InfiniteBackupStream extends Readable {
   }
 
   _read() {
-    var proceed;
+    let proceed;
     do {
       proceed = this.push(this.contents);
     } while (proceed);
@@ -80,8 +80,8 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('#unit Fatal errors', params), function() {
-    var processEnvCopy;
-    var proxy;
+    let processEnvCopy;
+    let proxy;
 
     before('Set process data for test', function() {
       // Copy env and argv so we can reset them after the tests
@@ -221,13 +221,13 @@ function restoreHttpError(opts, errorName, errorCode, done) {
 
       it('should terminate on notEmptyDBErr when database is not empty', function(done) {
         // Simulate the DB that does exist and not empty
-        nock(url).get('/fakenockdb').reply(200,  { doc_count: 10, doc_del_count: 0 });
+        nock(url).get('/fakenockdb').reply(200, { doc_count: 10, doc_del_count: 0 });
         restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
       });
 
       it('should terminate on notEmptyDBErr when database is not new', function(done) {
         // Simulate the DB that does exist and not new
-        nock(url).get('/fakenockdb').reply(200,  { doc_count: 0, doc_del_count: 10 });
+        nock(url).get('/fakenockdb').reply(200, { doc_count: 0, doc_del_count: 10 });
         restoreHttpError(params, 'DatabaseNotEmpty', 13, done);
       });
 

@@ -30,7 +30,7 @@ describe('Write error tests', function() {
     const params = { useApi: true };
     // try to do backup and check err was set in callback
     u.testBackup(params, 'animaldb', backupStream, function(resultErr) {
-      var err = null;
+      let err = null;
       try {
         // cleanup temp dir
         fs.rmdirSync(dirname);

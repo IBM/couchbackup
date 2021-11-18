@@ -25,7 +25,7 @@ const trules = toxy.rules;
 
 function setupProxy(poison) {
   const backendUrl = new url.URL(process.env.COUCH_BACKEND_URL);
-  var proxy = toxy({
+  const proxy = toxy({
     auth: `${backendUrl.username}:${backendUrl.password}`,
     changeOrigin: true
   });
@@ -90,7 +90,7 @@ const poisons = [
 
 poisons.forEach(function(poison) {
   describe('unreliable network tests (using toxy poison ' + poison + ')', function() {
-    var proxy;
+    let proxy;
 
     before('start toxy server', function() {
       proxy = setupProxy(poison);

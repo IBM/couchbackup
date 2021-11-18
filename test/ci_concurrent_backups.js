@@ -27,9 +27,9 @@ describe(u.scenario('Concurrent database backups', params), function() {
     // Allow up to 900 s to backup and compare (it should be much faster)!
     u.setTimeout(this, 900);
 
-    var doneCount = 0;
-    var doneErr;
-    var finished = function(err) {
+    let doneCount = 0;
+    let doneErr;
+    const finished = function(err) {
       doneCount++;
       if (doneCount === 2) {
         done(doneErr || err);
@@ -37,10 +37,10 @@ describe(u.scenario('Concurrent database backups', params), function() {
       doneErr = err;
     };
 
-    var checkForEmptyBatches = function(fileName, cb) {
-      var foundEmptyBatch = false;
+    const checkForEmptyBatches = function(fileName, cb) {
+      let foundEmptyBatch = false;
 
-      var rd = readline.createInterface({
+      const rd = readline.createInterface({
         input: fs.createReadStream(fileName),
         output: fs.createWriteStream('/dev/null'),
         terminal: false

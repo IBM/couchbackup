@@ -15,10 +15,10 @@
 /* global describe it beforeEach */
 'use strict';
 
-var assert = require('assert');
-var nock = require('nock');
-var request = require('../includes/request.js');
-var error = require('../includes/error.js');
+const assert = require('assert');
+const nock = require('nock');
+const request = require('../includes/request.js');
+const error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
 const db = request.client(url, { parallelism: 1 });
@@ -31,7 +31,7 @@ beforeEach('Clean nock', function() {
 
 describe('#unit Check request headers', function() {
   it('should have a couchbackup user-agent', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .matchHeader('user-agent', /couchbackup-cloudant\/\d+\.\d+\.\d+(?:-SNAPSHOT)? \(Node.js v\d+\.\d+\.\d+\)/)
       .head('/good')
       .reply(200);
@@ -47,7 +47,7 @@ describe('#unit Check request headers', function() {
 
 describe('#unit Check request response error callback', function() {
   it('should not callback with error for 200 response', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .get('/good')
       .reply(200, { ok: true });
 
@@ -62,7 +62,7 @@ describe('#unit Check request response error callback', function() {
   });
 
   it('should callback with error after 3 500 responses', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .get('/bad')
       .times(3)
       .reply(500, function(uri, requestBody) {
@@ -85,7 +85,7 @@ describe('#unit Check request response error callback', function() {
   }).timeout(longTestTimeout);
 
   it('should callback with error after 3 POST 503 responses', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
       .times(3)
@@ -109,7 +109,7 @@ describe('#unit Check request response error callback', function() {
   }).timeout(longTestTimeout);
 
   it('should callback with error after 3 429 responses', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .get('/bad')
       .times(3)
       .reply(429, function(uri, requestBody) {
@@ -132,7 +132,7 @@ describe('#unit Check request response error callback', function() {
   }).timeout(longTestTimeout);
 
   it('should callback with fatal error for 404 response', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .get('/bad')
       .reply(404, function(uri, requestBody) {
         this.req.response.statusMessage = 'Not Found';
@@ -154,7 +154,7 @@ describe('#unit Check request response error callback', function() {
   });
 
   it('should callback with same error for no status code error response', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .get('/bad')
       .times(3)
       .replyWithError('testing badness');
@@ -173,7 +173,7 @@ describe('#unit Check request response error callback', function() {
   }).timeout(longTestTimeout);
 
   it('should retry request if HTTP request gets timed out', function(done) {
-    var couch = nock(url)
+    const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
       .delay(1000)
@@ -198,7 +198,7 @@ describe('#unit Check request response error callback', function() {
   it('should callback with error code ESOCKETTIMEDOUT if 3 HTTP requests gets timed out', function(done) {
     // Increase the timeout for this test to allow for the delays
     this.timeout(3000);
-    var couch = nock(url)
+    const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
       .delay(1000)

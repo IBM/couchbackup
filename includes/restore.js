@@ -14,8 +14,8 @@
 'use strict';
 
 module.exports = function(db, options, readstream, ee, callback) {
-  var liner = require('../includes/liner.js')();
-  var writer = require('../includes/writer.js')(db, options.bufferSize, options.parallelism, ee);
+  const liner = require('../includes/liner.js')();
+  const writer = require('../includes/writer.js')(db, options.bufferSize, options.parallelism, ee);
 
   // pipe the input to the output, via transformation functions
   readstream

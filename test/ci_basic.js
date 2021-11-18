@@ -94,7 +94,11 @@ const u = require('./citestutils.js');
           } else {
             // restore
             u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
-              u.dbCompare('animaldb', dbName, done);
+              if (!err) {
+                u.dbCompare('animaldb', dbName, done);
+              } else {
+                done(err);
+              }
             });
           }
         });
@@ -113,7 +117,11 @@ const u = require('./citestutils.js');
           } else {
             // restore
             u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
-              u.dbCompare('animaldb', dbName, done);
+              if (!err) {
+                u.dbCompare('animaldb', dbName, done);
+              } else {
+                done(err);
+              }
             });
           }
         });

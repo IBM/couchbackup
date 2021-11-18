@@ -15,12 +15,12 @@
 /* global describe afterEach before after it */
 'use strict';
 
-var assert = require('assert');
-var parser = require('../includes/parser.js');
+const assert = require('assert');
+const parser = require('../includes/parser.js');
 
 describe('#unit Default parameters', function() {
-  var processEnvCopy;
-  var processArgvCopy;
+  let processEnvCopy;
+  let processArgvCopy;
 
   before('Set process data for test', function() {
     // Copy env and argv so we can reset them after the tests
@@ -53,7 +53,7 @@ describe('#unit Default parameters', function() {
   describe('Backup command-line', function() {
     it('respects the COUCH_URL env variable if the --url backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.url, 'string');
       assert.strictEqual(program.url, process.env.COUCH_URL);
       done();
@@ -61,7 +61,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_DATABASE env variable if the --db backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.db, 'string');
       assert.strictEqual(program.db, process.env.COUCH_DATABASE);
       done();
@@ -69,7 +69,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_BUFFER_SIZE env variable if the --buffer-size backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
       assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
@@ -77,7 +77,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_PARALLELISM env variable if the --parallelism backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
@@ -85,7 +85,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_REQUEST_TIMEOUT env variable if the --request-timeout backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.requestTimeout, 'number');
       assert.strictEqual(program.requestTimeout, parseInt(process.env.COUCH_REQUEST_TIMEOUT, 10));
       done();
@@ -93,7 +93,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
       done();
@@ -101,7 +101,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_LOG env variable if the --log backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.log, 'string');
       assert.strictEqual(program.log, process.env.COUCH_LOG);
       done();
@@ -109,7 +109,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_RESUME env variable if the --resume backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.resume, 'boolean');
       assert.strictEqual(program.resume, true);
       done();
@@ -117,7 +117,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_OUTPUT env variable if the --output backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.output, 'string');
       assert.strictEqual(program.output, process.env.COUCH_OUTPUT);
       done();
@@ -125,7 +125,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_MODE env variable if the --mode backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.mode, 'string');
       assert.strictEqual(program.mode, process.env.COUCH_MODE);
       done();
@@ -133,52 +133,52 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_QUIET env variable if the --quiet backup command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
       done();
     });
 
     it('respects the backup --url command-line parameter', function(done) {
-      var url = 'http://user:pass@myurl2.com';
+      const url = 'http://user:pass@myurl2.com';
       process.argv = ['node', 'test', '--url', url];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.url, 'string');
       assert.strictEqual(program.url, url);
       done();
     });
 
     it('respects the backup --db command-line parameter', function(done) {
-      var db = 'mydb2';
+      const db = 'mydb2';
       process.argv = ['node', 'test', '--db', db];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.db, 'string');
       assert.strictEqual(program.db, db);
       done();
     });
 
     it('respects the backup --buffer-size command-line parameter', function(done) {
-      var bufferSize = 500;
+      const bufferSize = 500;
       process.argv = ['node', 'test', '--buffer-size', bufferSize];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
       assert.strictEqual(program.bufferSize, bufferSize);
       done();
     });
 
     it('respects the backup --parallelism command-line parameter', function(done) {
-      var parallelism = 10;
+      const parallelism = 10;
       process.argv = ['node', 'test', '--parallelism', parallelism];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parallelism);
       done();
     });
 
     it('respects the backup --request-timeout command-line parameter', function(done) {
-      var requestTimeout = 10000;
+      const requestTimeout = 10000;
       process.argv = ['node', 'test', '--request-timeout', requestTimeout];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.requestTimeout, 'number');
       assert.strictEqual(program.requestTimeout, requestTimeout);
       done();
@@ -187,16 +187,16 @@ describe('#unit Default parameters', function() {
     it('respects the backup --iam-api-key command-line parameter', function(done) {
       const key = '123abc-789zyx_CBA987-XYZ321';
       process.argv = ['node', 'test', '--iam-api-key', key];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, key);
       done();
     });
 
     it('respects the backup --log command-line parameter', function(done) {
-      var filename = 'my2.log';
+      const filename = 'my2.log';
       process.argv = ['node', 'test', '--log', filename];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.log, 'string');
       assert.strictEqual(program.log, filename);
       done();
@@ -204,16 +204,16 @@ describe('#unit Default parameters', function() {
 
     it('respects the backup --resume command-line parameter', function(done) {
       process.argv = ['node', 'test', '--resume'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.resume, 'boolean');
       assert.strictEqual(program.resume, true);
       done();
     });
 
     it('respects the backup --output command-line parameter', function(done) {
-      var filename = 'myfile2.txt';
+      const filename = 'myfile2.txt';
       process.argv = ['node', 'test', '--output', filename];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.output, 'string');
       assert.strictEqual(program.output, filename);
       done();
@@ -221,7 +221,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the backup --mode full command-line parameter', function(done) {
       process.argv = ['node', 'test', '--mode', 'full'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.mode, 'string');
       assert.strictEqual(program.mode, 'full');
       done();
@@ -229,7 +229,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the backup --mode shallow command-line parameter', function(done) {
       process.argv = ['node', 'test', '--mode', 'shallow'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.mode, 'string');
       assert.strictEqual(program.mode, 'shallow');
       done();
@@ -237,7 +237,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the backup --quiet command-line parameter', function(done) {
       process.argv = ['node', 'test', '--quiet'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
       done();
@@ -247,7 +247,7 @@ describe('#unit Default parameters', function() {
   describe('Restore command-line', function() {
     it('respects the COUCH_URL env variable if the --url restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.url, 'string');
       assert.strictEqual(program.url, process.env.COUCH_URL);
       done();
@@ -255,7 +255,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_DATABASE env variable if the --db restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.db, 'string');
       assert.strictEqual(program.db, process.env.COUCH_DATABASE);
       done();
@@ -263,7 +263,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_BUFFER_SIZE env variable if the --buffer-size restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
       assert.strictEqual(program.bufferSize, parseInt(process.env.COUCH_BUFFER_SIZE, 10));
       done();
@@ -271,7 +271,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_PARALLELISM env variable if the --parallelism restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parseInt(process.env.COUCH_PARALLELISM, 10));
       done();
@@ -279,7 +279,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_REQUEST_TIMEOUT env variable if the --request-timeout restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.requestTimeout, 'number');
       assert.strictEqual(program.requestTimeout, parseInt(process.env.COUCH_REQUEST_TIMEOUT, 10));
       done();
@@ -287,7 +287,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the CLOUDANT_IAM_API_KEY env variable if the --iam-api-key restore command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
       done();
@@ -295,52 +295,52 @@ describe('#unit Default parameters', function() {
 
     it('respects the COUCH_QUIET env variable if the --quiet restorer command-line parameter is missing', function(done) {
       process.argv = ['node', 'test'];
-      var program = parser.parseBackupArgs();
+      const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
       done();
     });
 
     it('respects the restore --url command-line parameter', function(done) {
-      var url = 'https://a:b@myurl3.com';
+      const url = 'https://a:b@myurl3.com';
       process.argv = ['node', 'test', '--url', url];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.url, 'string');
       assert.strictEqual(program.url, url);
       done();
     });
 
     it('respects the restore --db command-line parameter', function(done) {
-      var db = 'mydb3';
+      const db = 'mydb3';
       process.argv = ['node', 'test', '--db', db];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.db, 'string');
       assert.strictEqual(program.db, db);
       done();
     });
 
     it('respects the restore --buffer-size command-line parameter', function(done) {
-      var bufferSize = 250;
+      const bufferSize = 250;
       process.argv = ['node', 'test', '--buffer-size', bufferSize];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.bufferSize, 'number');
       assert.strictEqual(program.bufferSize, bufferSize);
       done();
     });
 
     it('respects the restore --parallelism command-line parameter', function(done) {
-      var parallelism = 5;
+      const parallelism = 5;
       process.argv = ['node', 'test', '--parallelism', parallelism];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.parallelism, 'number');
       assert.strictEqual(program.parallelism, parallelism);
       done();
     });
 
     it('respects the restore --request-timeout command-line parameter', function(done) {
-      var requestTimeout = 10000;
+      const requestTimeout = 10000;
       process.argv = ['node', 'test', '--request-timeout', requestTimeout];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.requestTimeout, 'number');
       assert.strictEqual(program.requestTimeout, requestTimeout);
       done();
@@ -349,7 +349,7 @@ describe('#unit Default parameters', function() {
     it('respects the restore --iam-api-key command-line parameter', function(done) {
       const key = '123abc-789zyx_CBA987-XYZ321';
       process.argv = ['node', 'test', '--iam-api-key', key];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.iamApiKey, 'string');
       assert.strictEqual(program.iamApiKey, key);
       done();
@@ -357,7 +357,7 @@ describe('#unit Default parameters', function() {
 
     it('respects the restore --quiet command-line parameter', function(done) {
       process.argv = ['node', 'test', '--quiet'];
-      var program = parser.parseRestoreArgs();
+      const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
       done();

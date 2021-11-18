@@ -178,8 +178,8 @@ function proceedIfRestoreDbValid(db, callback) {
     // The system databases can have a validation ddoc(s) injected in them on creation.
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
-    if (!db.db.startsWith("_") && (docCount !== 0 || deletedDocCount !== 0)) {
-      var notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty.`);
+    if (!db.db.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
+      const notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty.`);
       notEmptyDBErr.name = 'DatabaseNotEmpty';
       callback(notEmptyDBErr);
     } else {
@@ -200,10 +200,10 @@ function proceedIfRestoreDbValid(db, callback) {
 function parseIfDbValidResponseError(db, err) {
   if (err && err.status === 404) {
     // Override the error type and message for the DB not found case
-    var msg = `Database ${db.url}` +
+    const msg = `Database ${db.url}` +
     `${db.db} does not exist. ` +
     'Check the URL and database name have been specified correctly.';
-    var noDBErr = new Error(msg);
+    const noDBErr = new Error(msg);
     noDBErr.name = 'DatabaseNotFound';
     return noDBErr;
   }
@@ -229,7 +229,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   backup: function(srcUrl, targetStream, opts, callback) {
-    var listenerErrorIndicator = { errored: false };
+    const listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
@@ -263,7 +263,7 @@ module.exports = {
         callback(err);
         return;
       }
-      var backup = null;
+      let backup = null;
       if (opts.mode === 'shallow') {
         backup = backupShallow;
       } else { // full mode
@@ -348,7 +348,7 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {
-    var listenerErrorIndicator = { errored: false };
+    const listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};

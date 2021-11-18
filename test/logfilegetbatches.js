@@ -15,12 +15,14 @@
 /* global describe it */
 'use strict';
 
-var assert = require('assert');
-var logfilegetbatches = require('../includes/logfilegetbatches.js');
+const assert = require('assert');
+const logfilegetbatches = require('../includes/logfilegetbatches.js');
 
 describe('#unit Fetching batches from a log file', function() {
   it('should fetch multiple batches correctly', function(done) {
     logfilegetbatches('./test/fixtures/test.log', [1, 4], function(err, data) {
+      assert.ok(!err);
+      assert.ok(data);
       assert.strictEqual(typeof data, 'object');
       assert.strictEqual(Object.keys(data).length, 2);
       assert.deepStrictEqual(data['1'].docs, [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }]);
