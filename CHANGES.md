@@ -1,4 +1,4 @@
-# Unreleased
+# 2.8.0 (2021-11-25)
 - [FIXED] Corrected `user-agent` header on requests.
 - [FIXED] Restore of shallow backups created with versions <=2.4.2.
 - [IMPROVED] Added quiet option to backup and restore to suppress batch messages.
@@ -6,6 +6,7 @@
 - [IMPROVED] Added handling for errors reading log file.
 - [IMPROVED] Split changes spooling to improve reliability on databases with
   millions of documents.
+- [UPGRADED] `@ibm-cloud/cloudant`, `commander` and `debug` dependencies.
 
 # 2.7.0 (2021-09-14)
 - [UPGRADED] Cloudant client dependency from `@cloudant/cloudant` to `@ibm-cloud/cloudant`.
