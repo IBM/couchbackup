@@ -122,8 +122,8 @@ module.exports = {
       authenticator = new IamAuthenticator(iamAuthOpts);
     } else if (url.username) {
       authenticator = new CouchdbSessionAuthenticator({
-        username: url.username,
-        password: url.password
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password)
       });
     } else {
       authenticator = new NoAuthAuthenticator();
