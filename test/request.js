@@ -228,7 +228,7 @@ describe('#unit Check request response error callback', function() {
       const sessionUrl = 'http://localhost:7777';
       const couch = nock(sessionUrl)
         .post('/_session', { username: username, password: password })
-        .reply(200, { ok: true }, { 'Set-Cookie': 'AuthSession=YWRtaW46NUI0NjFCNTM6ABVJbca2_R0cnDW-dP0c9Bp4lGA;' })
+        .reply(200, { ok: true }, { 'Set-Cookie': 'AuthSession=ABC123DEF4356;' })
         .get('/')
         .reply(200);
       const db = request.client(url, { parallelism: 1 });
