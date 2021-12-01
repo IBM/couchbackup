@@ -125,8 +125,8 @@ describe('#unit Check spool changes', function() {
 
 describe('Longer spool changes checks', function() {
   it('#slow should keep collecting changes (25M)', function(done) {
-    // This test might take up to 2 minutes
-    this.timeout(2 * 60 * 1000);
+    // This test might take up to 5 minutes
+    this.timeout(5 * 60 * 1000);
     // Note changes spooling uses a constant batch size, we are setting
     // a test value here and setting the buffer to match
     const batch = 100000;
