@@ -1,3 +1,6 @@
+# Unreleased
+- [FIXED] Regression from version 2.7 resulting in incorrect handling of percent-encoded credentials in the URL user-info.
+  
 # 2.8.0 (2021-11-25)
 - [FIXED] Corrected `user-agent` header on requests.
 - [FIXED] Restore of shallow backups created with versions <=2.4.2.

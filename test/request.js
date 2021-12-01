@@ -220,4 +220,25 @@ describe('#unit Check request response error callback', function() {
       done(err);
     });
   });
+  describe('#unit Check credentials', function() {
+    it('should properly decode username and password', function(done) {
+      const username = 'user%123';
+      const password = 'colon:at@321';
+      const url = `http://${encodeURIComponent(username)}:${encodeURIComponent(password)}@localhost:7777/testdb`;
+      const sessionUrl = 'http://localhost:7777';
+      const couch = nock(sessionUrl)
+        .post('/_session', { username: username, password: password })
+        .reply(200, { ok: true }, { 'Set-Cookie': 'AuthSession=ABC123DEF4356;' })
+        .get('/')
+        .reply(200);
+      const db = request.client(url, { parallelism: 1 });
+      db.service.getServerInformation().then(response => {
+        assert.ok(response);
+        assert.ok(couch.isDone());
+        done();
+      }).catch(err => {
+        done(err);
+      });
+    });
+  });
 });
