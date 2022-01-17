@@ -39,7 +39,7 @@ def getEnvForSuite(suiteName) {
 }
 
 def setupNodeAndTest(version, filter='', testSuite='test') {
-  node {
+  node('sdks-backup-executor') {
     // Install NVM
     sh 'wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash'
     // Unstash the built content
@@ -93,7 +93,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
 
 stage('Build') {
   // Checkout, build
-  node {
+  node('sdks-backup-executor') {
     checkout scm
     sh 'npm ci'
     stash name: 'built', useDefaultExcludes: false
@@ -131,7 +131,7 @@ stage('QA') {
 // Publish the master branch
 stage('Publish') {
   if (env.BRANCH_NAME == "master") {
-    node {
+    node('sdks-backup-executor') {
       unstash 'built'
 
       def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
