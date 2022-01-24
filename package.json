@@ -20,8 +20,8 @@
     "node": ">=12"
   },
   "dependencies": {
+    "ibm-cloud-sdk-core": "2.17.9",
     "@ibm-cloud/cloudant": "0.0.23",
-    "tough-cookie": "^4.0.0",
     "retry-axios": "^2.4.0",
     "async": "^3.1.0",
     "commander": "^8.3.0",
@@ -41,10 +41,8 @@
     "eslint-plugin-import": "^2.8.0",
     "eslint-plugin-node": "^11.0.0",
     "eslint-plugin-promise": "^4.0.0",
-    "eslint-plugin-react": "^7.14.2",
     "http-proxy": "^1.16.2",
-    "jsdoc": "^3.6.7",
-    "mocha": "^9.1.3",
+    "mocha": "^9.2.0",
     "nock": "^13.2.1",
     "tail": "^2.0.0",
     "toxy": "^0.3.16",
