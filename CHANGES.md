@@ -1,3 +1,6 @@
+# 2.8.2 (2022-02-10)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.0.24`.
+
 # 2.8.1 (2021-12-02)
 - [FIXED] Regression from version 2.7 resulting in incorrect handling of percent-encoded credentials in the URL user-info.
 
