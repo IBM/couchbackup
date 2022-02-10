@@ -13,7 +13,7 @@
   ],
   "bugs": {
     "url": "https://github.com/cloudant/couchbackup/issues",
-    "email": "support@cloudant.com"
+    "email": "cldtsdks@us.ibm.com"
   },
   "license": "Apache-2.0",
   "engines": {
