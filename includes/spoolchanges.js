@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2022 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
 
   function getChanges(since = 0) {
     debug('making changes request since ' + since);
-    return db.service.postChangesAsStream({ db: db.db, since: since, limit: limit, seq_interval: limit })
+    return db.service.postChangesAsStream({ db: db.db, since: since, limit: limit, seqInterval: limit })
       .then(response => {
         response.result.pipe(liner())
           .on('error', function(err) {

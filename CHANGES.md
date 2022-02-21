@@ -1,3 +1,6 @@
+# Unreleased
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.0.25`.
+
 # 2.8.2 (2022-02-10)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.0.24`.
 
