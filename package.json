@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "ibm-cloud-sdk-core": "^2.14",
-    "@ibm-cloud/cloudant": "0.0.24",
+    "@ibm-cloud/cloudant": "0.0.25",
     "retry-axios": "2.x",
     "async": "^3.1.0",
     "commander": "^9.0.0",
