@@ -1,4 +1,5 @@
 # Unreleased
+- [NOTE] Move `retry-axios` and `ibm-cloud-sdk-core` to peerDependencies.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.0.25`.
 
 # 2.8.2 (2022-02-10)
