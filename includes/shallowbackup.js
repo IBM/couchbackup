@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2022 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ module.exports = function(db, options) {
       const opts = { db: db.db, limit: options.bufferSize, includeDocs: true };
 
       // To avoid double fetching a document solely for the purposes of getting
-      // the next ID to use as a startkey for the next page we instead use the
+      // the next ID to use as a startKey for the next page we instead use the
       // last ID of the current page and append the lowest unicode sort
       // character.
-      if (startKey) opts.startkey = `${startKey}\0`;
+      if (startKey) opts.startKey = `${startKey}\0`;
       db.service.postAllDocs(opts).then(response => {
         const body = response.result;
         if (!body.rows) {

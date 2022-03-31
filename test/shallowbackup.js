@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2022 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,13 +50,13 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3
-      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
-      .post('/_all_docs', { limit: 3, startkey: snipeKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
     shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
@@ -83,16 +83,16 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - transient error
-      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true })
       .reply(500, { error: 'Internal Server Error' })
       // batch 3 - retry
-      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
       // batch 4
-      .post('/_all_docs', { limit: 3, startkey: snipeKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
     shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
@@ -119,10 +119,10 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
       // batch 2
-      .post('/_all_docs', { limit: 3, startkey: badgerKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: badgerKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
       // batch 3 - fatal error
-      .post('/_all_docs', { limit: 3, startkey: kookaburraKey, include_docs: true })
+      .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true })
       .reply(401, { error: 'Unauthorized' });
 
     let errCount = 0;
