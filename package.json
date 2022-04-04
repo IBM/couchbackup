@@ -42,7 +42,7 @@
     "eslint-plugin-header": "^3.0.0",
     "eslint-plugin-import": "^2.8.0",
     "eslint-plugin-node": "^11.0.0",
-    "eslint-plugin-promise": "^4.0.0",
+    "eslint-plugin-promise": "^6.0.0",
     "http-proxy": "^1.16.2",
     "mocha": "^9.2.0",
     "nock": "^13.2.1",
