@@ -64,7 +64,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               // want to keep the report named 'test-iam'
               def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
 
-              def dbPasswordEncoded = java.net.URLEncoder.encode(${DB_PASSWORD}, "UTF-8")
+              def dbPasswordEncoded = java.net.URLEncoder.encode(DB_PASSWORD, "UTF-8")
               // Actions:
               //  1. Load NVM
               //  2. Install/use required Node.js version
