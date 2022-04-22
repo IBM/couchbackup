@@ -18,7 +18,7 @@
 const { CloudantV1 } = require('@ibm-cloud/cloudant');
 const url = new URL((process.env.COUCH_BACKEND_URL) ? process.env.COUCH_BACKEND_URL : 'https://no-couch-backend-url-set.test');
 const { BasicAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
-const authenticator = (url.username) ? new BasicAuthenticator({ username: url.username, password: url.password }) : new NoAuthAuthenticator();
+const authenticator = (url.username) ? new BasicAuthenticator({ username: url.username, password: decodeURIComponent(url.password) }) : new NoAuthAuthenticator();
 const serviceOpts = {
   authenticator: authenticator
 };
