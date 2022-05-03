@@ -1,3 +1,6 @@
+# Unreleased
+- [NOTE] Updated minimum supported engine to Node.js 14 `fermium` LTS.
+
 # 2.8.3 (2022-04-05)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.1.1`.
 - [NOTE] Move `retry-axios` and `ibm-cloud-sdk-core` to peerDependencies.
