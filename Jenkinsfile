@@ -115,13 +115,13 @@ stage('QA') {
   }
 
   def axes = [
-    Node12x:{ setupNodeAndTest('12', filter) }, // 12.x Maintenance LTS
-    Node14x:{ setupNodeAndTest('14', filter) }, // 14.x Active LTS
-    Node:{ setupNodeAndTest('16', filter) }, // Current
+    Node14x:{ setupNodeAndTest('14', filter) }, // 14.x Maintenance LTS
+    Node16x:{ setupNodeAndTest('16', filter) }, // 16.x Active LTS
+    Node:{ setupNodeAndTest('18', filter) }, // Current
     // Test IAM on the current Node.js version. Filter out unit tests and the
     // slowest integration tests.
     Iam: { setupNodeAndTest('16', '-i -g \'#unit|#slowe\'', 'test-iam') },
-    Lint: { setupNodeAndTest('12', '', 'lint') }
+    Lint: { setupNodeAndTest('14', '', 'lint') }
   ]
   // Add unreliable network tests if specified
   if (env.RUN_TOXY_TESTS && env.RUN_TOXY_TESTS.toBoolean()) {
