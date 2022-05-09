@@ -1,4 +1,5 @@
-# Unreleased
+# 2.9.0 (2022-05-09)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.1.2`.
 - [NOTE] Updated minimum supported engine to Node.js 14 `fermium` LTS.
 
 # 2.8.3 (2022-04-05)
