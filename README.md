@@ -2,8 +2,6 @@
 
 [![npm (scoped)](https://img.shields.io/npm/v/@cloudant/couchbackup.svg?colorB=0000ff)](https://www.npmjs.com/package/@cloudant/couchbackup)
 [![npm (scoped with tag)](https://img.shields.io/npm/v/@cloudant/couchbackup/snapshot.svg?colorB=666699)](https://www.npmjs.com/package/@cloudant/couchbackup)
-[![Build Status](https://travis-ci.org/cloudant/couchbackup.svg?branch=master)](https://travis-ci.org/cloudant/couchbackup)
-[![Greenkeeper badge](https://badges.greenkeeper.io/cloudant/couchbackup.svg)](https://greenkeeper.io/)
 
 ```
  _____                  _    ______            _
@@ -40,7 +38,7 @@ npm install -g @cloudant/couchbackup
 
 ### Snapshots
 
-The latest builds of master are published to npm with the `snapshot` tag. Use the `snapshot` tag if you want to experiment with an unreleased fix or new function, but please note that snapshot versions are **unsupported**.
+The latest builds of main are published to npm with the `snapshot` tag. Use the `snapshot` tag if you want to experiment with an unreleased fix or new function, but please note that snapshot versions are **unsupported**.
 
 ## Usage
 

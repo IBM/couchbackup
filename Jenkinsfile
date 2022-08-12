@@ -131,9 +131,9 @@ stage('QA') {
   parallel(axes)
 }
 
-// Publish the master branch
+// Publish the primary branch
 stage('Publish') {
-  if (env.BRANCH_NAME == "master") {
+  if (env.BRANCH_IS_PRIMARY) {
     node('sdks-backup-executor') {
       unstash 'built'
 
