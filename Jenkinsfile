@@ -133,7 +133,7 @@ stage('QA') {
 
 // Publish the primary branch
 stage('Publish') {
-  if (env.BRANCH_IS_PRIMARY) {
+  if (env.BRANCH_NAME == 'main') {
     node('sdks-backup-executor') {
       unstash 'built'
 
