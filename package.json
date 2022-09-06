@@ -49,7 +49,7 @@
     "nock": "^13.2.1",
     "tail": "^2.0.0",
     "toxy": "^0.3.16",
-    "uuid": "^8.3.2"
+    "uuid": "^9.0.0"
   },
   "scripts": {
     "lint": "eslint --ignore-path .gitignore .",
