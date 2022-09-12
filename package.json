@@ -45,7 +45,7 @@
     "eslint-plugin-node": "^11.0.0",
     "eslint-plugin-promise": "^6.0.0",
     "http-proxy": "^1.16.2",
-    "mocha": "^9.2.0",
+    "mocha": "^10.0.0",
     "nock": "^13.2.1",
     "tail": "^2.0.0",
     "toxy": "^0.3.16",
