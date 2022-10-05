@@ -1,4 +1,4 @@
-# 2.9.4
+# 2.9.4 (2022-10-05)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.2.1`.
 - [NOTE] Add `axios` to peerDependencies.
 
