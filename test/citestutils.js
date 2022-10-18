@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2022 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -164,41 +164,41 @@ function testBackup(params, databaseName, outputStream, callback) {
       }
     }
 
-    // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    backup = spawn('node', args, { stdio: ['ignore', destination, 'pipe'] });
-    // Pipe the stdout to the supplied outputStream
-    if (destination === 'pipe') {
-      backup.stdout.pipe(backupStream);
+    let count = 0;
+    /**
+     * In some tests we need to wait for both the backup process
+     * and the outputStream to "close". If we callback from either
+     * event the other might not be ready and lead to flaky tests.
+     *
+     * This function delegates to the callback but only after the
+     * correct number of invocations. That is 2 when we have an
+     * output stream or 1 otherwise, and only once in the case of
+     * an error.
+     */
+    function gatingCallback(err) {
+      count += 1;
+      if (err) {
+        if (count === 1) {
+          callback(err);
+        }
+      } else {
+        // Output stream case we want a callback from process
+        // and the stream.
+        if (outputStream && count === 2) {
+          callback();
+        } else if (!outputStream && count === 1) {
+          callback();
+        }
+      }
     }
-    // Forward the spawned process stderr (we don't use inherit because we want
-    // to access this stream directly as well)
-    backup.stderr.on('data', function(data) {
-      console.error(`${data}`);
-    });
-    backup.on('error', function(err) {
-      callback(err);
-    });
-    // Call done when the last child process exits - could be gzip or backup
-    if (gzip) {
-      gzip.on('close', function(code) {
-        try {
-          assert.strictEqual(code, 0, `The compression should exit normally, got exit code ${code}.`);
-          callback();
-        } catch (err) {
-          callback(err);
-        }
-      });
-    } else if (openssl) {
-      openssl.on('close', function(code) {
-        try {
-          assert.strictEqual(code, 0, `The encryption should exit normally, got exit code ${code}.`);
-          callback();
-        } catch (err) {
-          callback(err);
-        }
-      });
-    } else {
-      backup.on('close', function(code, signal) {
+
+    // Note use spawn not fork for stdio options not supported with fork in Node 4.x
+    backup = spawn('node', args, { stdio: ['ignore', destination, 'pipe'] })
+      .on('error', function(err) {
+        gatingCallback(err);
+      })
+      .on('close', function(code, signal) {
+        console.log(`Backup process close ${code} ${signal}`);
         try {
           if (params.abort) {
             // The tail should be stopped when we match a line and abort, but if
@@ -209,13 +209,48 @@ function testBackup(params, databaseName, outputStream, callback) {
           } else if (params.expectedBackupError) {
             assert.strictEqual(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
           } else {
-            assert.strictEqual(code, 0, `The backup should exit normally, got exit code ${code}.`);
+            assert.strictEqual(code, 0, `The backup should exit normally, got exit code ${code} and signal ${signal}.`);
           }
-          callback();
+          gatingCallback();
         } catch (err) {
-          callback(err);
+          gatingCallback(err);
         }
       });
+    // Pipe the stdout to the supplied outputStream
+    if (destination === 'pipe') {
+      backup.stdout.pipe(backupStream);
+    }
+
+    // Forward the spawned process stderr (we don't use inherit because we want
+    // to access this stream directly as well)
+    backup.stderr.on('data', function(data) {
+      console.error(`${data}`);
+    });
+
+    // Check for errors on the spawned processes
+    if (gzip) {
+      gzip.on('close', function(code) {
+        try {
+          assert.strictEqual(code, 0, `The compression should exit normally, got exit code ${code}.`);
+        } catch (err) {
+          gatingCallback(err);
+        }
+      });
+    }
+    if (openssl) {
+      openssl.on('close', function(code) {
+        try {
+          assert.strictEqual(code, 0, `The encryption should exit normally, got exit code ${code}.`);
+        } catch (err) {
+          gatingCallback(err);
+        }
+      });
+    }
+    if (outputStream) {
+      // Callback when the destination stream closes.
+      outputStream.on('close', gatingCallback);
+    } else if (!params.opts.output) {
+      gatingCallback(new Error('Unexpected test without outputStream or output option.'));
     }
   }
   return backup;
