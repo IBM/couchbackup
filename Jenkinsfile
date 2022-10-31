@@ -116,11 +116,12 @@ stage('QA') {
 
   def axes = [
     Node14x:{ setupNodeAndTest('14', filter) }, // 14.x Maintenance LTS
-    Node16x:{ setupNodeAndTest('16', filter) }, // 16.x Active LTS
+    Node16x:{ setupNodeAndTest('16', filter) }, // 16.x Maintenance LTS
+    Node18x:{ setupNodeAndTest('18', filter) }, // 18.x Active LTS
     Node:{ setupNodeAndTest('18', filter) }, // Current
     // Test IAM on the current Node.js version. Filter out unit tests and the
     // slowest integration tests.
-    Iam: { setupNodeAndTest('16', '-i -g \'#unit|#slowe\'', 'test-iam') },
+    Iam: { setupNodeAndTest('18', '-i -g \'#unit|#slowe\'', 'test-iam') },
     Lint: { setupNodeAndTest('14', '', 'lint') }
   ]
   // Add unreliable network tests if specified
