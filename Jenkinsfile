@@ -103,12 +103,12 @@ def getRegistryPublic() {
 
 // url of registry for artifactory up
 def getRegistryArtifactoryUp() {
-    return "${env.ARTIFACTORY_URL_UP}/api/npm/cloudant-sdks-npm-virtual/"
+    return "${Artifactory.server('taas-artifactory-upload').getUrl()}/api/npm/cloudant-sdks-npm-virtual/"
 }
 
 // url of registry for artifactory down
 def getRegistryArtifactoryDown() {
-    return "${env.ARTIFACTORY_URL_DOWN}/api/npm/cloudant-sdks-npm-virtual/"
+    return "${Artifactory.server('taas-artifactory').getUrl()}/api/npm/cloudant-sdks-npm-virtual/"
 }
 
 def noScheme(str) {
