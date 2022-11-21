@@ -72,6 +72,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               //  4. Fetch database compare tool for CI tests
               //  5. Run tests using filter
               withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+              withEnv('NPMRC_EMAIL'=env.NPMRC_USER) {
               withNpmEnv(registryArtifactoryDown) {
                 sh """
                   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
@@ -86,6 +87,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                   set -x
                   ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
                 """
+              }
               }
               }
             } finally {
@@ -132,8 +134,10 @@ stage('Build') {
   node('sdks-backup-executor') {
     checkout scm
     withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+    withEnv('NPMRC_EMAIL'=env.NPMRC_USER) {
     withNpmEnv(registryArtifactoryDown) {
       sh "npm ci"
+    }
     }
     }
     stash name: 'built', useDefaultExcludes: false
