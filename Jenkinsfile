@@ -94,11 +94,42 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
   }
 }
 
+// NB these registry URLs must have trailing slashes
+
+// url of registry for public uploads
+def getRegistryPublic() {
+    return "https://registry.npmjs.org/"
+}
+
+// url of registry for artifactory up
+def getRegistryArtifactoryUp() {
+    return "${env.ARTIFACTORY_URL_UP}/api/npm/cloudant-sdks-npm-virtual/"
+}
+
+// url of registry for artifactory down
+def getRegistryArtifactoryDown() {
+    return "${env.ARTIFACTORY_URL_DOWN}/api/npm/cloudant-sdks-npm-virtual/"
+}
+
+def noScheme(str) {
+    return str.substring(str.indexOf(':') + 1)
+}
+
+def withNpmEnv(varName, registry, closure) {
+  withCredentials([usernamePassword(usernameVariable: 'ARTIFACTORY_TOKEN_USR', passwordVariable: 'ARTIFACTORY_TOKEN_PSW', credentialsId: 'artifactory-id-token')]) {
+    withEnv([varName + '=' + noScheme(registry), 'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
+      closure()
+    }
+  }
+}
+
 stage('Build') {
   // Checkout, build
   node('sdks-backup-executor') {
     checkout scm
-    sh 'npm ci'
+    withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
+      sh "npm ci --registry $registryArtifactoryDown"
+    }
     stash name: 'built', useDefaultExcludes: false
   }
 }
@@ -146,14 +177,12 @@ stage('Publish') {
       withCredentials([string(credentialsId: 'npm-mail', variable: 'NPM_EMAIL'),
                        usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPM_TOKEN', usernameVariable: 'NPM_USER')]) {
         // Actions:
-        // 1. create .npmrc file for publishing
-        // 2. add the build ID to any snapshot version for uniqueness
-        // 3. publish the build to NPM adding a snapshot tag if pre-release
-        sh """
-          echo '//registry.npmjs.org/:_authToken=\${NPM_TOKEN}' > .npmrc
-          ${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}
-          npm publish ${isReleaseVersion ? '' : '--tag snapshot'}
-        """
+        // 1. add the build ID to any snapshot version for uniqueness
+        // 2. publish the build to NPM adding a snapshot tag if pre-release
+        sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
+        withNpmEnv("NPM_REGISTRY", registryPublic) {
+          sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'} --registry $registryPublic"
+        }
       }
     }
   }
