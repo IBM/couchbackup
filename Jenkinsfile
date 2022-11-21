@@ -76,7 +76,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
                   nvm install ${version}
                   nvm use ${version}
-                  npm install mocha-jenkins-reporter --save-dev --registry registryPublic
+                  npm install mocha-jenkins-reporter --save-dev --registry $registryPublic
                   curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
                   unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
                   set +x
