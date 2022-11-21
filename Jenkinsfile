@@ -71,14 +71,12 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               //  3. Install mocha-jenkins-reporter so that we can get junit style output
               //  4. Fetch database compare tool for CI tests
               //  5. Run tests using filter
-              sh """
-                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                nvm install ${version}
-                nvm use ${version}
-                """
               withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
                 sh """
-                  npm install mocha-jenkins-reporter --save-dev --registry $registryArtifactoryDown
+                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                  nvm install ${version}
+                  nvm use ${version}
+                  npm install mocha-jenkins-reporter --save-dev
                   curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
                   unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
                   set +x
@@ -86,7 +84,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                   export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
                   set -x
                   ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
-                  """
+                """
               }
             } finally {
               junit '**/*test-results.xml'
@@ -121,7 +119,8 @@ def noScheme(str) {
 
 def withNpmEnv(varName, registry, closure) {
   withCredentials([usernamePassword(usernameVariable: 'ARTIFACTORY_TOKEN_USR', passwordVariable: 'ARTIFACTORY_TOKEN_PSW', credentialsId: 'artifactory-id-token')]) {
-    withEnv([varName + '=' + noScheme(registry), 'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
+    withEnv(['NPM_CONFIG_REGISTRY='+registry,
+             varName + '=' + noScheme(registry), 'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
       closure()
     }
   }
@@ -132,7 +131,7 @@ stage('Build') {
   node('sdks-backup-executor') {
     checkout scm
     withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
-      sh "npm ci --registry $registryArtifactoryDown"
+      sh "npm ci"
     }
     stash name: 'built', useDefaultExcludes: false
   }
@@ -185,7 +184,7 @@ stage('Publish') {
         // 2. publish the build to NPM adding a snapshot tag if pre-release
         sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
         withNpmEnv('NPM_REGISTRY', registryPublic) {
-          sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'} --registry $registryPublic"
+          sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
         }
       }
     }
