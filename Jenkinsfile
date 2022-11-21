@@ -71,7 +71,8 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               //  3. Install mocha-jenkins-reporter so that we can get junit style output
               //  4. Fetch database compare tool for CI tests
               //  5. Run tests using filter
-              withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
+              withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+              withNpmEnv(registryArtifactoryDown) {
                 sh """
                   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
                   nvm install ${version}
@@ -85,6 +86,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                   set -x
                   ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
                 """
+              }
               }
             } finally {
               junit '**/*test-results.xml'
@@ -117,12 +119,11 @@ def noScheme(str) {
     return str.substring(str.indexOf(':') + 1)
 }
 
-def withNpmEnv(varName, registry, closure) {
-  withCredentials([usernamePassword(usernameVariable: 'ARTIFACTORY_TOKEN_USR', passwordVariable: 'ARTIFACTORY_TOKEN_PSW', credentialsId: 'artifactory-id-token')]) {
-    withEnv(['NPM_CONFIG_REGISTRY='+registry,
-             varName + '=' + noScheme(registry), 'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
-      closure()
-    }
+def withNpmEnv(registry, closure) {
+  withEnv(['NPMRC_REGISTRY' + '=' + noScheme(registry),
+           'NPM_CONFIG_REGISTRY='+registry,
+           'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
+    closure()
   }
 }
 
@@ -130,8 +131,10 @@ stage('Build') {
   // Checkout, build
   node('sdks-backup-executor') {
     checkout scm
-    withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
+    withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+    withNpmEnv(registryArtifactoryDown) {
       sh "npm ci"
+    }
     }
     stash name: 'built', useDefaultExcludes: false
   }
@@ -177,13 +180,13 @@ stage('Publish') {
       boolean isReleaseVersion = v.isReleaseVersion
 
       // Upload using the NPM creds
-      withCredentials([string(credentialsId: 'npm-mail', variable: 'NPM_EMAIL'),
-                       usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPM_TOKEN', usernameVariable: 'NPM_USER')]) {
+      withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
+                       usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
         // Actions:
         // 1. add the build ID to any snapshot version for uniqueness
         // 2. publish the build to NPM adding a snapshot tag if pre-release
         sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
-        withNpmEnv('NPM_REGISTRY', registryPublic) {
+        withNpmEnv(registryPublic) {
           sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
         }
       }

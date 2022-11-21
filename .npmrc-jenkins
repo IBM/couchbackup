@@ -1,13 +1,4 @@
 ; NB registry scopes are assumed to have scheme stripped and have a trailing slash
-; for npm public releases
-${NPM_REGISTRY:-undefined}:username=${NPM_USER}
-${NPM_REGISTRY:-undefined}:email=${NPM_EMAIL}
-${NPM_REGISTRY:-undefined}:_authToken=${NPM_TOKEN}
-
-; for artifactory virtual
-${ARTIFACTORY_DOWN:-undefined}:username=${ARTIFACTORY_TOKEN_USR}
-${ARTIFACTORY_DOWN:-undefined}:email=${ARTIFACTORY_TOKEN_USR}
-${ARTIFACTORY_DOWN:-undefined}:_authToken=${ARTIFACTORY_TOKEN_PSW}
-${ARTIFACTORY_UP:-undefined}:username=${ARTIFACTORY_TOKEN_USR}
-${ARTIFACTORY_UP:-undefined}:email=${ARTIFACTORY_TOKEN_USR}
-${ARTIFACTORY_UP:-undefined}:_authToken=${ARTIFACTORY_TOKEN_PSW}
+${NPMRC_REGISTRY}:username=${NPMRC_USER}
+${NPMRC_REGISTRY}:email=${NPMRC_EMAIL}
+${NPMRC_REGISTRY}:_authToken=${NPMRC_TOKEN}
