@@ -76,9 +76,9 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                 nvm install ${version}
                 nvm use ${version}
                 """
-              withNpmEnv("NPM_REGISTRY", registryPublic) {
+              withNpmEnv('ARTIFACTORY_DOWN', registryArtifactoryDown) {
                 sh """
-                  npm install mocha-jenkins-reporter --save-dev --registry $registryPublic
+                  npm install mocha-jenkins-reporter --save-dev --registry $registryArtifactoryDown
                   curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
                   unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
                   set +x
@@ -184,7 +184,7 @@ stage('Publish') {
         // 1. add the build ID to any snapshot version for uniqueness
         // 2. publish the build to NPM adding a snapshot tag if pre-release
         sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
-        withNpmEnv("NPM_REGISTRY", registryPublic) {
+        withNpmEnv('NPM_REGISTRY', registryPublic) {
           sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'} --registry $registryPublic"
         }
       }
