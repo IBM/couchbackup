@@ -71,19 +71,25 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               //  3. Install mocha-jenkins-reporter so that we can get junit style output
               //  4. Fetch database compare tool for CI tests
               //  5. Run tests using filter
-              sh """
-                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                nvm install ${version}
-                nvm use ${version}
-                npm install mocha-jenkins-reporter --save-dev
-                curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
-                unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
-                set +x
-                export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
-                export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
-                set -x
-                ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
-              """
+              withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+                withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+                  withNpmEnv(registryArtifactoryDown) {
+                    sh """
+                      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                      nvm install ${version}
+                      nvm use ${version}
+                      npm install mocha-jenkins-reporter --save-dev
+                      curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
+                      unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
+                      set +x
+                      export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
+                      export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
+                      set -x
+                      ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
+                    """
+                  }
+                }
+              }
             } finally {
               junit '**/*test-results.xml'
             }
@@ -94,11 +100,41 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
   }
 }
 
+// NB these registry URLs must have trailing slashes
+
+// url of registry for public uploads
+def getRegistryPublic() {
+    return "https://registry.npmjs.org/"
+}
+
+// url of registry for artifactory down
+def getRegistryArtifactoryDown() {
+    return "${Artifactory.server('taas-artifactory').getUrl()}/api/npm/cloudant-sdks-npm-virtual/"
+}
+
+def noScheme(str) {
+    return str.substring(str.indexOf(':') + 1)
+}
+
+def withNpmEnv(registry, closure) {
+  withEnv(['NPMRC_REGISTRY=' + noScheme(registry),
+           'NPM_CONFIG_REGISTRY=' + registry,
+           'NPM_CONFIG_USERCONFIG=.npmrc-jenkins']) {
+    closure()
+  }
+}
+
 stage('Build') {
   // Checkout, build
   node('sdks-backup-executor') {
     checkout scm
-    sh 'npm ci'
+    withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+      withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+        withNpmEnv(registryArtifactoryDown) {
+          sh "npm ci"
+        }
+      }
+    }
     stash name: 'built', useDefaultExcludes: false
   }
 }
@@ -143,17 +179,15 @@ stage('Publish') {
       boolean isReleaseVersion = v.isReleaseVersion
 
       // Upload using the NPM creds
-      withCredentials([string(credentialsId: 'npm-mail', variable: 'NPM_EMAIL'),
-                       usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPM_TOKEN', usernameVariable: 'NPM_USER')]) {
+      withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
+                       usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
         // Actions:
-        // 1. create .npmrc file for publishing
-        // 2. add the build ID to any snapshot version for uniqueness
-        // 3. publish the build to NPM adding a snapshot tag if pre-release
-        sh """
-          echo '//registry.npmjs.org/:_authToken=\${NPM_TOKEN}' > .npmrc
-          ${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}
-          npm publish ${isReleaseVersion ? '' : '--tag snapshot'}
-        """
+        // 1. add the build ID to any snapshot version for uniqueness
+        // 2. publish the build to NPM adding a snapshot tag if pre-release
+        sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
+        withNpmEnv(registryPublic) {
+          sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+        }
       }
     }
   }

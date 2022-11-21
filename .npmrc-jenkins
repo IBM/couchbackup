@@ -1,0 +1,4 @@
+; NB registry scopes are assumed to have scheme stripped and have a trailing slash
+${NPMRC_REGISTRY}:username=${NPMRC_USER}
+${NPMRC_REGISTRY}:email=${NPMRC_EMAIL}
+${NPMRC_REGISTRY}:_authToken=${NPMRC_TOKEN}
