@@ -71,7 +71,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
               //  3. Install mocha-jenkins-reporter so that we can get junit style output
               //  4. Fetch database compare tool for CI tests
               //  5. Run tests using filter
-              withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+              withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
                 withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
                   withNpmEnv(registryArtifactoryDown) {
                     sh """
@@ -128,7 +128,7 @@ stage('Build') {
   // Checkout, build
   node('sdks-backup-executor') {
     checkout scm
-    withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory-id-token')]) {
+    withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
       withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
         withNpmEnv(registryArtifactoryDown) {
           sh "npm ci"
