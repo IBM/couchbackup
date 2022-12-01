@@ -14,8 +14,6 @@
 'use strict';
 
 const pkg = require('../package.json');
-const http = require('http');
-const https = require('https');
 const stream = require('stream');
 const { CloudantV1, CouchdbSessionAuthenticator } = require('@ibm-cloud/cloudant');
 const { IamAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
@@ -102,12 +100,6 @@ const errorHelper = async function(err) {
 module.exports = {
   client: function(rawUrl, opts) {
     const url = new URL(rawUrl);
-    const protocol = (url.protocol.match(/^https/)) ? https : http;
-    const keepAliveAgent = new protocol.Agent({
-      keepAlive: true,
-      keepAliveMsecs: 30000,
-      maxSockets: opts.parallelism
-    });
     // Split the URL to separate service from database
     // Use origin as the "base" to remove auth elements
     const actUrl = new URL(url.pathname.substr(0, url.pathname.lastIndexOf('/')), url.origin);
@@ -134,11 +126,7 @@ module.exports = {
       // Axios performance options
       maxContentLength: -1
     };
-    if (url.protocol === 'https') {
-      serviceOpts.httpsAgent = keepAliveAgent;
-    } else {
-      serviceOpts.httpAgent = keepAliveAgent;
-    }
+
     const service = new CloudantV1(serviceOpts);
     // Configure retries
     const maxRetries = 2; // for 3 total attempts
