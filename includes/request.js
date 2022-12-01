@@ -102,8 +102,8 @@ module.exports = {
     const url = new URL(rawUrl);
     // Split the URL to separate service from database
     // Use origin as the "base" to remove auth elements
-    const actUrl = new URL(url.pathname.substr(0, url.pathname.lastIndexOf('/')), url.origin);
-    const dbName = url.pathname.substr(url.pathname.lastIndexOf('/') + 1);
+    const actUrl = new URL(url.pathname.substring(0, url.pathname.lastIndexOf('/')), url.origin);
+    const dbName = url.pathname.substring(url.pathname.lastIndexOf('/') + 1);
     let authenticator;
     // Default to cookieauth unless an IAM key is provided
     if (opts.iamApiKey) {
