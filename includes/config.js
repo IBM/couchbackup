@@ -24,7 +24,7 @@ function apiDefaults() {
     parallelism: 5,
     bufferSize: 500,
     requestTimeout: 120000,
-    log: tmp.fileSync().name,
+    log: tmp.tmpNameSync(),
     resume: false,
     mode: 'full'
   };

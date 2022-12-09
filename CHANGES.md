@@ -1,3 +1,6 @@
+# Unreleased
+- [FIXED] Discard temporary file descriptor for backup.
+
 # 2.9.5 (2022-11-01)
 - [UPGRADED]  `@ibm-cloud/cloudant` dependency to version `0.3.0`.
 
