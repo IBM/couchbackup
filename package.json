@@ -27,9 +27,9 @@
     "tmp": "0.2.1"
   },
   "peerDependencies": {
-    "ibm-cloud-sdk-core": "^3.1.0",
+    "ibm-cloud-sdk-core": "^4.0.2",
     "retry-axios": "^2.6.0",
-    "axios": "^0.26.1"
+    "axios": "^1.2.1"
   },
   "main": "app.js",
   "bin": {
