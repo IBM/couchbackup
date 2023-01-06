@@ -1,5 +1,9 @@
-# Unreleased
+# 2.9.6 (2023-01-06)
+- [FIXED] HTTP client dependency issue that masked backup errors when server connection was dropped.
 - [FIXED] Discard temporary file descriptor for backup.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.4.0`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.0.2` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `axios` peerDependency to minimum version `1.2.1` to match version provided from `ibm-cloud-sdk-core`.
 
 # 2.9.5 (2022-11-01)
 - [UPGRADED]  `@ibm-cloud/cloudant` dependency to version `0.3.0`.
