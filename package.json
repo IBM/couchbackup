@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "@ibm-cloud/cloudant": "0.4.0",
-    "async": "^3.1.0",
-    "commander": "^9.0.0",
-    "debug": "~4.3.2",
+    "async": "3.2.4",
+    "commander": "9.4.1",
+    "debug": "4.3.4",
     "tmp": "0.2.1"
   },
   "peerDependencies": {
@@ -37,20 +37,20 @@
     "couchrestore": "bin/couchrestore.bin.js"
   },
   "devDependencies": {
-    "eslint": "^8.2.0",
-    "eslint-config-semistandard": "^17.0.0",
-    "eslint-config-standard": "^17.0.0",
-    "eslint-plugin-header": "^3.0.0",
-    "eslint-plugin-import": "^2.8.0",
-    "eslint-plugin-n": "^15.2.4",
-    "eslint-plugin-node": "^11.0.0",
-    "eslint-plugin-promise": "^6.0.0",
-    "http-proxy": "^1.16.2",
-    "mocha": "^10.0.0",
-    "nock": "^13.2.1",
-    "tail": "^2.0.0",
-    "toxy": "^0.3.16",
-    "uuid": "^9.0.0"
+    "eslint": "8.31.0",
+    "eslint-config-semistandard": "17.0.0",
+    "eslint-config-standard": "17.0.0",
+    "eslint-plugin-header": "3.1.1",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-n": "15.6.0",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-promise": "6.1.1",
+    "http-proxy": "1.18.1",
+    "mocha": "10.2.0",
+    "nock": "13.2.9",
+    "tail": "2.2.5",
+    "toxy": "0.3.16",
+    "uuid": "9.0.0"
   },
   "scripts": {
     "lint": "eslint --ignore-path .gitignore .",
