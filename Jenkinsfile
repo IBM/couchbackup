@@ -1,5 +1,5 @@
 #!groovy
-// Copyright © 2017, 2019 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -166,6 +166,18 @@ stage('QA') {
   }
   // Run the required axes in parallel
   parallel(axes)
+}
+
+stage('SonarQube analysis') {
+  node('sdks-backup-executor') {
+    unstash name: 'built'
+    if (!(env.BRANCH_NAME).startsWith('dependabot/')) {
+      def scannerHome = tool 'SonarQubeScanner';
+      withSonarQubeEnv(installationName: 'SonarQubeServer') {
+        sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
+      }
+    }
+  }
 }
 
 // Publish the primary branch
