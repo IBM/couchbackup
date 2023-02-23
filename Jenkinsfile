@@ -174,7 +174,7 @@ stage('SonarQube analysis') {
     if (!(env.BRANCH_NAME).startsWith('dependabot/')) {
       def scannerHome = tool 'SonarQubeScanner';
       withSonarQubeEnv(installationName: 'SonarQubeServer') {
-        sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
+        sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
       }
     }
   }
