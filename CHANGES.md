@@ -1,3 +1,7 @@
+# 2.9.7 (2023-02-27)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.4.1`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to version `4.0.3`.
+
 # 2.9.6 (2023-01-06)
 - [FIXED] HTTP client dependency issue that masked backup errors when server connection was dropped.
 - [FIXED] Discard temporary file descriptor for backup.
