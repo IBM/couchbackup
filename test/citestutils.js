@@ -23,6 +23,8 @@ const stream = require('stream');
 const fs = require('fs');
 const zlib = require('zlib');
 const Tail = require('tail').Tail;
+const compare = require('./compare.js');
+const request = require('../includes/request.js');
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -508,19 +510,17 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 }
 
 function dbCompare(db1Name, db2Name, callback) {
-  const comparison = spawn(`./${process.env.DBCOMPARE_NAME}-${process.env.DBCOMPARE_VERSION}/bin/${process.env.DBCOMPARE_NAME}`,
-    [process.env.COUCH_BACKEND_URL, db1Name, process.env.COUCH_BACKEND_URL, db2Name], { stdio: 'inherit' });
-  comparison.on('exit', function(code) {
-    try {
-      assert.strictEqual(code, 0, `The database comparison should succeed, got exit code ${code}`);
-      callback();
-    } catch (err) {
-      callback(err);
-    }
-  });
-  comparison.on('error', function(err) {
-    callback(err);
-  });
+  const client = request.client(process.env.COUCH_BACKEND_URL, {});
+  compare.compare(db1Name, db2Name, client.service)
+    .then(result => {
+      try {
+        assert.strictEqual(result, true, 'The database comparison should succeed, but failed');
+        callback();
+      } catch (err) {
+        callback(err);
+      }
+    })
+    .catch(err => callback(err));
 }
 
 function sortByIdThenRev(o1, o2) {
@@ -608,18 +608,18 @@ function augmentParamsWithApiKey(params) {
 }
 
 module.exports = {
-  scenario: scenario,
+  scenario,
   p: params,
-  setTimeout: setTimeout,
-  dbCompare: dbCompare,
-  readSortAndDeepEqual: readSortAndDeepEqual,
-  assertGzipFile: assertGzipFile,
-  assertEncryptedFile: assertEncryptedFile,
-  testBackup: testBackup,
-  testRestore: testRestore,
-  testDirectBackupAndRestore: testDirectBackupAndRestore,
-  testBackupToFile: testBackupToFile,
-  testRestoreFromFile: testRestoreFromFile,
-  testBackupAndRestoreViaFile: testBackupAndRestoreViaFile,
-  testBackupAbortResumeRestore: testBackupAbortResumeRestore
+  setTimeout,
+  dbCompare,
+  readSortAndDeepEqual,
+  assertGzipFile,
+  assertEncryptedFile,
+  testBackup,
+  testRestore,
+  testDirectBackupAndRestore,
+  testBackupToFile,
+  testRestoreFromFile,
+  testBackupAndRestoreViaFile,
+  testBackupAbortResumeRestore
 };
