@@ -18,7 +18,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const u = require('./citestutils.js');
-const url = 'http://localhost:7777';
+const mockServerPort = +process.env.COUCHBACKUP_MOCK_SERVER_PORT || 7777;
+const url = `http://localhost:${mockServerPort}`;
 const nock = require('nock');
 const httpProxy = require('http-proxy');
 const Readable = require('stream').Readable;
@@ -90,11 +91,11 @@ function restoreHttpError(opts, errorName, errorCode, done) {
       // Set up a proxy to point to our nock server because the nock override
       // isn't visible to the spawned CLI process
       if (!params.useApi) {
-        proxy = httpProxy.createProxyServer({ target: url }).listen(8888, 'localhost');
+        proxy = httpProxy.createProxyServer({ target: url }).listen(mockServerPort + 1000, 'localhost');
       }
 
       // setup environment variables
-      process.env.COUCH_URL = (params.useApi) ? url : 'http://localhost:8888';
+      process.env.COUCH_URL = (params.useApi) ? url : `http://localhost:${mockServerPort + 1000}`;
     });
 
     after('Reset process data', function(done) {
