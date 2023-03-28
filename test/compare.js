@@ -14,21 +14,21 @@
 
 'use strict';
 
-const chunk = require("lodash/chunk");
-const difference = require("lodash/difference");
-const forOwn = require("lodash/forOwn");
-const isEmpty = require("lodash/isEmpty");
-const union = require("lodash/union");
+const chunk = require('lodash/chunk');
+const difference = require('lodash/difference');
+const forOwn = require('lodash/forOwn');
+const isEmpty = require('lodash/isEmpty');
+const union = require('lodash/union');
 
 const compare = async(database1, database2, client) => {
   // check docs same in both dbs
   const allDocs1 = await getAllDocs(client, database1);
   const allDocs2 = await getAllDocs(client, database2);
 
-  const onlyInDb1 = (_.difference(allDocs1, allDocs2));
-  const onlyInDb2 = (_.difference(allDocs2, allDocs1));
+  const onlyInDb1 = (difference(allDocs1, allDocs2));
+  const onlyInDb2 = (difference(allDocs2, allDocs1));
 
-  let databasesSame = _.isEmpty(onlyInDb1) && _.isEmpty(onlyInDb2);
+  let databasesSame = isEmpty(onlyInDb1) && isEmpty(onlyInDb2);
 
   if (!databasesSame) {
     console.log(onlyInDb1.length + ' documents only in db 1.');
@@ -39,12 +39,12 @@ const compare = async(database1, database2, client) => {
 
   // check revs same in docs common to both dbs
   const partitionSize = 500;
-  const batches = _.chunk(_.union(allDocs1, allDocs2), partitionSize);
+  const batches = chunk(union(allDocs1, allDocs2), partitionSize);
 
   const missingRevsInDb2 = await getMissingRevs(client, database1, database2, batches);
   const missingRevsInDb1 = await getMissingRevs(client, database2, database1, batches);
 
-  databasesSame = databasesSame && _.isEmpty(missingRevsInDb1) && _.isEmpty(missingRevsInDb2);
+  databasesSame = databasesSame && isEmpty(missingRevsInDb1) && isEmpty(missingRevsInDb2);
 
   if (!databasesSame) {
     console.log('Missing revs in db 1:' + JSON.stringify(missingRevsInDb1));
@@ -67,10 +67,10 @@ const getMissingRevs = async(client, databaseName1, databaseName2, batcheses) =>
 
     const result1 = await client.postRevsDiff({ db: databaseName1, documentRevisions });
     const revsDiffRequestDb2 = {};
-    _.forOwn(result1.result, (v, k) => (revsDiffRequestDb2[k] = v.possible_ancestors));
+    forOwn(result1.result, (v, k) => (revsDiffRequestDb2[k] = v.possible_ancestors));
     // look in db2
     const result2 = await client.postRevsDiff({ db: databaseName2, documentRevisions: revsDiffRequestDb2 });
-    _.forOwn(result2.result, (v, k) => {
+    forOwn(result2.result, (v, k) => {
       if ('missing' in v) {
         missing[k] = v.missing;
       }
