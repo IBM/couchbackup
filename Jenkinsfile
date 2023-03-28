@@ -15,6 +15,8 @@
 
 def getEnvForSuite(suiteName) {
 
+  def envVars = []
+
   // Add test suite specific environment variables
   switch(suiteName) {
     case 'test':
