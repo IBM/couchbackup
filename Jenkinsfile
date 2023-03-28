@@ -76,13 +76,16 @@ def nodeYaml(version) {
 """
 }
 
+def workspace = 0
+
 def setupNodeAndTest(version, filter='', testSuite='test') {
 
   return {
 
   container("node${version}") {
     
-    
+    dir("workspace-${workspace++}") {
+
     if (testSuite == 'lint') {
       sh 'npm run lint'
     } else {
@@ -121,6 +124,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
         }
       }
     }
+  }
   }
   }
 }
