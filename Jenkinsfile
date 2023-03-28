@@ -78,6 +78,7 @@ def nodeYaml(version) {
 
 def setupNodeAndTest(version, filter='', testSuite='test') {
 
+  return () -> {
 
   container("node${version}") {
     
@@ -120,6 +121,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
         }
       }
     }
+  }
   }
 }
 
