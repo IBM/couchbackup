@@ -14,7 +14,11 @@
 
 'use strict';
 
-const _ = require('lodash');
+const chunk = require("lodash/chunk");
+const difference = require("lodash/difference");
+const forOwn = require("lodash/forOwn");
+const isEmpty = require("lodash/isEmpty");
+const union = require("lodash/union");
 
 const compare = async(database1, database2, client) => {
   // check docs same in both dbs
