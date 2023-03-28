@@ -86,6 +86,9 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
     
     dir("workspace-${workspace++}") {
 
+    unstash name: 'built'
+
+
     if (testSuite == 'lint') {
       sh 'npm run lint'
     } else {
@@ -170,6 +173,7 @@ status: {}
             }
           }
         }
+        stash name: 'built', useDefaultExcludes: false
       }
     }
     stage('QA') {
