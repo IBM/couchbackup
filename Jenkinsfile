@@ -16,8 +16,6 @@
 def getEnvForSuite(suiteName) {
   // Base environment variables
   def envVars = [
-    "DBCOMPARE_NAME=DatabaseCompare",
-    "DBCOMPARE_VERSION=1.0.1",
     "NVM_DIR=${env.HOME}/.nvm"
   ]
 
@@ -79,8 +77,6 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
                       nvm install ${version}
                       nvm use ${version}
                       npm install mocha-jenkins-reporter --save-dev
-                      curl -O -u "\${ARTIFACTORY_USER}:\${ARTIFACTORY_PW}" "https://na.artifactory.swg-devops.com/artifactory/cloudant-sdks-maven-local/com/ibm/cloudant/${env.DBCOMPARE_NAME}/${env.DBCOMPARE_VERSION}/${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip"
-                      unzip ${env.DBCOMPARE_NAME}-${env.DBCOMPARE_VERSION}.zip
                       set +x
                       export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
                       export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"

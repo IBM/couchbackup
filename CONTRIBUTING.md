@@ -89,8 +89,6 @@ locally by using these environment variables for example:
 ```
 export COUCH_URL=https://...
 export COUCH_BACKEND_URL=$COUCH_URL
-export DBCOMPARE_NAME=DatabaseCompare
-export DBCOMPARE_VERSION=1.0
 ```
 
 and then run the non-slow integration tests by issuing the command:

@@ -50,7 +50,8 @@
     "nock": "13.3.0",
     "tail": "2.2.6",
     "toxy": "0.3.16",
-    "uuid": "9.0.0"
+    "uuid": "9.0.0",
+    "lodash": "4.17.21"
   },
   "scripts": {
     "lint": "eslint --ignore-path .gitignore .",
