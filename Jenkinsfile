@@ -76,7 +76,7 @@ def nodeYaml(version) {
 """
 }
 
-def workspace = 0
+def nodeWorkspace = 0
 
 def setupNodeAndTest(version, filter='', testSuite='test') {
 
@@ -84,7 +84,7 @@ def setupNodeAndTest(version, filter='', testSuite='test') {
 
   container("node${version}") {
     
-    dir("workspace-${workspace++}") {
+    dir("workspace-${nodeWorkspace++}") {
 
     unstash name: 'built'
 
