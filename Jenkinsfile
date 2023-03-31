@@ -13,21 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-def getEnvForSuite(suiteName) {
-  // Base environment variables
-  def envVars = [
-    "NVM_DIR=${env.HOME}/.nvm"
-  ]
+def getEnvForSuite(suiteName, version) {
+
+  def envVars = []
 
   // Add test suite specific environment variables
   switch(suiteName) {
     case 'test':
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7700 + version.toInteger()}")
       break
     case 'toxytests/toxy':
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7800 + version.toInteger()}")
       break
       case 'test-iam':
         envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
+        envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7900 + version.toInteger()}")
         break
     default:
       error("Unknown test suite environment ${suiteName}")
@@ -36,65 +37,7 @@ def getEnvForSuite(suiteName) {
   return envVars
 }
 
-def setupNodeAndTest(version, filter='', testSuite='test') {
-  node('sdks-backup-executor') {
-    // Install NVM
-    sh 'wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash'
-    // Unstash the built content
-    unstash name: 'built'
 
-    withEnv(["NVM_DIR=${env.HOME}/.nvm"]) {
-      if (testSuite == 'lint') {
-        sh """
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm install ${version}
-          nvm use ${version}
-          npm run lint
-        """
-      } else {
-        // Run tests using creds
-        withEnv(getEnvForSuite("${testSuite}")) {
-          withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
-                          usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
-                          string(credentialsId: 'testServerIamApiKey', variable: "${(testSuite == 'test-iam') ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
-            try {
-              // For the IAM tests we want to run the normal 'test' suite, but we
-              // want to keep the report named 'test-iam'
-              def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
-              def dbPassword = java.net.URLEncoder.encode(DB_PASSWORD, "UTF-8")
-
-              // Actions:
-              //  1. Load NVM
-              //  2. Install/use required Node.js version
-              //  3. Install mocha-jenkins-reporter so that we can get junit style output
-              //  4. Fetch database compare tool for CI tests
-              //  5. Run tests using filter
-              withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
-                withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
-                  withNpmEnv(registryArtifactoryDown) {
-                    sh """
-                      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                      nvm install ${version}
-                      nvm use ${version}
-                      npm install mocha-jenkins-reporter --save-dev
-                      set +x
-                      export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
-                      export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
-                      set -x
-                      ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=./test/test-results.xml,junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
-                    """
-                  }
-                }
-              }
-            } finally {
-              junit '**/*test-results.xml'
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 // NB these registry URLs must have trailing slashes
 
@@ -120,89 +63,228 @@ def withNpmEnv(registry, closure) {
   }
 }
 
-stage('Build') {
-  // Checkout, build
-  node('sdks-backup-executor') {
-    checkout scm
-    withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
-      withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
-        withNpmEnv(registryArtifactoryDown) {
-          sh "npm ci"
-        }
-      }
+def nodeYaml(version) {
+    return """\
+      |    - name: node${version}
+      |      image: ${globals.ARTIFACTORY_DOCKER_REPO_VIRTUAL}/node:${version}
+      |      command: ['sh', '-c', 'sleep 99d']
+      |      imagePullPolicy: Always
+      |      resources:
+      |        requests:
+      |          memory: "2Gi"
+      |          cpu: "650m"
+      |        limits:
+      |          memory: "4Gi"
+      |          cpu: "4"
+      |      securityContext:
+      |        runAsUser: 1000""".stripIndent()
+}
+
+def agentYaml() {
+  return """\
+    |apiVersion: v1
+    |kind: Pod
+    |metadata:
+    |  name: couchbackup
+    |spec:
+    |  imagePullSecrets:
+    |    - name: artifactory
+    |  containers:
+    |    - name: jnlp
+    |      image: ${globals.ARTIFACTORY_DOCKER_REPO_VIRTUAL}/sdks-full-agent
+    |      imagePullPolicy: Always
+    |      resources:
+    |        requests:
+    |          memory: "2Gi"
+    |          cpu: "650m"
+    |        limits:
+    |          memory: "4Gi"
+    |          cpu: "4"
+    ${nodeYaml(14)}
+    ${nodeYaml(16)}
+    ${nodeYaml(19)}
+    |restartPolicy: Never""".stripMargin('|')
+}
+
+
+
+def runTest(version, filter=null, testSuite='test') {
+  if (filter == null) {
+    if (env.TEST_FILTER == null) {
+      // The set of default tests includes unit and integration tests, but
+      // not ones tagged #slower, #slowest.
+      filter = '-i -g \'#slowe\''
+    } else {
+      filter = env.TEST_FILTER
     }
-    stash name: 'built', useDefaultExcludes: false
   }
-}
-
-stage('QA') {
-  // Allow a supplied a test filter, but provide a reasonable default.
-  String filter;
-  if (env.TEST_FILTER == null) {
-    // The set of default tests includes unit and integration tests, but
-    // not ones tagged #slower, #slowest.
-    filter = '-i -g \'#slowe\''
-  } else {
-    filter = env.TEST_FILTER
-  }
-
-  def axes = [
-    Node14x:{ setupNodeAndTest('14', filter) }, // 14.x Maintenance LTS
-    Node16x:{ setupNodeAndTest('16', filter) }, // 16.x Maintenance LTS
-    Node18x:{ setupNodeAndTest('18', filter) }, // 18.x Active LTS
-    Node:{ setupNodeAndTest('18', filter) }, // Current
-    // Test IAM on the current Node.js version. Filter out unit tests and the
-    // slowest integration tests.
-    Iam: { setupNodeAndTest('18', '-i -g \'#unit|#slowe\'', 'test-iam') },
-    Lint: { setupNodeAndTest('14', '', 'lint') }
-  ]
-  // Add unreliable network tests if specified
-  if (env.RUN_TOXY_TESTS && env.RUN_TOXY_TESTS.toBoolean()) {
-    axes.Network = { setupNodeAndTest('node', '', 'toxytests/toxy') }
-  }
-  // Run the required axes in parallel
-  parallel(axes)
-}
-
-stage('SonarQube analysis') {
-  node('sdks-backup-executor') {
-    unstash name: 'built'
-    if (env.BRANCH_NAME != null && !(env.BRANCH_NAME).startsWith('dependabot/')) {
-      def scannerHome = tool 'SonarQubeScanner';
-      withSonarQubeEnv(installationName: 'SonarQubeServer') {
-        sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
-      }
-    }
-  }
-}
-
-// Publish the primary branch
-stage('Publish') {
-  if (env.BRANCH_NAME == 'main') {
-    node('sdks-backup-executor') {
-      unstash 'built'
-
-      def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
-      String version = v.version
-      boolean isReleaseVersion = v.isReleaseVersion
-
-      // Upload using the NPM creds
-      withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
-                       usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
+  def testReportPath = "${testSuite}-${version}-results.xml"
+  // Run tests using creds
+  withEnv(getEnvForSuite("${testSuite}", version)) {
+    withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+                      usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
+                      string(credentialsId: 'testServerIamApiKey', variable: "${(testSuite == 'test-iam') ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
+      try {
+        // For the IAM tests we want to run the normal 'test' suite, but we
+        // want to keep the report named 'test-iam'
+        def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
+        def dbPassword = java.net.URLEncoder.encode(DB_PASSWORD, "UTF-8")
+        
         // Actions:
-        // 1. add the build ID to any snapshot version for uniqueness
-        // 2. publish the build to NPM adding a snapshot tag if pre-release
-        sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
-        withNpmEnv(registryPublic) {
-          sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+        //  3. Install mocha-jenkins-reporter so that we can get junit style output
+        //  4. Fetch database compare tool for CI tests
+        //  5. Run tests using filter
+        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+            withNpmEnv(registryArtifactoryDown) {
+              sh """
+                set +x
+                export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
+                export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
+                set -x
+                ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
+              """
+            }
+          }
         }
+      } finally {
+        junit "**/${testReportPath}"
       }
     }
   }
+}
 
-  // Run the gitTagAndPublish which tags/publishes to github for release builds
-  gitTagAndPublish {
-      versionFile='package.json'
-      releaseApiUrl='https://api.github.com/repos/cloudant/couchbackup/releases'
+pipeline {
+  agent {
+    kubernetes {
+      yaml "${agentYaml()}"
+    }
+  }
+  stages {
+    stage('Build') {
+      steps {
+        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+            withNpmEnv(registryArtifactoryDown) {
+              sh 'npm ci'
+              sh 'npm install mocha-jenkins-reporter --no-save'
+            }
+          }
+        }
+      }
+    }
+    stage('QA') {
+      parallel {
+        // Stages that run on LTS version from full agent default container
+        stage('Lint') {
+          steps {
+            sh 'npm run lint'
+          }
+        }
+        stage('Node LTS') {
+          steps {
+            script{
+              runTest('18')
+            }
+          }
+        }
+        stage('IAM Node LTS') {
+          steps {
+            script{
+              runTest('18', '-i -g \'#unit|#slowe\'', 'test-iam')
+            }
+          }
+        }
+        stage('Network Node LTS') {
+          when {
+            beforeAgent true
+            environment name: 'RUN_TOXY_TESTS', value: 'true'
+          }
+          steps {
+            script{
+              runTest('18', '', 'toxytests/toxy')
+            }
+          }
+        }
+        // Stages that run for other version node containers in the pod
+        stage('Node 14x') {
+          steps {
+            container('node14') {
+              script{
+                runTest('14')
+              }
+            }
+          }
+        }
+        stage('Node 16x') {
+          steps {
+            container('node16') {
+              script{
+                runTest('16')
+              }
+            }
+          }
+        }
+        stage('Node 19x') {
+          steps {
+            container('node19') {
+              script{
+                runTest('19')
+              }
+            }
+          }
+        }
+      }
+    }
+    stage('SonarQube analysis') {
+      when {
+        beforeAgent true
+        allOf {
+          expression { env.BRANCH_NAME }
+          not {
+            expression { env.BRANCH_NAME.startsWith('dependabot/') }
+          }
+        }
+      }
+      steps {
+        script {
+          def scannerHome = tool 'SonarQubeScanner';
+          withSonarQubeEnv(installationName: 'SonarQubeServer') {
+            sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
+          }
+        }
+      }
+    }
+    // Publish the primary branch
+    stage('Publish') {
+      when {
+        beforeAgent true
+        branch 'main'
+      }
+      steps {
+        script {
+          def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
+          String version = v.version
+          boolean isReleaseVersion = v.isReleaseVersion
+
+          // Upload using the NPM creds
+          withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
+                          usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
+            // Actions:
+            // 1. add the build ID to any snapshot version for uniqueness
+            // 2. publish the build to NPM adding a snapshot tag if pre-release
+            sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
+            withNpmEnv(registryPublic) {
+              sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+            }
+          }
+          // Run the gitTagAndPublish which tags/publishes to github for release builds
+          gitTagAndPublish {
+              versionFile='package.json'
+              releaseApiUrl='https://api.github.com/repos/cloudant/couchbackup/releases'
+          }
+        }
+      }
+    }
   }
 }
