@@ -101,7 +101,7 @@ def agentYaml() {
     |          memory: "4Gi"
     |          cpu: "4"
     ${nodeYaml(16)}
-    ${nodeYaml(19)}
+    ${nodeYaml(20)}
     |restartPolicy: Never""".stripMargin('|')
 }
 
@@ -215,11 +215,11 @@ pipeline {
             }
           }
         }
-        stage('Node 19x') {
+        stage('Node 20x') {
           steps {
-            container('node19') {
+            container('node20') {
               script{
-                runTest('19')
+                runTest('20')
               }
             }
           }
