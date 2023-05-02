@@ -100,7 +100,6 @@ def agentYaml() {
     |        limits:
     |          memory: "4Gi"
     |          cpu: "4"
-    ${nodeYaml(14)}
     ${nodeYaml(16)}
     ${nodeYaml(19)}
     |restartPolicy: Never""".stripMargin('|')
@@ -207,15 +206,6 @@ pipeline {
           }
         }
         // Stages that run for other version node containers in the pod
-        stage('Node 14x') {
-          steps {
-            container('node14') {
-              script{
-                runTest('14')
-              }
-            }
-          }
-        }
         stage('Node 16x') {
           steps {
             container('node16') {
