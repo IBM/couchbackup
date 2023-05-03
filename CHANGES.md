@@ -1,3 +1,7 @@
+# 2.9.9 (2023-05-03)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.1`.
+- [NOTE] Updated minimum supported engine to Node.js 16 `gallium` LTS.
+
 # 2.9.8 (2023-04-04)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.0`.
 
