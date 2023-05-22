@@ -17,7 +17,7 @@
   },
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=16"
+    "node": "^16 || ^18"
   },
   "dependencies": {
     "@ibm-cloud/cloudant": "0.5.1",
