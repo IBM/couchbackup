@@ -20,16 +20,16 @@
     "node": "^16 || ^18"
   },
   "dependencies": {
-    "@ibm-cloud/cloudant": "0.5.1",
+    "@ibm-cloud/cloudant": "0.5.2",
     "async": "3.2.4",
     "commander": "10.0.1",
     "debug": "4.3.4",
     "tmp": "0.2.1"
   },
   "peerDependencies": {
-    "ibm-cloud-sdk-core": "^4.0.5",
+    "ibm-cloud-sdk-core": "^4.0.8",
     "retry-axios": "^2.6.0",
-    "axios": "^1.2.1"
+    "axios": "^1.4.0"
   },
   "main": "app.js",
   "bin": {
