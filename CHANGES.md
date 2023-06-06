@@ -1,3 +1,6 @@
+# Unreleased
+- [NOTE] Repository moved from https://github.com/cloudant/couchbackup to https://github.com/IBM/couchbackup.
+
 # 2.9.9 (2023-05-03)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.1`.
 - [NOTE] Updated minimum supported engine to Node.js 16 `gallium` LTS.
@@ -153,7 +156,7 @@
 
 # 2.0.0 (2017-07-04)
 
-- [NEW] Moved to https://github.com/cloudant/couchbackup repository.
+- [NEW] Moved to https://github.com/IBM/couchbackup repository.
 - [NEW] Validate backup/restore options.
 - [NEW] Add User-Agent header to all requests.
 - [NEW] Added unique CLI exit codes for known error conditions.

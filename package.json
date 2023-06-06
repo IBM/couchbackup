@@ -2,8 +2,8 @@
   "name": "@cloudant/couchbackup",
   "version": "2.9.10-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
-  "homepage": "https://github.com/cloudant/couchbackup",
-  "repository": "https://github.com/cloudant/couchbackup.git",
+  "homepage": "https://github.com/IBM/couchbackup",
+  "repository": "https://github.com/IBM/couchbackup.git",
   "keywords": [
     "CouchDB",
     "Cloudant",
@@ -12,7 +12,7 @@
     "command-line"
   ],
   "bugs": {
-    "url": "https://github.com/cloudant/couchbackup/issues",
+    "url": "https://github.com/IBM/couchbackup/issues",
     "email": "cldtsdks@us.ibm.com"
   },
   "license": "Apache-2.0",
