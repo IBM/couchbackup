@@ -1,0 +1,4 @@
+# This enables DCO bot -  https://github.com/probot/dco for more details.
+# Exclude org members from DCO sign-off on commits
+require:
+  members: false
