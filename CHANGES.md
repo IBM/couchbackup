@@ -1,5 +1,9 @@
-# Unreleased
+# 2.9.10 (2023-06-09)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.2`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.0.8` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `axios` peerDependency to minimum version `1.4.0` to match version provided from `ibm-cloud-sdk-core`.
 - [NOTE] Repository moved from https://github.com/cloudant/couchbackup to https://github.com/IBM/couchbackup.
+- [NOTE] Updated Node.js version requirement statement for LTS 16 and 18.
 
 # 2.9.9 (2023-05-03)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.1`.
@@ -156,7 +160,7 @@
 
 # 2.0.0 (2017-07-04)
 
-- [NEW] Moved to https://github.com/IBM/couchbackup repository.
+- [NEW] Moved to https://github.com/cloudant/couchbackup repository.
 - [NEW] Validate backup/restore options.
 - [NEW] Add User-Agent header to all requests.
 - [NEW] Added unique CLI exit codes for known error conditions.
