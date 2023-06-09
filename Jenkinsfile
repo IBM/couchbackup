@@ -277,7 +277,7 @@ pipeline {
           // Run the gitTagAndPublish which tags/publishes to github for release builds
           gitTagAndPublish {
               versionFile='package.json'
-              releaseApiUrl='https://api.github.com/repos/cloudant/couchbackup/releases'
+              releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
           }
         }
       }
