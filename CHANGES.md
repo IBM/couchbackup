@@ -1,3 +1,6 @@
+# 2.9.12 (2023-09-04)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.6.0`.
+
 # 2.9.11 (2023-06-29)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.5.4`.
 - [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.0.9` to match version provided from `@ibm-cloud/cloudant`.
