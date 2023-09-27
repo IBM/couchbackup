@@ -27,9 +27,9 @@
     "tmp": "0.2.1"
   },
   "peerDependencies": {
-    "ibm-cloud-sdk-core": "^4.1.1",
-    "retry-axios": "^2.6.0",
-    "axios": "^1.4.0"
+    "axios": "^1.4.0",
+    "ibm-cloud-sdk-core": "^4.1.2",
+    "retry-axios": "^2.6.0"
   },
   "main": "app.js",
   "bin": {
@@ -46,12 +46,12 @@
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
     "http-proxy": "1.18.1",
+    "lodash": "4.17.21",
     "mocha": "10.2.0",
     "nock": "13.3.3",
     "tail": "2.2.6",
     "toxy": "0.3.16",
-    "uuid": "9.0.1",
-    "lodash": "4.17.21"
+    "uuid": "9.0.1"
   },
   "scripts": {
     "lint": "eslint --ignore-path .gitignore .",
