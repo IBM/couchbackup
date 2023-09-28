@@ -1,3 +1,8 @@
+# 2.9.13 (2023-09-28)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.7.1`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.1.2` to match version provided from `@ibm-cloud/cloudant`.
+- [NOTE] Updated minimum supported engine to Node.js 18 `hydrogen` LTS.
+
 # 2.9.12 (2023-09-04)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.6.0`.
 
