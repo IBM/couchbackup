@@ -19,12 +19,16 @@ const assert = require('assert');
 const spawn = require('child_process').spawn;
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
-const stream = require('stream');
-const fs = require('fs');
-const zlib = require('zlib');
+const { PassThrough } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
+const fs = require('node:fs');
+const { promisify } = require('node:util');
+const zlib = require('node:zlib');
 const Tail = require('tail').Tail;
 const compare = require('./compare.js');
 const request = require('../includes/request.js');
+const { cliBackup, cliGzip, cliEncrypt } = require('./test_process.js');
+const promisifiedBackup = promisify(app.backup);
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -40,31 +44,55 @@ function params() {
 
 // Returns the event emitter for API calls, or the child process for CLI calls
 function testBackup(params, databaseName, outputStream, callback) {
-  let gzip;
-  let openssl;
-  let backup;
-  let backupStream = outputStream;
+  const pipelineStreams = [];
+  const promises = [];
 
   // Configure API key if needed
   augmentParamsWithApiKey(params);
 
-  // Pipe via compression if requested
-  if (params.compression) {
-    if (params.useApi) {
-      // If use API use the Node zlib stream
-      const zlib = require('zlib');
-      backupStream = zlib.createGzip();
-      backupStream.pipe(outputStream);
-    } else {
-      // Spawn process for gzip
-      gzip = spawn('gzip', [], { stdio: ['pipe', 'pipe', 'inherit'] });
-      // Pipe the streams as needed
-      gzip.stdout.pipe(outputStream);
-      backupStream = gzip.stdin;
-      // register an error handler
-      gzip.on('error', function(err) {
+  let backup;
+  let backupStream;
+  let backupPromise;
+  let tail;
+  if (params.useApi) {
+    backupStream = new PassThrough();
+    backupPromise = promisifiedBackup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts);
+  } else {
+    backup = cliBackup(databaseName, params);
+    backupStream = backup.stream;
+    backupPromise = backup.childProcessPromise;
+    if (params.abort) {
+      // Create the log file for abort tests so we can tail it, other tests assert
+      // the log file is usually created normally by the backup process.
+      const f = fs.openSync(params.opts.log, 'w');
+      fs.closeSync(f);
+
+      // Use tail to watch the log file for a batch to be completed then abort
+      tail = new Tail(params.opts.log, { useWatchFile: true, fsWatchOptions: { interval: 500 }, follow: false });
+      tail.on('line', function(data) {
+        const matches = data.match(/:d batch\d+/);
+        if (matches !== null) {
+          // Turn off the tail.
+          tail.unwatch();
+          // Abort the backup
+          backup.childProcess.kill();
+        }
+      });
+      tail.on('error', function(err) {
         callback(err);
       });
+    }
+  }
+  promises.push(backupPromise);
+  pipelineStreams.push(backupStream);
+
+  if (params.compression) {
+    if (params.useApi) {
+      pipelineStreams.push(zlib.createGzip());
+    } else {
+      const gzipProcess = cliGzip();
+      pipelineStreams.push(gzipProcess.stream);
+      promises.push(gzipProcess.childProcessPromise);
     }
   }
 
@@ -74,199 +102,47 @@ function testBackup(params, databaseName, outputStream, callback) {
       // Currently only CLI support for testing encryption
       callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
-      // Spawn process for openssl
-      openssl = spawn('openssl', ['aes-128-cbc', '-pass', 'pass:12345'], { stdio: ['pipe', 'pipe', 'inherit'] });
-      // Pipe the streams as needed
-      openssl.stdout.pipe(outputStream);
-      backupStream = openssl.stdin;
-      // register an error handler
-      openssl.on('error', function(err) {
-        callback(err);
-      });
+      const encryptProcess = cliEncrypt();
+      pipelineStreams.push(encryptProcess.stream);
+      promises.push(encryptProcess.childProcessPromise);
     }
   }
 
-  let tail;
-  if (params.abort) {
-    // Create the log file for abort tests so we can tail it, other tests assert
-    // the log file is usually created normally by the backup process.
-    const f = fs.openSync(params.opts.log, 'w');
-    fs.closeSync(f);
+  // Finally add the outputStream to the list we want to pipeline
+  pipelineStreams.push(outputStream);
 
-    // Use tail to watch the log file for a batch to be completed then abort
-    tail = new Tail(params.opts.log, { useWatchFile: true, fsWatchOptions: { interval: 500 }, follow: false });
-    tail.on('line', function(data) {
-      const matches = data.match(/:d batch\d+/);
-      if (matches !== null) {
-        // Turn off the tail.
-        tail.unwatch();
-        // Abort the backup
-        backupAbort(params.useApi, backup);
-      }
-    });
-    tail.on('error', function(err) {
-      callback(err);
-    });
-  }
+  // Create the promisified pipeline and add it to the array of promises we'll wait for
+  promises.unshift(pipeline(pipelineStreams));
 
-  if (params.useApi) {
-    backup = app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, function(err, data) {
-      if (err) {
-        if (params.expectedBackupError) {
-          try {
-            assert.strictEqual(err.name, params.expectedBackupError.name, 'The backup should receive the expected error.');
-            // Got the expected error, so wipe it for the callback
-            err = null;
-          } catch (caught) {
-            // Update the error with the assertion failure
-            err = caught;
-          }
-        }
-      } else {
-        console.log(data);
+  // Wait for the promises and then assert
+  Promise.all(promises)
+    .then(() => {
+      if (params.expectedBackupError) {
+        throw new Error('Backup passed when it should have failed.');
       }
-      callback(err);
-    });
-    if (backup) {
-      backup.on('error', function(err) {
-        console.error(`Caught non-fatal error: ${err}`);
-      });
-    }
-  } else {
-    // Default to pipe, but will use 'inherit' if using --output (see params.opts.output)
-    let destination = 'pipe';
-
-    // Set up default args
-    const args = ['./bin/couchbackup.bin.js', '--db', databaseName];
-    if (params.opts) {
-      if (params.opts.mode) {
-        args.push('--mode');
-        args.push(params.opts.mode);
-      }
-      if (params.opts.output) {
-        args.push('--output');
-        args.push(params.opts.output);
-        destination = 'inherit';
-      }
-      if (params.opts.log) {
-        args.push('--log');
-        args.push(params.opts.log);
-      }
-      if (params.opts.resume) {
-        args.push('--resume');
-        args.push(params.opts.resume);
-      }
-      if (params.opts.bufferSize) {
-        args.push('--buffer-size');
-        args.push(params.opts.bufferSize);
-      }
-      if (params.opts.iamApiKey) {
-        args.push('--iam-api-key');
-        args.push(params.opts.iamApiKey);
-      }
-    }
-
-    let count = 0;
-    /**
-     * In some tests we need to wait for both the backup process
-     * and the outputStream to "close". If we callback from either
-     * event the other might not be ready and lead to flaky tests.
-     *
-     * This function delegates to the callback but only after the
-     * correct number of invocations. That is 2 when we have an
-     * output stream or 1 otherwise, and only once in the case of
-     * an error.
-     */
-    function gatingCallback(err) {
-      count += 1;
-      if (err) {
-        if (count === 1) {
-          callback(err);
-        }
-      } else {
-        // Output stream case we want a callback from process
-        // and the stream.
-        if (outputStream && count === 2) {
-          callback();
-        } else if (!outputStream && count === 1) {
-          callback();
-        }
-      }
-    }
-
-    // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    backup = spawn('node', args, { stdio: ['ignore', destination, 'pipe'] })
-      .on('error', function(err) {
-        gatingCallback(err);
-      })
-      .on('close', function(code, signal) {
-        console.log(`Backup process close ${code} ${signal}`);
-        try {
+    })
+    .catch((err) => {
+      if (params.expectedBackupError || params.abort) {
+        if (params.useApi) {
+          assert.strictEqual(err.name, params.expectedBackupError.name, 'The backup should receive the expected error.');
+        } else {
           if (params.abort) {
             // The tail should be stopped when we match a line and abort, but if
             // something didn't work we need to make sure the tail is stopped
             tail.unwatch();
             // Assert that the process was aborted as expected
-            assert.strictEqual(signal, 'SIGTERM', `The backup should have terminated with SIGTERM, but was ${signal}.`);
+            assert.strictEqual(err.signal, 'SIGTERM', `The backup should have terminated with SIGTERM, but was ${err.signal}.`);
           } else if (params.expectedBackupError) {
-            assert.strictEqual(code, params.expectedBackupError.code, `The backup exited with unexpected code ${code}.`);
-          } else {
-            assert.strictEqual(code, 0, `The backup should exit normally, got exit code ${code} and signal ${signal}.`);
+            assert.strictEqual(err.code, params.expectedBackupError.code, `The backup exited with unexpected code ${err.code} and signal ${err.signal}.`);
           }
-          gatingCallback();
-        } catch (err) {
-          gatingCallback(err);
         }
-      });
-    // Pipe the stdout to the supplied outputStream
-    if (destination === 'pipe') {
-      backup.stdout.pipe(backupStream);
-    }
-
-    // Forward the spawned process stderr (we don't use inherit because we want
-    // to access this stream directly as well)
-    backup.stderr.on('data', function(data) {
-      console.error(`${data}`);
+      } else {
+        throw err;
+      }
+    }).then(() => { callback(); }).catch((err) => {
+      callback(err);
     });
-
-    // Check for errors on the spawned processes
-    if (gzip) {
-      gzip.on('close', function(code) {
-        try {
-          assert.strictEqual(code, 0, `The compression should exit normally, got exit code ${code}.`);
-        } catch (err) {
-          gatingCallback(err);
-        }
-      });
-    }
-    if (openssl) {
-      openssl.on('close', function(code) {
-        try {
-          assert.strictEqual(code, 0, `The encryption should exit normally, got exit code ${code}.`);
-        } catch (err) {
-          gatingCallback(err);
-        }
-      });
-    }
-    if (outputStream) {
-      // Callback when the destination stream closes.
-      outputStream.on('close', gatingCallback);
-    } else if (!params.opts.output) {
-      gatingCallback(new Error('Unexpected test without outputStream or output option.'));
-    }
-  }
   return backup;
-}
-
-function backupAbort(usingApi, backup) {
-  setImmediate(function() {
-    if (usingApi) {
-      // Currently no way to abort an API backup
-      console.error('UNSUPPORTED: cannot abort API backups at this time.');
-    } else {
-      backup.kill();
-    }
-  });
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
@@ -420,7 +296,7 @@ function testRestoreFromFile(params, backupFile, targetDb, callback) {
 
 function testDirectBackupAndRestore(params, srcDb, targetDb, callback) {
   // Allow a 64 MB highWaterMark for the passthrough during testing
-  const passthrough = new stream.PassThrough({ highWaterMark: 67108864 });
+  const passthrough = new PassThrough({ highWaterMark: 67108864 });
   testBackupAndRestore(params, srcDb, passthrough, passthrough, targetDb, callback);
 }
 
@@ -452,10 +328,10 @@ function assertResumedBackup(params, resumedBackup, restoreCallback) {
       const matches = data.toString().match(/.*Finished - Total document revisions written: (\d+).*/);
       if (matches !== null) {
         assertWrittenFewerThan(matches[1], params.exclusiveMaxExpected, restoreCallback);
-        resumedBackup.stderr.removeListener('data', listener);
+        resumedBackup.childProcess.stderr.removeListener('data', listener);
       }
     };
-    resumedBackup.stderr.on('data', listener);
+    resumedBackup.childProcess.stderr.on('data', listener);
   }
 }
 
