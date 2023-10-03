@@ -100,7 +100,6 @@ def agentYaml() {
     |        limits:
     |          memory: "4Gi"
     |          cpu: "4"
-    ${nodeYaml(18)}
     ${nodeYaml(20)}
     |restartPolicy: Never""".stripMargin('|')
 }
