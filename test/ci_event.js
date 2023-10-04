@@ -21,8 +21,8 @@ const u = require('./citestutils.js');
 describe('Event tests', function() {
   it('should get a finished event when using stdout', function(done) {
     u.setTimeout(this, 40);
-    // Use the API so we can get events
-    const params = { useApi: true };
+    // Use the API so we can get events, pass eventEmitter so we get the emitter back
+    const params = { useApi: true, eventEmitter: true };
     const backup = u.testBackup(params, 'animaldb', process.stdout, function(err) {
       if (err) {
         done(err);
@@ -39,8 +39,8 @@ describe('Event tests', function() {
   });
   it('should get a finished event when using file output', function(done) {
     u.setTimeout(this, 40);
-    // Use the API so we can get events
-    const params = { useApi: true };
+    // Use the API so we can get events, pass eventEmitter so we get the emitter back
+    const params = { useApi: true, eventEmitter: true };
     const actualBackup = `./${this.fileName}`;
     // Create a file and backup to it
     const output = fs.createWriteStream(actualBackup);
