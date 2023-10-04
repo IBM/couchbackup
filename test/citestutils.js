@@ -56,7 +56,12 @@ function testBackup(params, databaseName, outputStream, callback) {
   let tail;
   if (params.useApi) {
     backupStream = new PassThrough();
-    backupPromise = promisifiedBackup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts);
+    if (params.eventEmitter) {
+      // For event tests we need the event emitter, not the promise, so shortcut here
+      return app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, callback);
+    } else {
+      backupPromise = promisifiedBackup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts);
+    }
   } else {
     backup = cliBackup(databaseName, params);
     backupStream = backup.stream;
