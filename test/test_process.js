@@ -112,7 +112,13 @@ module.exports = {
   cliGzip: function() {
     return new TestProcess('gzip', []);
   },
+  cliGunzip: function() {
+    return new TestProcess('gunzip', []);
+  },
   cliEncrypt: function() {
     return new TestProcess('openssl', ['aes-128-cbc', '-pass', 'pass:12345']);
+  },
+  cliDecrypt: function() {
+    return new TestProcess('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345']);
   }
 };
