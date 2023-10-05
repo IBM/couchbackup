@@ -15,19 +15,22 @@
 /* global */
 'use strict';
 
-const assert = require('assert');
-const spawn = require('child_process').spawn;
-const app = require('../app.js');
-const dbUrl = require('../includes/cliutils.js').databaseUrl;
+const assert = require('node:assert');
+const { once } = require('node:events');
+const fs = require('node:fs');
 const { PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const fs = require('node:fs');
 const { promisify } = require('node:util');
-const zlib = require('node:zlib');
-const Tail = require('tail').Tail;
+const { createGzip, createGunzip } = require('node:zlib');
+const debug = require('debug');
+const { Tail } = require('tail');
+const app = require('../app.js');
+const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const compare = require('./compare.js');
 const request = require('../includes/request.js');
-const { cliBackup, cliGzip, cliEncrypt } = require('./test_process.js');
+const { cliBackup, cliDecrypt, cliEncrypt, cliGzip, cliGunzip, cliRestore } = require('./test_process.js');
+const testLogger = debug('couchbackup:test:utils');
+
 const promisifiedBackup = promisify(app.backup);
 
 function scenario(test, params) {
@@ -93,7 +96,7 @@ function testBackup(params, databaseName, outputStream, callback) {
 
   if (params.compression) {
     if (params.useApi) {
-      pipelineStreams.push(zlib.createGzip());
+      pipelineStreams.push(createGzip());
     } else {
       const gzipProcess = cliGzip();
       pipelineStreams.push(gzipProcess.stream);
@@ -151,105 +154,108 @@ function testBackup(params, databaseName, outputStream, callback) {
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
-  let restoreStream = inputStream;
+  const pipelineStreams = [inputStream];
+  const promises = [];
 
   // Configure API key if needed
   augmentParamsWithApiKey(params);
 
+  let restore;
+  let restoreStream;
+  let restorePromise;
+
+  if (params.useApi) {
+    restoreStream = new PassThrough();
+    const restoreCallbackPromise = new Promise((resolve, reject) => {
+      restore = app.restore(
+        restoreStream,
+        dbUrl(process.env.COUCH_URL, databaseName),
+        params.opts,
+        (err, data) => {
+          if (err) {
+            testLogger(`API restore callback with ${err}, will reject.`);
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+    });
+    const restoreFinshedPromise = once(restore, 'finished')
+      .then((summary) => {
+        testLogger(`Resolving API restore promise with ${summary}`);
+      })
+      .catch((err) => {
+        testLogger(`Handling API restore error event ${JSON.stringify(err)}`);
+        if (params.expectedRestoreErrorRecoverable) {
+          testLogger(`Expecting restore error ${params.expectedRestoreErrorRecoverable.name}`);
+          assert.strictEqual(err.name, params.expectedRestoreErrorRecoverable.name, 'The restore should receive the expected recoverable error.');
+        } else {
+          testLogger(`API restore will reject by throwing error event ${JSON.stringify(err)}`);
+          throw err;
+        }
+      });
+    restorePromise = Promise.all([restoreCallbackPromise, restoreFinshedPromise]);
+  } else {
+    restore = cliRestore(databaseName, params);
+    restoreStream = restore.stream;
+    restorePromise = restore.childProcessPromise;
+  }
+  promises.push(restorePromise);
+
   // Pipe via decompression if requested
   if (params.compression) {
     if (params.useApi) {
-      // If use API use the Node zlib stream
-      restoreStream = zlib.createGunzip();
-      inputStream.pipe(restoreStream);
+      pipelineStreams.push(createGunzip());
     } else {
-      // Spawn process for gunzip
-      const gunzip = spawn('gunzip', [], { stdio: ['pipe', 'pipe', 'inherit'] });
-      // Pipe the streams as needed
-      inputStream.pipe(gunzip.stdin);
-      restoreStream = gunzip.stdout;
+      const gunzipProcess = cliGunzip();
+      pipelineStreams.push(gunzipProcess.stream);
+      promises.push(gunzipProcess.childProcessPromise);
     }
   }
 
   // Pipe via decryption if requested
   if (params.encryption) {
     if (params.useApi) {
+      // Currently only CLI support for testing encryption
       callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
-      // Spawn process for openssl
-      const dopenssl = spawn('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345'], { stdio: ['pipe', 'pipe', 'inherit'] });
-      // Pipe the streams as needed
-      inputStream.pipe(dopenssl.stdin);
-      restoreStream = dopenssl.stdout;
+      const decryptProcess = cliDecrypt();
+      pipelineStreams.push(decryptProcess.stream);
+      promises.push(decryptProcess.childProcessPromise);
     }
   }
 
-  if (params.useApi) {
-    app.restore(restoreStream, dbUrl(process.env.COUCH_URL, databaseName), params.opts, function(err, data) {
-      if (err) {
-        if (params.expectedRestoreError) {
-          try {
-            assert.strictEqual(err.name, params.expectedRestoreError.name, 'The restore should receive the expected error.');
-            err = null;
-          } catch (caught) {
-            err = caught;
-          }
+  // pipeline everything into the restoreStream
+  pipelineStreams.push(restoreStream);
+
+  // Create the promisified pipeline and add it to the array of promises we'll wait for
+  promises.unshift(pipeline(pipelineStreams));
+
+  // Wait for the all the promises to settle and then assert based on the process promise
+  return Promise.allSettled(promises)
+    .then(() => { return restorePromise; })
+    .then((summary) => {
+      testLogger(`Restore promise resolved with ${summary}.`);
+      if (params.expectedRestoreError) {
+        throw new Error('Restore passed when it should have failed.');
+      }
+    })
+    .catch((err) => {
+      testLogger(`Restore promise rejected with ${err}.`);
+      if (params.expectedRestoreError) {
+        if (params.useApi) {
+          assert.strictEqual(err.name, params.expectedRestoreError.name, 'The restore should receive the expected error.');
+        } else {
+          assert.strictEqual(err.code, params.expectedRestoreError.code, `The restore exited with unexpected code ${err.code} and signal ${err.signal}.`);
         }
       } else {
-        console.log(data);
+        throw err;
       }
-      callback(err);
-    }).on('error', function(err) {
-      console.error(`Caught non-fatal error: ${err}`);
-    });
-  } else {
-    // Set up default args
-    const args = ['./bin/couchrestore.bin.js', '--db', databaseName];
-    if (params.opts) {
-      if (params.opts.bufferSize) {
-        args.push('--buffer-size');
-        args.push(params.opts.bufferSize);
-      }
-      if (params.opts.parallelism) {
-        args.push('--parallelism');
-        args.push(params.opts.parallelism);
-      }
-      if (params.opts.requestTimeout) {
-        args.push('--request-timeout');
-        args.push(params.opts.requestTimeout);
-      }
-      if (params.opts.iamApiKey) {
-        args.push('--iam-api-key');
-        args.push(params.opts.iamApiKey);
-      }
-    }
-
-    // Note use spawn not fork for stdio options not supported with fork in Node 4.x
-    const restore = spawn('node', args, { stdio: ['pipe', 'inherit', 'inherit'] });
-    // Pipe to write the readable inputStream into stdin
-    restoreStream.pipe(restore.stdin);
-    restore.stdin.on('error', function(err) {
-      // Suppress errors that might arise from piping of input streams
-      // from the test process to the child process (this appears to be  handled
-      // gracefully in the shell)
-      console.error(`Test stream error code ${err.code}`);
-    });
-    restore.on('close', function(code) {
-      try {
-        if (params.expectedRestoreError) {
-          assert.strictEqual(code, params.expectedRestoreError.code, `The backup exited with unexpected code ${code}.`);
-        } else {
-          assert.strictEqual(code, 0, `The restore should exit normally, got exit code ${code}`);
-        }
-        callback();
-      } catch (err) {
-        callback(err);
-      }
-    });
-    restore.on('error', function(err) {
+    })
+    .then(() => { callback(); })
+    .catch((err) => {
       callback(err);
     });
-  }
 }
 
 // Serial backup and restore via a file on disk
