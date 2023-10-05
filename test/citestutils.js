@@ -365,7 +365,7 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 
     // Resume backup and restore to validate it was successful.
     if (params.opts && params.opts.output) {
-      const resumedBackup = testBackup(params, srcDb, null, function(err) {
+      const resumedBackup = testBackup(params, srcDb, new PassThrough(), function(err) {
         if (err) {
           callback(err);
         }
@@ -384,7 +384,7 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
   };
 
   if (params.opts && params.opts.output) {
-    testBackup(params, srcDb, null, resume);
+    testBackup(params, srcDb, new PassThrough(), resume);
   } else {
     testBackupToFile(params, srcDb, backupFile, resume);
   }
