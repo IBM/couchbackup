@@ -15,49 +15,22 @@
 /* global describe it */
 'use strict';
 
-const fs = require('fs');
 const u = require('./citestutils.js');
 
 describe('Event tests', function() {
-  it('should get a finished event when using stdout', function(done) {
+  it('should get a finished event when using stdout', async function() {
     u.setTimeout(this, 40);
     // Use the API so we can get events, pass eventEmitter so we get the emitter back
-    const params = { useApi: true, eventEmitter: true };
-    const backup = u.testBackup(params, 'animaldb', process.stdout, function(err) {
-      if (err) {
-        done(err);
-      }
-    });
-    backup.on('finished', function() {
-      try {
-        // Test will time out if the finished event is not emitted
-        done();
-      } catch (err) {
-        done(err);
-      }
-    });
+    const params = { useApi: true, useStdOut: true };
+    // All API backups now set an event listener for finished and it is part of the backup
+    // promise, so if the backup passes the finished event fired.
+    return u.testBackup(params, 'animaldb', process.stdout);
   });
-  it('should get a finished event when using file output', function(done) {
+  it('should get a finished event when using file output', async function() {
     u.setTimeout(this, 40);
     // Use the API so we can get events, pass eventEmitter so we get the emitter back
-    const params = { useApi: true, eventEmitter: true };
+    const params = { useApi: true };
     const actualBackup = `./${this.fileName}`;
-    // Create a file and backup to it
-    const output = fs.createWriteStream(actualBackup);
-    output.on('open', function() {
-      const backup = u.testBackup(params, 'animaldb', output, function(err) {
-        if (err) {
-          done(err);
-        }
-      });
-      backup.on('finished', function() {
-        try {
-          // Test will time out if the finished event is not emitted
-          done();
-        } catch (err) {
-          done(err);
-        }
-      });
-    });
+    return u.testBackupToFile(params, 'animaldb', actualBackup, () => {});
   });
 });

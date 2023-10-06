@@ -55,7 +55,11 @@ function testBackup(params, databaseName, outputStream, callback) {
   let backupPromise;
   let tail;
   if (params.useApi) {
-    backupStream = new PassThrough();
+    if (params.useStdOut) {
+      backupStream = outputStream;
+    } else {
+      backupStream = new PassThrough();
+    }
     const backupCallbackPromise = new Promise((resolve, reject) => {
       backup = app.backup(
         dbUrl(process.env.COUCH_URL, databaseName),
@@ -63,25 +67,29 @@ function testBackup(params, databaseName, outputStream, callback) {
         params.opts,
         (err, data) => {
           if (err) {
-            testLogger(`API backup callback with ${err}, will reject.`);
+            testLogger(`API backup callback with ${JSON.stringify(err)}, will reject.`);
             reject(err);
           } else {
+            testLogger(`API backup callback with ${JSON.stringify(data)}, will resolve.`);
             resolve(data);
           }
         });
     });
     const backupFinshedPromise = once(backup, 'finished')
       .then((summary) => {
-        testLogger(`Resolving API backup promise with ${summary}`);
+        testLogger(`Resolving API backup event promise with ${JSON.stringify(summary)}`);
         if (params.resume) {
           assertWrittenFewerThan(summary.total, params.exclusiveMaxExpected);
         }
       })
       .catch((err) => {
-        testLogger(`Rejecting API backup with error ${JSON.stringify(err)}`);
+        testLogger(`Rejecting API backup event promise with error ${JSON.stringify(err)}`);
         throw err;
       });
-    backupPromise = Promise.all([backupCallbackPromise, backupFinshedPromise]);
+    backupPromise = Promise.all([backupCallbackPromise, backupFinshedPromise])
+      .then(() => {
+        testLogger('Both API backup promises resolved.');
+      });
   } else {
     backup = cliBackup(databaseName, params);
     backupStream = backup.stream;
@@ -127,7 +135,9 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   }
   promises.push(backupPromise);
-  pipelineStreams.push(backupStream);
+  if (!params.useStdOut) {
+    pipelineStreams.push(backupStream);
+  }
 
   if (params.compression) {
     if (params.useApi) {
@@ -151,14 +161,17 @@ function testBackup(params, databaseName, outputStream, callback) {
     }
   }
 
-  // Finally add the outputStream to the list we want to pipeline
-  pipelineStreams.push(outputStream);
+  if (!params.useStdOut) {
+    // Finally add the outputStream to the list we want to pipeline
+    pipelineStreams.push(outputStream);
 
-  // Create the promisified pipeline and add it to the array of promises we'll wait for
-  promises.unshift(pipeline(pipelineStreams));
+    // Create the promisified pipeline and add it to the array of promises we'll wait for
+    promises.unshift(pipeline(pipelineStreams));
+  }
 
   // Wait for the promises and then assert
   return Promise.all(promises)
+    .then(() => testLogger('All backup promises resolved.'))
     .then(() => {
       if (params.expectedBackupError) {
         throw new Error('Backup passed when it should have failed.');
@@ -182,8 +195,11 @@ function testBackup(params, databaseName, outputStream, callback) {
       } else {
         throw err;
       }
-    }).then(() => { callback(); }).catch((err) => {
-      callback(err);
+    }).then(() => {
+      if (callback) callback();
+    })
+    .catch((err) => {
+      if (callback) callback(err);
     });
 }
 
