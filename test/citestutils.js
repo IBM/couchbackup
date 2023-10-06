@@ -20,7 +20,6 @@ const { once } = require('node:events');
 const fs = require('node:fs');
 const { PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { promisify } = require('node:util');
 const { createGzip, createGunzip } = require('node:zlib');
 const debug = require('debug');
 const { Tail } = require('tail');
@@ -30,8 +29,6 @@ const compare = require('./compare.js');
 const request = require('../includes/request.js');
 const { cliBackup, cliDecrypt, cliEncrypt, cliGzip, cliGunzip, cliRestore } = require('./test_process.js');
 const testLogger = debug('couchbackup:test:utils');
-
-const promisifiedBackup = promisify(app.backup);
 
 function scenario(test, params) {
   return `${test} ${(params.useApi) ? 'using API' : 'using CLI'}`;
@@ -59,12 +56,32 @@ function testBackup(params, databaseName, outputStream, callback) {
   let tail;
   if (params.useApi) {
     backupStream = new PassThrough();
-    if (params.eventEmitter) {
-      // For event tests we need the event emitter, not the promise, so shortcut here
-      return app.backup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts, callback);
-    } else {
-      backupPromise = promisifiedBackup(dbUrl(process.env.COUCH_URL, databaseName), backupStream, params.opts);
-    }
+    const backupCallbackPromise = new Promise((resolve, reject) => {
+      backup = app.backup(
+        dbUrl(process.env.COUCH_URL, databaseName),
+        backupStream,
+        params.opts,
+        (err, data) => {
+          if (err) {
+            testLogger(`API backup callback with ${err}, will reject.`);
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+    });
+    const backupFinshedPromise = once(backup, 'finished')
+      .then((summary) => {
+        testLogger(`Resolving API backup promise with ${summary}`);
+        if (params.resume) {
+          assertWrittenFewerThan(summary.total, params.exclusiveMaxExpected);
+        }
+      })
+      .catch((err) => {
+        testLogger(`Rejecting API backup with error ${JSON.stringify(err)}`);
+        throw err;
+      });
+    backupPromise = Promise.all([backupCallbackPromise, backupFinshedPromise]);
   } else {
     backup = cliBackup(databaseName, params);
     backupStream = backup.stream;
@@ -89,6 +106,24 @@ function testBackup(params, databaseName, outputStream, callback) {
       tail.on('error', function(err) {
         callback(err);
       });
+    }
+    if (params.resume) {
+      const listenerPromise = new Promise((resolve, reject) => {
+        const listener = function(data) {
+          const matches = data.toString().match(/.*Finished - Total document revisions written: (\d+).*/);
+          if (matches !== null) {
+            try {
+              assertWrittenFewerThan(matches[1], params.exclusiveMaxExpected);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+            process.stderr.removeListener('data', listener);
+          }
+        };
+        backup.childProcess.stderr.on('data', listener);
+      });
+      promises.push(listenerPromise);
     }
   }
   promises.push(backupPromise);
@@ -123,7 +158,7 @@ function testBackup(params, databaseName, outputStream, callback) {
   promises.unshift(pipeline(pipelineStreams));
 
   // Wait for the promises and then assert
-  Promise.all(promises)
+  return Promise.all(promises)
     .then(() => {
       if (params.expectedBackupError) {
         throw new Error('Backup passed when it should have failed.');
@@ -150,7 +185,6 @@ function testBackup(params, databaseName, outputStream, callback) {
     }).then(() => { callback(); }).catch((err) => {
       callback(err);
     });
-  return backup;
 }
 
 function testRestore(params, inputStream, databaseName, callback) {
@@ -275,20 +309,17 @@ function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callba
   });
 }
 
-function testBackupToFile(params, srcDb, backupFile, callback, processCallback) {
+function testBackupToFile(params, srcDb, backupFile, callback) {
   // Open the file for appending if this is a resume
   const output = fs.createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
   output.on('open', function() {
-    const backupProcess = testBackup(params, srcDb, output, function(err) {
+    testBackup(params, srcDb, output, function(err) {
       if (err) {
         callback(err);
       } else {
         callback();
       }
     });
-    if (processCallback) {
-      processCallback(backupProcess);
-    }
   });
 }
 
@@ -326,26 +357,6 @@ function testBackupAndRestore(params, srcDb, backupStream, restoreStream, target
   });
 }
 
-function assertResumedBackup(params, resumedBackup, restoreCallback) {
-  // Validate that the resume backup didn't need to write all the docs
-  if (params.useApi) {
-    resumedBackup.once('finished', function(summary) {
-      assertWrittenFewerThan(summary.total, params.exclusiveMaxExpected, restoreCallback);
-    });
-  } else {
-    // For the CLI case we need to see the output because we don't have
-    // the finished event.
-    const listener = function(data) {
-      const matches = data.toString().match(/.*Finished - Total document revisions written: (\d+).*/);
-      if (matches !== null) {
-        assertWrittenFewerThan(matches[1], params.exclusiveMaxExpected, restoreCallback);
-        resumedBackup.childProcess.stderr.removeListener('data', listener);
-      }
-    };
-    resumedBackup.childProcess.stderr.on('data', listener);
-  }
-}
-
 function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callback) {
   const restore = function(err) {
     if (err) {
@@ -371,20 +382,20 @@ function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callb
 
     // Resume backup and restore to validate it was successful.
     if (params.opts && params.opts.output) {
-      const resumedBackup = testBackup(params, srcDb, new PassThrough(), function(err) {
+      testBackup(params, srcDb, new PassThrough(), function(err) {
         if (err) {
           callback(err);
+        } else {
+          restore();
         }
       });
-      assertResumedBackup(params, resumedBackup, restore);
     } else {
       testBackupToFile(params, srcDb, backupFile, function(err) {
         if (err) {
           callback(err);
+        } else {
+          restore();
         }
-      },
-      function(backupProcess) {
-        assertResumedBackup(params, backupProcess, restore);
       });
     }
   };
@@ -475,13 +486,8 @@ function assertEncryptedFile(path, callback) {
   }
 }
 
-function assertWrittenFewerThan(total, number, callback) {
-  try {
-    assert(total < number && total > 0, `Saw ${total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
-    callback();
-  } catch (err) {
-    callback(err);
-  }
+function assertWrittenFewerThan(total, number) {
+  assert(total < number && total > 0, `Saw ${total} but expected between 1 and ${number - 1} documents for the resumed backup.`);
 }
 
 function augmentParamsWithApiKey(params) {
