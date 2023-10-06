@@ -27,8 +27,6 @@ const u = require('./citestutils.js');
 
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
-      // Use abort parameter to terminate the backup a given number of ms after
-      // the first data write to the output file.
       const p = u.p(params, { opts: { log: logFile } });
       u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
         if (err) {
@@ -50,8 +48,9 @@ const u = require('./citestutils.js');
       u.setTimeout(this, 60);
       const input = fs.createReadStream('./test/fixtures/animaldb_corrupted.json');
       const dbName = this.dbName;
+      const p = u.p(params, { expectedRestoreErrorRecoverable: { name: 'BackupFileJsonError' } });
       input.on('open', function() {
-        u.testRestore(params, input, dbName, function(err) {
+        u.testRestore(p, input, dbName, function(err) {
           if (err) {
             done(err);
           } else {
@@ -88,8 +87,7 @@ describe('Resume tests', function() {
 
     const actualBackup = `./${this.fileName}`;
     const logFile = `./${this.fileName}` + '.log';
-    // Use abort parameter to terminate the backup a given number of ms after
-    // the first data write to the output file.
+    // Use abort parameter to terminate the backup
     const p = u.p(params, { abort: true }, { opts: { log: logFile } });
     const restoreDb = this.dbName;
     // Set the database doc count as fewer than this should be written during
@@ -106,8 +104,7 @@ describe('Resume tests', function() {
 
     const actualBackup = `./${this.fileName}`;
     const logFile = `./${this.fileName}` + '.log';
-    // Use abort parameter to terminate the backup a given number of ms after
-    // the first data write to the output file.
+    // Use abort parameter to terminate the backup
     const p = u.p(params, { abort: true }, { opts: { output: actualBackup, log: logFile } });
     const restoreDb = this.dbName;
     // Set the database doc count as fewer than this should be written during
