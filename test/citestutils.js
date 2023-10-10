@@ -355,22 +355,11 @@ function testRestoreFromFile(params, backupFile, targetDb, callback) {
 function testDirectBackupAndRestore(params, srcDb, targetDb, callback) {
   // Allow a 64 MB highWaterMark for the passthrough during testing
   const passthrough = new PassThrough({ highWaterMark: 67108864 });
-  testBackupAndRestore(params, srcDb, passthrough, passthrough, targetDb, callback);
-}
-
-function testBackupAndRestore(params, srcDb, backupStream, restoreStream, targetDb, callback) {
-  testBackup(params, srcDb, backupStream, function(err) {
-    if (err) {
-      callback(err);
-    }
-  });
-  testRestore(params, restoreStream, targetDb, function(err) {
-    if (err) {
-      callback(err);
-    } else {
-      dbCompare(srcDb, targetDb, callback);
-    }
-  });
+  const backup = testBackup(params, srcDb, passthrough, () => {});
+  const restore = testRestore(params, passthrough, targetDb, () => {});
+  Promise.all([backup, restore]).then(() => {
+    dbCompare(srcDb, targetDb, callback);
+  }).catch((err) => callback(err));
 }
 
 function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callback) {
