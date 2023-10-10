@@ -48,6 +48,11 @@ class TestProcess {
         logProcess(`Will reject process promise for ${cmd} with ${e}`);
         return Promise.reject(e);
       }
+    }).finally(() => {
+      // If we finished the process but the writable side of the duplex was not ended, end it.
+      if (!this.stream.writableEnded) {
+        this.stream.end();
+      }
     });
     // Make sure we get error output on the main process error log too
     this.childProcess.stderr.pipe(process.stderr);
