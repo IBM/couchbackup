@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,63 +17,48 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const { once } = require('node:events');
 const u = require('./citestutils.js');
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Resume tests', params), function() {
-    it('should create a log file', function(done) {
+    it('should create a log file', async function() {
       // Allow up to 90 s for this test
       u.setTimeout(this, 60);
 
       const actualBackup = `./${this.fileName}`;
       const logFile = `./${this.fileName}` + '.log';
       const p = u.p(params, { opts: { log: logFile } });
-      u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
-        if (err) {
-          done(err);
-        } else {
-          // Assert the log file exists
-          try {
-            assert.ok(fs.existsSync(logFile), 'The log file should exist.');
-            done();
-          } catch (err) {
-            done(err);
-          }
-        }
+      return u.testBackupToFile(p, 'animaldb', actualBackup).then(() => {
+        assert.ok(fs.existsSync(logFile), 'The log file should exist.');
       });
     });
 
-    it('should restore corrupted animaldb to a database correctly', function(done) {
+    it('should restore corrupted animaldb to a database correctly', async function() {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
       const input = fs.createReadStream('./test/fixtures/animaldb_corrupted.json');
       const dbName = this.dbName;
       const p = u.p(params, { expectedRestoreErrorRecoverable: { name: 'BackupFileJsonError' } });
-      input.on('open', function() {
-        u.testRestore(p, input, dbName, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.dbCompare('animaldb', dbName, done);
-          }
+      return once(input, 'open')
+        .then(() => {
+          return u.testRestore(p, input, dbName);
+        }).then(() => {
+          return u.dbCompare('animaldb', dbName);
         });
-      });
     });
 
-    it('should restore resumed animaldb with blank line to a database correctly', function(done) {
+    it('should restore resumed animaldb with blank line to a database correctly', async function() {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
       const input = fs.createReadStream('./test/fixtures/animaldb_resumed_blank.json');
       const dbName = this.dbName;
-      input.on('open', function() {
-        u.testRestore(params, input, dbName, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.dbCompare('animaldb', dbName, done);
-          }
+      return once(input, 'open')
+        .then(() => {
+          return u.testRestore(params, input, dbName);
+        }).then(() => {
+          return u.dbCompare('animaldb', dbName);
         });
-      });
     });
   });
 });
@@ -81,7 +66,7 @@ const u = require('./citestutils.js');
 describe('Resume tests', function() {
   // Currently cannot abort API backups, when we do this test should be run for
   // both API and CLI
-  it('should correctly backup and restore backup10m', function(done) {
+  it('should correctly backup and restore backup10m', async function() {
     // Allow up to 90 s for this test
     u.setTimeout(this, 90);
 
@@ -94,11 +79,11 @@ describe('Resume tests', function() {
     // resumed backup.
     p.exclusiveMaxExpected = 5096;
 
-    u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
+    return u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb);
   });
   // Note --output is only valid for CLI usage, this test should only run for CLI
   const params = { useApi: false };
-  it('should correctly backup and restore backup10m using --output', function(done) {
+  it('should correctly backup and restore backup10m using --output', async function() {
     // Allow up to 90 s for this test
     u.setTimeout(this, 90);
 
@@ -111,6 +96,6 @@ describe('Resume tests', function() {
     // resumed backup.
     p.exclusiveMaxExpected = 5096;
 
-    u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb, done);
+    return await u.testBackupAbortResumeRestore(p, 'backup10m', actualBackup, restoreDb);
   });
 });
