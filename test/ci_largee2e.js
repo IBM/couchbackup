@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ const u = require('./citestutils.js');
   describe(u.scenario('#slowest End to end backup and restore', params), function() {
     // 10 GB is about the largest the CI can handle before getting very upset
     // about how long things are taking
-    it('should backup and restore largedb10g', function(done) {
+    it('should backup and restore largedb10g', async function() {
       u.setTimeout(this, 350 * 60);
-      u.testDirectBackupAndRestore(params, 'largedb10g', this.dbName, done);
+      return u.testDirectBackupAndRestore(params, 'largedb10g', this.dbName);
     });
   });
 });

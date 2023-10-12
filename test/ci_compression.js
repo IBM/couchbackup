@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,53 +16,47 @@
 'use strict';
 
 const fs = require('fs');
+const { once } = require('node:events');
 const u = require('./citestutils.js');
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Compression tests', params), function() {
     const p = u.p(params, { compression: true });
 
-    it('should backup animaldb to a compressed file', function(done) {
+    it('should backup animaldb to a compressed file', async function() {
       // Allow up to 60 s for backup of animaldb
       u.setTimeout(this, 60);
       const compressedBackup = `./${this.fileName}`;
       const output = fs.createWriteStream(compressedBackup);
-      output.on('open', function() {
-        u.testBackup(p, 'animaldb', output, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.assertGzipFile(compressedBackup, done);
-          }
+      return once(output, 'open')
+        .then(() => {
+          return u.testBackup(p, 'animaldb', output);
+        }).then(() => {
+          return u.assertGzipFile(compressedBackup);
         });
-      });
     });
 
-    it('should backup and restore animaldb via a compressed file', function(done) {
+    it('should backup and restore animaldb via a compressed file', async function() {
       // Allow up to 60 s for backup and restore of animaldb
       u.setTimeout(this, 60);
       const compressedBackup = `./${this.fileName}`;
-      u.testBackupAndRestoreViaFile(p, 'animaldb', compressedBackup, this.dbName, function(err) {
-        if (err) {
-          done(err);
-        } else {
-          u.assertGzipFile(compressedBackup, done);
-        }
+      return u.testBackupAndRestoreViaFile(p, 'animaldb', compressedBackup, this.dbName).then(() => {
+        return u.assertGzipFile(compressedBackup);
       });
     });
 
-    it('should backup and restore animaldb via a compressed stream', function(done) {
+    it('should backup and restore animaldb via a compressed stream', async function() {
       // Allow up to 60 s for backup and restore of animaldb
       u.setTimeout(this, 60);
-      u.testDirectBackupAndRestore(p, 'animaldb', this.dbName, done);
+      return u.testDirectBackupAndRestore(p, 'animaldb', this.dbName);
     });
 
-    it('should backup and restore largedb2g via a compressed file #slower', function(done) {
+    it('should backup and restore largedb2g via a compressed file #slower', async function() {
       // Takes ~ 25 min using CLI, but sometimes over an hour with API
       u.setTimeout(this, 180 * 60);
       const compressedBackup = `./${this.fileName}`;
       params.compression = true;
-      u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName, done);
+      return u.testBackupAndRestoreViaFile(p, 'largedb2g', compressedBackup, this.dbName);
     });
   });
 });
