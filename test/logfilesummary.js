@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,16 +19,22 @@ const assert = require('assert');
 const logfilesummary = require('../includes/logfilesummary.js');
 
 describe('#unit Fetching summary from the log file', function() {
-  it('should fetch a summary correctly', function(done) {
-    logfilesummary('./test/fixtures/test.log', function(err, data) {
-      assert.ok(!err);
-      assert.ok(data);
-      assert.strictEqual(data.changesComplete, true);
-      assert.strictEqual(typeof data.batches, 'object');
-      assert.strictEqual(Object.keys(data.batches).length, 2);
-      assert.deepStrictEqual(data.batches['1'], true);
-      assert.deepStrictEqual(data.batches['4'], true);
-      done();
+  it('should fetch a summary correctly', function() {
+    return new Promise((resolve, reject) => {
+      logfilesummary('./test/fixtures/test.log', function(err, data) {
+        try {
+          assert.ok(!err);
+          assert.ok(data);
+          assert.strictEqual(data.changesComplete, true);
+          assert.strictEqual(typeof data.batches, 'object');
+          assert.strictEqual(Object.keys(data.batches).length, 2);
+          assert.deepStrictEqual(data.batches['1'], true);
+          assert.deepStrictEqual(data.batches['4'], true);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 });

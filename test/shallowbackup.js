@@ -1,4 +1,4 @@
-// Copyright © 2017, 2022 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ describe('#unit Perform backup using shallow backup', function() {
     nock.cleanAll();
   });
 
-  it('should perform a shallow backup', function(done) {
+  it('should perform a shallow backup', async function() {
     const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
@@ -59,25 +59,35 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-      .on('error', function(err) {
-        assert.fail(err);
-      })
-      .on('received', function(data) {
-        if (data.batch === 3) {
-          assert.strictEqual(data.length, 2); // smaller last batch
-        } else {
-          assert.strictEqual(data.length, 3);
-        }
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 11);
-        assert.ok(couch.isDone());
-        done();
-      });
+    return new Promise((resolve, reject) => {
+      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
+        .on('error', function(err) {
+          reject(err);
+        })
+        .on('received', function(data) {
+          try {
+            if (data.batch === 3) {
+              assert.strictEqual(data.length, 2); // smaller last batch
+            } else {
+              assert.strictEqual(data.length, 3);
+            }
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('finished', function(data) {
+          try {
+            assert.strictEqual(data.total, 11);
+            assert.ok(couch.isDone());
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+    });
   });
 
-  it('should perform a shallow backup with transient error', function(done) {
+  it('should perform a shallow backup with transient error', async function() {
     const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
@@ -95,25 +105,39 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-      .on('error', function(err) {
-        assert.strictEqual(err.name, 'HTTPError');
-      })
-      .on('received', function(data) {
-        if (data.batch === 3) {
-          assert.strictEqual(data.length, 2); // smaller last batch
-        } else {
-          assert.strictEqual(data.length, 3);
-        }
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 11);
-        assert.ok(couch.isDone());
-        done();
-      });
+    return new Promise((resolve, reject) => {
+      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
+        .on('error', function(err) {
+          try {
+            assert.strictEqual(err.name, 'HTTPError');
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('received', function(data) {
+          try {
+            if (data.batch === 3) {
+              assert.strictEqual(data.length, 2); // smaller last batch
+            } else {
+              assert.strictEqual(data.length, 3);
+            }
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('finished', function(data) {
+          try {
+            assert.strictEqual(data.total, 11);
+            assert.ok(couch.isDone());
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+    });
   });
 
-  it('should fail to perform a shallow backup on fatal error', function(done) {
+  it('should fail to perform a shallow backup on fatal error', async function() {
     const couch = nock(dbUrl)
       // batch 1
       .post('/_all_docs', { limit: 3, include_docs: true })
@@ -127,19 +151,33 @@ describe('#unit Perform backup using shallow backup', function() {
 
     let errCount = 0;
 
-    shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-      .on('error', function(err) {
-        errCount++;
-        assert.strictEqual(err.name, 'Unauthorized');
-      })
-      .on('received', function(data) {
-        assert.strictEqual(data.length, 3);
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 6);
-        assert.ok(couch.isDone());
-        assert.strictEqual(errCount, 1);
-        done();
-      });
+    return new Promise((resolve, reject) => {
+      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
+        .on('error', function(err) {
+          try {
+            errCount++;
+            assert.strictEqual(err.name, 'Unauthorized');
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('received', function(data) {
+          try {
+            assert.strictEqual(data.length, 3);
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('finished', function(data) {
+          try {
+            assert.strictEqual(data.total, 6);
+            assert.ok(couch.isDone());
+            assert.strictEqual(errCount, 1);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+    });
   });
 });
