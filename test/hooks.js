@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ const fs = require('fs');
 
 // Mocha hooks that will be at the root context so run for all tests
 
-beforeEach('Create test database', function(done) {
+beforeEach('Create test database', async function() {
   // Don't run hook for unit tests, just for CI
   if (!this.currentTest.fullTitle().includes('#unit')) {
     // Allow 10 seconds to create the DB
@@ -38,22 +38,19 @@ beforeEach('Create test database', function(done) {
     const unique = uuid();
     this.fileName = `${unique}`;
     this.dbName = 'couchbackup_test_' + unique;
-    cloudant.putDatabase({ db: this.dbName }).then(() => { done(); }).catch((err) => { done(err); });
-  } else {
-    done();
+
+    return cloudant.putDatabase({ db: this.dbName });
   }
 });
 
-afterEach('Delete test database', function(done) {
+afterEach('Delete test database', async function() {
   // Don't run hook for unit tests, just for CI
   if (!this.currentTest.fullTitle().includes('#unit')) {
     // Allow 10 seconds to delete the DB
     this.timeout(10 * 1000);
     deleteIfExists(this.fileName);
     deleteIfExists(`${this.fileName}.log`);
-    cloudant.deleteDatabase({ db: this.dbName }).then(() => { done(); }).catch((err) => { done(err); });
-  } else {
-    done();
+    return cloudant.deleteDatabase({ db: this.dbName });
   }
 });
 
