@@ -43,7 +43,7 @@ function params() {
 }
 
 // Returns the event emitter for API calls, or the child process for CLI calls
-function testBackup(params, databaseName, outputStream, callback) {
+async function testBackup(params, databaseName, outputStream) {
   const pipelineStreams = [];
   const promises = [];
 
@@ -111,9 +111,6 @@ function testBackup(params, databaseName, outputStream, callback) {
           backup.childProcess.kill();
         }
       });
-      tail.on('error', function(err) {
-        callback(err);
-      });
     }
     if (params.resume) {
       const listenerPromise = new Promise((resolve, reject) => {
@@ -134,6 +131,7 @@ function testBackup(params, databaseName, outputStream, callback) {
       promises.push(listenerPromise);
     }
   }
+
   promises.push(backupPromise);
   if (!params.useStdOut) {
     pipelineStreams.push(backupStream);
@@ -153,7 +151,7 @@ function testBackup(params, databaseName, outputStream, callback) {
   if (params.encryption) {
     if (params.useApi) {
       // Currently only CLI support for testing encryption
-      callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
+      return Promise.reject(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
       const encryptProcess = cliEncrypt();
       pipelineStreams.push(encryptProcess.stream);
@@ -174,7 +172,7 @@ function testBackup(params, databaseName, outputStream, callback) {
     .then(() => testLogger('All backup promises resolved.'))
     .then(() => {
       if (params.expectedBackupError) {
-        throw new Error('Backup passed when it should have failed.');
+        return Promise.reject(new Error('Backup passed when it should have failed.'));
       }
     })
     .catch((err) => {
@@ -193,17 +191,12 @@ function testBackup(params, databaseName, outputStream, callback) {
           }
         }
       } else {
-        throw err;
+        return Promise.reject(err);
       }
-    }).then(() => {
-      if (callback) callback();
-    })
-    .catch((err) => {
-      if (callback) callback(err);
     });
 }
 
-function testRestore(params, inputStream, databaseName, callback) {
+async function testRestore(params, inputStream, databaseName) {
   const pipelineStreams = [inputStream];
   const promises = [];
 
@@ -241,7 +234,7 @@ function testRestore(params, inputStream, databaseName, callback) {
           assert.strictEqual(err.name, params.expectedRestoreErrorRecoverable.name, 'The restore should receive the expected recoverable error.');
         } else {
           testLogger(`API restore will reject by throwing error event ${JSON.stringify(err)}`);
-          throw err;
+          return Promise.reject(err);
         }
       });
     restorePromise = Promise.all([restoreCallbackPromise, restoreFinshedPromise]);
@@ -267,7 +260,7 @@ function testRestore(params, inputStream, databaseName, callback) {
   if (params.encryption) {
     if (params.useApi) {
       // Currently only CLI support for testing encryption
-      callback(new Error('Not implemented: cannot test encrypted API backups at this time.'));
+      return Promise.reject(new Error('Not implemented: cannot test encrypted API backups at this time.'));
     } else {
       const decryptProcess = cliDecrypt();
       pipelineStreams.push(decryptProcess.stream);
@@ -287,7 +280,7 @@ function testRestore(params, inputStream, databaseName, callback) {
     .then((summary) => {
       testLogger(`Restore promise resolved with ${summary}.`);
       if (params.expectedRestoreError) {
-        throw new Error('Restore passed when it should have failed.');
+        return Promise.reject(new Error('Restore passed when it should have failed.'));
       }
     })
     .catch((err) => {
@@ -299,131 +292,80 @@ function testRestore(params, inputStream, databaseName, callback) {
           assert.strictEqual(err.code, params.expectedRestoreError.code, `The restore exited with unexpected code ${err.code} and signal ${err.signal}.`);
         }
       } else {
-        throw err;
+        return Promise.reject(err);
       }
-    })
-    .then(() => { callback(); })
-    .catch((err) => {
-      callback(err);
     });
 }
 
 // Serial backup and restore via a file on disk
-function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb, callback) {
-  testBackupToFile(params, srcDb, backupFile, function(err) {
-    if (err) {
-      callback(err);
-    } else {
-      testRestoreFromFile(params, backupFile, targetDb, function(err) {
-        if (!err) {
-          dbCompare(srcDb, targetDb, callback);
-        } else {
-          callback(err);
-        }
-      });
-    }
+async function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb) {
+  return testBackupToFile(params, srcDb, backupFile).then(() => {
+    return testRestoreFromFile(params, backupFile, targetDb);
   });
+  // return await Promise.allSettled([testBackupToFile(params, srcDb, backupFile), testRestoreFromFile(params, backupFile, targetDb)]);
 }
 
-function testBackupToFile(params, srcDb, backupFile, callback) {
+async function testBackupToFile(params, srcDb, backupFile, processCallback) {
   // Open the file for appending if this is a resume
   const output = fs.createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
-  output.on('open', function() {
-    testBackup(params, srcDb, output, function(err) {
-      if (err) {
-        callback(err);
-      } else {
-        callback();
-      }
+  return once(output, 'open')
+    .then(() => {
+      return testBackup(params, srcDb, output);
     });
-  });
 }
 
-function testRestoreFromFile(params, backupFile, targetDb, callback) {
+async function testRestoreFromFile(params, backupFile, targetDb) {
   const input = fs.createReadStream(backupFile);
-  input.on('open', function() {
-    testRestore(params, input, targetDb, function(err) {
-      if (err) {
-        callback(err);
-      } else {
-        callback();
-      }
+  return once(input, 'open')
+    .then(() => {
+      return testRestore(params, input, targetDb);
     });
-  });
 }
 
-function testDirectBackupAndRestore(params, srcDb, targetDb, callback) {
+async function testDirectBackupAndRestore(params, srcDb, targetDb) {
   // Allow a 64 MB highWaterMark for the passthrough during testing
   const passthrough = new PassThrough({ highWaterMark: 67108864 });
   const backup = testBackup(params, srcDb, passthrough, () => {});
   const restore = testRestore(params, passthrough, targetDb, () => {});
-  Promise.all([backup, restore]).then(() => {
-    dbCompare(srcDb, targetDb, callback);
-  }).catch((err) => callback(err));
+  return Promise.all([backup, restore]).then(() => {
+    return dbCompare(srcDb, targetDb);
+  });
 }
 
-function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb, callback) {
-  const restore = function(err) {
-    if (err) {
-      callback(err);
-    } else {
-      testRestoreFromFile(params, backupFile, targetDb, function(err) {
-        if (err) {
-          callback(err);
-        } else {
-          dbCompare(srcDb, targetDb, callback);
-        }
-      });
-    }
-  };
-
-  const resume = function(err) {
-    if (err) {
-      callback(err);
-    }
-    // Remove the abort parameter and add the resume parameter
-    delete params.abort;
-    params.opts.resume = true;
-
-    // Resume backup and restore to validate it was successful.
-    if (params.opts && params.opts.output) {
-      testBackup(params, srcDb, new PassThrough(), function(err) {
-        if (err) {
-          callback(err);
-        } else {
-          restore();
-        }
-      });
-    } else {
-      testBackupToFile(params, srcDb, backupFile, function(err) {
-        if (err) {
-          callback(err);
-        } else {
-          restore();
-        }
-      });
-    }
-  };
-
-  if (params.opts && params.opts.output) {
-    testBackup(params, srcDb, new PassThrough(), resume);
-  } else {
-    testBackupToFile(params, srcDb, backupFile, resume);
-  }
-}
-
-function dbCompare(db1Name, db2Name, callback) {
-  const client = request.client(process.env.COUCH_BACKEND_URL, {});
-  compare.compare(db1Name, db2Name, client.service)
-    .then(result => {
-      try {
-        assert.strictEqual(result, true, 'The database comparison should succeed, but failed');
-        callback();
-      } catch (err) {
-        callback(err);
+async function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb) {
+  return Promise.resolve()
+    .then(() => {
+      // First backup with an abort
+      if (params.opts && params.opts.output) {
+        return testBackup(params, srcDb, new PassThrough());
+      } else {
+        return testBackupToFile(params, srcDb, backupFile);
       }
-    })
-    .catch(err => callback(err));
+    }).then(() => {
+      // Remove the abort parameter and add the resume parameter
+      delete params.abort;
+      params.opts.resume = true;
+      // Resume the backup
+      if (params.opts && params.opts.output) {
+        return testBackup(params, srcDb, new PassThrough());
+      } else {
+        return testBackupToFile(params, srcDb, backupFile);
+      }
+    }).then(() => {
+      // Restore the backup
+      return testRestoreFromFile(params, backupFile, targetDb);
+    }).then(() => {
+      // Now compare the restored to the original for validation
+      return dbCompare(srcDb, targetDb);
+    });
+}
+
+async function dbCompare(db1Name, db2Name) {
+  const client = request.client(process.env.COUCH_BACKEND_URL, {});
+  return compare.compare(db1Name, db2Name, client.service)
+    .then(result => {
+      return assert.strictEqual(result, true, 'The database comparison should succeed, but failed');
+    });
 }
 
 function sortByIdThenRev(o1, o2) {
@@ -434,19 +376,14 @@ function sortByIdThenRev(o1, o2) {
   return 0;
 }
 
-function readSortAndDeepEqual(actualContentPath, expectedContentPath, callback) {
+function readSortAndDeepEqual(actualContentPath, expectedContentPath) {
   const backupContent = JSON.parse(fs.readFileSync(actualContentPath, 'utf8'));
   const expectedContent = JSON.parse(fs.readFileSync(expectedContentPath, 'utf8'));
   // Array order of the docs is important for equality, but not for backup
   backupContent.sort(sortByIdThenRev);
   expectedContent.sort(sortByIdThenRev);
   // Assert that the backup matches the expected
-  try {
-    assert.deepStrictEqual(backupContent, expectedContent);
-    callback();
-  } catch (err) {
-    callback(err);
-  }
+  assert.deepStrictEqual(backupContent, expectedContent);
 }
 
 function setTimeout(context, timeout) {
@@ -457,38 +394,28 @@ function setTimeout(context, timeout) {
   context.timeout(timeout * 1000);
 }
 
-function assertGzipFile(path, callback) {
-  try {
-    // 1f 8b is the gzip magic number
-    const expectedBytes = Buffer.from([0x1f, 0x8b]);
-    const buffer = Buffer.alloc(2);
-    const fd = fs.openSync(path, 'r');
-    // Read the first two bytes
-    fs.readSync(fd, buffer, 0, 2, 0);
-    fs.closeSync(fd);
-    // Assert the magic number corresponds to gz extension
-    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
-    callback();
-  } catch (err) {
-    callback(err);
-  }
+function assertGzipFile(path) {
+  // 1f 8b is the gzip magic number
+  const expectedBytes = Buffer.from([0x1f, 0x8b]);
+  const buffer = Buffer.alloc(2);
+  const fd = fs.openSync(path, 'r');
+  // Read the first two bytes
+  fs.readSync(fd, buffer, 0, 2, 0);
+  fs.closeSync(fd);
+  // Assert the magic number corresponds to gz extension
+  assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
 }
 
-function assertEncryptedFile(path, callback) {
-  try {
-    // Openssl encrypted files start with Salted
-    const expectedBytes = Buffer.from('Salted');
-    const buffer = Buffer.alloc(6);
-    const fd = fs.openSync(path, 'r');
-    // Read the first six bytes
-    fs.readSync(fd, buffer, 0, 6, 0);
-    fs.closeSync(fd);
-    // Assert first 6 characters of the file are "Salted"
-    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
-    callback();
-  } catch (err) {
-    callback(err);
-  }
+function assertEncryptedFile(path) {
+  // Openssl encrypted files start with Salted
+  const expectedBytes = Buffer.from('Salted');
+  const buffer = Buffer.alloc(6);
+  const fd = fs.openSync(path, 'r');
+  // Read the first six bytes
+  fs.readSync(fd, buffer, 0, 6, 0);
+  fs.closeSync(fd);
+  // Assert first 6 characters of the file are "Salted"
+  assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
 }
 
 function assertWrittenFewerThan(total, number) {
