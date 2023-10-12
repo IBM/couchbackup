@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,71 +16,63 @@
 'use strict';
 
 const fs = require('fs');
+const { once } = require('node:events');
 const u = require('./citestutils.js');
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('Basic backup and restore', params), function() {
-    it('should backup animaldb to a file correctly', function(done) {
+    it('should backup animaldb to a file correctly', async function() {
       // Allow up to 40 s to backup and compare (it should be much faster)!
       u.setTimeout(this, 40);
       const actualBackup = `./${this.fileName}`;
       // Create a file and backup to it
       const output = fs.createWriteStream(actualBackup);
-      output.on('open', function() {
-        u.testBackup(params, 'animaldb', output, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected.json', done);
-          }
+      return once(output, 'open')
+        .then(() => {
+          return u.testBackup(params, 'animaldb', output);
+        }).then(() => {
+          return u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected.json');
         });
-      });
     });
 
-    it('should restore animaldb to a database correctly', function(done) {
+    it('should restore animaldb to a database correctly', async function() {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
       const input = fs.createReadStream('./test/fixtures/animaldb_expected.json');
       const dbName = this.dbName;
-      input.on('open', function() {
-        u.testRestore(params, input, dbName, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.dbCompare('animaldb', dbName, done);
-          }
-        });
+      return once(input, 'open').then(() => {
+        return u.testRestore(params, input, dbName);
+      }).then(() => {
+        return u.dbCompare('animaldb', dbName);
       });
     });
 
-    it('should execute a shallow mode backup successfully', function(done) {
+    it('should execute a shallow mode backup successfully', async function() {
       // Allow 30 s
       u.setTimeout(this, 30);
       const actualBackup = `./${this.fileName}`;
       const output = fs.createWriteStream(actualBackup);
       // Add the shallow mode option
       const p = u.p(params, { opts: { mode: 'shallow' } });
-      output.on('open', function() {
-        u.testBackup(p, 'animaldb', output, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected_shallow.json', done);
-          }
+      return once(output, 'open')
+        .then(() => {
+          return u.testBackup(p, 'animaldb', output);
+        }).then(() => {
+          return u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected_shallow.json');
         });
-      });
     });
 
     describe(u.scenario('Buffer size tests', params), function() {
-      it('should backup/restore animaldb with the same buffer size', function(done) {
+      it('should backup/restore animaldb with the same buffer size', async function() {
         // Allow up to 60 s for backup and restore of animaldb
         u.setTimeout(this, 60);
         const actualBackup = `./${this.fileName}`;
         const logFile = `./${this.fileName}` + '.log';
         const p = u.p(params, { opts: { log: logFile, bufferSize: 1 } });
-        u.testBackupAndRestoreViaFile(p, 'animaldb', actualBackup, this.dbName, done);
+        return u.testBackupAndRestoreViaFile(p, 'animaldb', actualBackup, this.dbName);
       });
-      it('should backup/restore animaldb with backup buffer > restore buffer', function(done) {
+
+      it('should backup/restore animaldb with backup buffer > restore buffer', async function() {
         // Allow up to 60 s for backup and restore of animaldb
         u.setTimeout(this, 60);
         const actualBackup = `./${this.fileName}`;
@@ -88,22 +80,14 @@ const u = require('./citestutils.js');
         const dbName = this.dbName;
         const p = u.p(params, { opts: { log: logFile, bufferSize: 2 } }); // backup
         const q = u.p(params, { opts: { bufferSize: 1 } }); // restore
-        u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            // restore
-            u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
-              if (!err) {
-                u.dbCompare('animaldb', dbName, done);
-              } else {
-                done(err);
-              }
-            });
-          }
+        return u.testBackupToFile(p, 'animaldb', actualBackup).then(() => {
+          return u.testRestoreFromFile(q, actualBackup, dbName);
+        }).then(() => {
+          return u.dbCompare('animaldb', dbName);
         });
       });
-      it('should backup/restore animaldb with backup buffer < restore buffer', function(done) {
+
+      it('should backup/restore animaldb with backup buffer < restore buffer', async function() {
         // Allow up to 60 s for backup and restore of animaldb
         u.setTimeout(this, 60);
         const actualBackup = `./${this.fileName}`;
@@ -111,19 +95,10 @@ const u = require('./citestutils.js');
         const dbName = this.dbName;
         const p = u.p(params, { opts: { log: logFile, bufferSize: 1 } }); // backup
         const q = u.p(params, { opts: { bufferSize: 2 } }); // restore
-        u.testBackupToFile(p, 'animaldb', actualBackup, function(err) {
-          if (err) {
-            done(err);
-          } else {
-            // restore
-            u.testRestoreFromFile(q, actualBackup, dbName, function(err) {
-              if (!err) {
-                u.dbCompare('animaldb', dbName, done);
-              } else {
-                done(err);
-              }
-            });
-          }
+        return u.testBackupToFile(p, 'animaldb', actualBackup).then(() => {
+          return u.testRestoreFromFile(q, actualBackup, dbName);
+        }).then(() => {
+          return u.dbCompare('animaldb', dbName);
         });
       });
     });

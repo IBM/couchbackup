@@ -1,4 +1,4 @@
-// Copyright © 2018, 2021 IBM Corp. All rights reserved.
+// Copyright © 2018, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 'use strict';
 
 const fs = require('fs');
+const { once } = require('node:events');
 const readline = require('readline');
 const u = require('./citestutils.js');
 const uuid = require('uuid').v4;
@@ -23,21 +24,11 @@ const uuid = require('uuid').v4;
 const params = { useApi: true };
 
 describe(u.scenario('Concurrent database backups', params), function() {
-  it('should run concurrent API database backups correctly #slower', function(done) {
+  it('should run concurrent API database backups correctly #slower', async function() {
     // Allow up to 900 s to backup and compare (it should be much faster)!
     u.setTimeout(this, 900);
 
-    let doneCount = 0;
-    let doneErr;
-    const finished = function(err) {
-      doneCount++;
-      if (doneCount === 2) {
-        done(doneErr || err);
-      }
-      doneErr = err;
-    };
-
-    const checkForEmptyBatches = function(fileName, cb) {
+    const checkForEmptyBatches = async function(fileName) {
       let foundEmptyBatch = false;
 
       const rd = readline.createInterface({
@@ -56,37 +47,29 @@ describe(u.scenario('Concurrent database backups', params), function() {
 
       rd.on('close', function() {
         if (foundEmptyBatch) {
-          cb(new Error(`Log file '${fileName}' contains empty batches`));
+          return Promise.reject(new Error(`Log file '${fileName}' contains empty batches`));
         } else {
-          cb();
+          return Promise.resolve();
         }
       });
     };
 
-    // [1] Run 'largedb2g' database backup
-    const actualBackup1 = `./${uuid()}`;
-    const output1 = fs.createWriteStream(actualBackup1);
-    output1.on('open', function() {
-      u.testBackup(params, 'largedb2g', output1, function(err) {
-        if (err) {
-          finished(err);
-        } else {
-          checkForEmptyBatches(actualBackup1, finished);
-        }
+    const backupPromise = async function() {
+      const actualBackup = `./${uuid()}`;
+      const output = fs.createWriteStream(actualBackup);
+      return once(output, 'open').then(() => {
+        return u.testBackup(params, 'largedb1g', output);
+      }).then(() => {
+        return checkForEmptyBatches(actualBackup);
       });
-    });
+    };
+
+    // [1] Run 'largedb1g' database backup
+    const backup1 = backupPromise();
 
     // [2] Run 'largedb1g' database backup
-    const actualBackup2 = `./${uuid()}`;
-    const output2 = fs.createWriteStream(actualBackup2);
-    output2.on('open', function() {
-      u.testBackup(params, 'largedb1g', output2, function(err) {
-        if (err) {
-          finished(err);
-        } else {
-          checkForEmptyBatches(actualBackup2, finished);
-        }
-      });
-    });
+    const backup2 = backupPromise();
+
+    return Promise.all([backup1, backup2]);
   });
 });

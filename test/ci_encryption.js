@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,16 +21,12 @@ describe('Encryption tests', function() {
   // Note CLI only to use openssl command
   const p = { useApi: false, encryption: true };
 
-  it('should backup and restore animaldb via an encrypted file', function(done) {
+  it('should backup and restore animaldb via an encrypted file', async function() {
     // Allow up to 60 s for backup and restore of animaldb
     u.setTimeout(this, 60);
     const encryptedBackup = `./${this.fileName}`;
-    u.testBackupAndRestoreViaFile(p, 'animaldb', encryptedBackup, this.dbName, function(err) {
-      if (err) {
-        done(err);
-      } else {
-        u.assertEncryptedFile(encryptedBackup, done);
-      }
+    return u.testBackupAndRestoreViaFile(p, 'animaldb', encryptedBackup, this.dbName).then(() => {
+      return u.assertEncryptedFile(encryptedBackup);
     });
   });
 });

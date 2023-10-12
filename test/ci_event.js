@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,11 +26,12 @@ describe('Event tests', function() {
     // promise, so if the backup passes the finished event fired.
     return u.testBackup(params, 'animaldb', process.stdout);
   });
+
   it('should get a finished event when using file output', async function() {
     u.setTimeout(this, 40);
     // Use the API so we can get events, pass eventEmitter so we get the emitter back
     const params = { useApi: true };
     const actualBackup = `./${this.fileName}`;
-    return u.testBackupToFile(params, 'animaldb', actualBackup, () => {});
+    return u.testBackupToFile(params, 'animaldb', actualBackup);
   });
 });
