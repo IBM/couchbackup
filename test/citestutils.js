@@ -302,10 +302,9 @@ async function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb) 
   return testBackupToFile(params, srcDb, backupFile).then(() => {
     return testRestoreFromFile(params, backupFile, targetDb);
   });
-  // return await Promise.allSettled([testBackupToFile(params, srcDb, backupFile), testRestoreFromFile(params, backupFile, targetDb)]);
 }
 
-async function testBackupToFile(params, srcDb, backupFile, processCallback) {
+async function testBackupToFile(params, srcDb, backupFile) {
   // Open the file for appending if this is a resume
   const output = fs.createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
   return once(output, 'open')
