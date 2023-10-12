@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,22 +59,28 @@ function provideChanges(batchSize, totalChanges, fullResponse = false) {
 }
 
 describe('#unit Check spool changes', function() {
-  it('should terminate on request error', function(done) {
+  it('should terminate on request error', async function() {
     nock(url)
       .post(`/${dbName}/_changes`)
       .query(true)
       .times(3)
       .replyWithError({ code: 'ECONNRESET', message: 'socket hang up' });
 
-    changes(db, '/dev/null', 500, null, function(err) {
-      assert.strictEqual(err.name, 'SpoolChangesError');
-      assert.strictEqual(err.message, `Failed changes request - socket hang up: post ${url}/${dbName}/_changes`);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', 500, null, function(err) {
+        try {
+          assert.strictEqual(err.name, 'SpoolChangesError');
+          assert.strictEqual(err.message, `Failed changes request - socket hang up: post ${url}/${dbName}/_changes`);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   }).timeout(longTestTimeout);
 
-  it('should terminate on bad HTTP status code response', function(done) {
+  it('should terminate on bad HTTP status code response', async function() {
     nock(url)
       .post(`/${dbName}/_changes`)
       .query(true)
@@ -83,16 +89,21 @@ describe('#unit Check spool changes', function() {
         this.req.response.statusMessage = 'Internal Server Error';
         return { error: 'foo', reason: 'bar' };
       });
-
-    changes(db, '/dev/null', 500, null, function(err) {
-      assert.strictEqual(err.name, 'HTTPFatalError');
-      assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes - Error: foo, Reason: bar`);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', 500, null, function(err) {
+        try {
+          assert.strictEqual(err.name, 'HTTPFatalError');
+          assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes - Error: foo, Reason: bar`);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   }).timeout(longTestTimeout);
 
-  it('should keep collecting changes', function(done) {
+  it('should keep collecting changes', async function() {
     // This test validates that spooling will correctly
     // continue across multiple requests
     // (4 batches of 100000 to be precise).
@@ -101,30 +112,42 @@ describe('#unit Check spool changes', function() {
 
     // Use full changes for this test
     provideChanges(100000, 400000, true);
-    changes(db, '/dev/null', 500, null, function(err) {
-      assert.ok(!err);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', 500, null, function(err) {
+        try {
+          assert.ok(!err);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 
-  it('should keep collecting sparse changes', function(done) {
+  it('should keep collecting sparse changes', async function() {
     // This test checks that making thousands of requests doesn't
     // make anything bad happen.
     // This test might take up to 25 seconds
     this.timeout(25 * 1000);
     // Use sparse changes for this test and a batch size of 1
     provideChanges(1, 2500);
-    changes(db, '/dev/null', 500, null, function(err) {
-      assert.ok(!err);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', 500, null, function(err) {
+        try {
+          assert.ok(!err);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 });
 
 describe('Longer spool changes checks', function() {
-  it('#slow should keep collecting changes (25M)', function(done) {
+  it('#slow should keep collecting changes (25M)', async function() {
     // This test might take up to 5 minutes
     this.timeout(5 * 60 * 1000);
     // Note changes spooling uses a constant batch size, we are setting
@@ -132,14 +155,20 @@ describe('Longer spool changes checks', function() {
     const batch = 100000;
     // Use sparse changes for this test
     provideChanges(batch, 25000000);
-    changes(db, '/dev/null', batch, null, function(err) {
-      assert.ok(!err);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', batch, null, function(err) {
+        try {
+          assert.ok(!err);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 
-  it('#slower should keep collecting changes (500M)', function(done) {
+  it('#slower should keep collecting changes (500M)', async function() {
     // This test might take up to 90 minutes
     this.timeout(90 * 60 * 1000);
     // Note changes spooling uses a constant batch size, we are setting
@@ -147,10 +176,16 @@ describe('Longer spool changes checks', function() {
     const batch = 1000000;
     // Use full changes for this test to exercise load
     provideChanges(batch, 500000000, true);
-    changes(db, '/dev/null', batch, null, function(err) {
-      assert.ok(!err);
-      assert.ok(nock.isDone());
-      done();
+    return new Promise((resolve, reject) => {
+      changes(db, '/dev/null', batch, null, function(err) {
+        try {
+          assert.ok(!err);
+          assert.ok(nock.isDone());
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 });

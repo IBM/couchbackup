@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,16 +22,9 @@ const request = require('../includes/request.js');
 const writer = require('../includes/writer.js');
 const noopEmitter = new (require('events')).EventEmitter();
 const liner = require('../includes/liner.js');
-
+const { once } = require('node:events');
+const { pipeline } = require('node:stream/promises');
 const longTestTimeout = 3000;
-
-// The writer expects a line-by-line stream so this utility function does that
-// processing for the tests (which normally happens in the internal restore
-// function).
-function testLinestream(fixture = './test/fixtures/animaldb_expected.json') {
-  return fs.createReadStream(fixture)
-    .pipe(liner());
-}
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
@@ -41,39 +34,37 @@ describe('#unit Check database restore writer', function() {
     nock.cleanAll();
   });
 
-  it('should complete successfully', function(done) {
+  it('should complete successfully', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(200, []); // success
 
-    testLinestream()
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
-        done(err);
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 15);
+    const w = writer(db, 500, 1, noopEmitter);
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      once(w, 'finished').then((data) => {
+        assert.strictEqual(data[0].total, 15);
         assert.ok(nock.isDone());
-        done();
-      });
+      })]);
   });
 
-  it('should terminate on a fatal error', function(done) {
+  it('should terminate on a fatal error', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(401, { error: 'Unauthorized' }); // fatal error
 
-    testLinestream()
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
+    const w = writer(db, 500, 1, noopEmitter);
+    return assert.rejects(
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      (err) => {
         assert.strictEqual(err.name, 'Unauthorized');
         assert.strictEqual(err.message, 'Access is denied due to invalid credentials.');
         assert.ok(nock.isDone());
-        done();
-      });
+        return true;
+      }
+    );
   });
 
-  it('should retry on transient errors', function(done) {
+  it('should retry on transient errors', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(429, { error: 'Too Many Requests' }) // transient error
@@ -82,19 +73,15 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, { ok: true }); // third time lucky success
 
-    testLinestream()
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
-        done(err);
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 15);
+    const w = writer(db, 500, 1, noopEmitter);
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      once(w, 'finished').then((data) => {
+        assert.strictEqual(data[0].total, 15);
         assert.ok(nock.isDone());
-        done();
-      });
+      })]);
   }).timeout(longTestTimeout);
 
-  it('should fail after 3 transient errors', function(done) {
+  it('should fail after 3 transient errors', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(429, { error: 'Too Many Requests' }) // transient error
@@ -103,45 +90,45 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(503, { error: 'Service Unavailable' }); // Final transient error
 
-    testLinestream()
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
+    const w = writer(db, 500, 1, noopEmitter);
+    return assert.rejects(
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      (err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 : post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
         assert.ok(nock.isDone());
-        done();
-      });
+        return true;
+      }
+    );
   }).timeout(longTestTimeout);
 
-  it('should restore shallow backups without rev info successfully', function(done) {
+  it('should restore shallow backups without rev info successfully', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(200, [{ ok: true, id: 'foo', rev: '1-abc' }]); // success
 
-    testLinestream('./test/fixtures/animaldb_old_shallow.json')
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
-        done(err);
-      })
-      .on('finished', function(data) {
-        assert.strictEqual(data.total, 11);
+    const w = writer(db, 500, 1, noopEmitter);
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_old_shallow.json'), liner(), w),
+      once(w, 'finished').then((data) => {
+        assert.strictEqual(data[0].total, 11);
         assert.ok(nock.isDone());
-        done();
-      });
+      })]);
   });
 
-  it('should get a batch error for non-empty array response with new_edits false', function(done) {
+  it('should get a batch error for non-empty array response with new_edits false', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(200, [{ id: 'foo', error: 'foo', reason: 'bar' }]);
 
-    testLinestream()
-      .pipe(writer(db, 500, 1, noopEmitter))
-      .on('error', function(err) {
+    const w = writer(db, 500, 1, noopEmitter);
+    return assert.rejects(
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      (err) => {
         assert.strictEqual(err.name, 'Error');
         assert.strictEqual(err.message, 'Error writing batch with new_edits:false and 1 items');
         assert.ok(nock.isDone());
-        done();
-      });
+        return true;
+      }
+    );
   });
 });

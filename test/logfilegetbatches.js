@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,17 +19,23 @@ const assert = require('assert');
 const logfilegetbatches = require('../includes/logfilegetbatches.js');
 
 describe('#unit Fetching batches from a log file', function() {
-  it('should fetch multiple batches correctly', function(done) {
-    logfilegetbatches('./test/fixtures/test.log', [1, 4], function(err, data) {
-      assert.ok(!err);
-      assert.ok(data);
-      assert.strictEqual(typeof data, 'object');
-      assert.strictEqual(Object.keys(data).length, 2);
-      assert.deepStrictEqual(data['1'].docs, [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }]);
-      assert.strictEqual(data['1'].batch, 1);
-      assert.deepStrictEqual(data['4'].docs, [{ id: '21' }, { id: '22' }]);
-      assert.strictEqual(data['4'].batch, 4);
-      done();
+  it('should fetch multiple batches correctly', async function() {
+    return new Promise((resolve, reject) => {
+      logfilegetbatches('./test/fixtures/test.log', [1, 4], function(err, data) {
+        try {
+          assert.ok(!err);
+          assert.ok(data);
+          assert.strictEqual(typeof data, 'object');
+          assert.strictEqual(Object.keys(data).length, 2);
+          assert.deepStrictEqual(data['1'].docs, [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }]);
+          assert.strictEqual(data['1'].batch, 1);
+          assert.deepStrictEqual(data['4'].docs, [{ id: '21' }, { id: '22' }]);
+          assert.strictEqual(data['4'].batch, 4);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
 });

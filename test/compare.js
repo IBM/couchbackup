@@ -20,7 +20,7 @@ const forOwn = require('lodash/forOwn');
 const isEmpty = require('lodash/isEmpty');
 const union = require('lodash/union');
 
-const compare = async(database1, database2, client) => {
+const compare = async function(database1, database2, client) {
   // check docs same in both dbs
   const allDocs1 = await getAllDocs(client, database1);
   const allDocs2 = await getAllDocs(client, database2);
@@ -79,7 +79,7 @@ const getMissingRevs = async(client, databaseName1, databaseName2, batcheses) =>
   return missing;
 };
 
-const getAllDocs = async(client, database) => {
+const getAllDocs = async function(client, database) {
   let allDocIds = [];
   const limit = 2000;
   let startKey = '\u0000';
