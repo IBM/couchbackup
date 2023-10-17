@@ -101,7 +101,6 @@ def agentYaml() {
     |          memory: "4Gi"
     |          cpu: "4"
     ${nodeYaml(18)}
-    ${nodeYaml(20)}
     |restartPolicy: Never""".stripMargin('|')
 }
 
@@ -162,11 +161,13 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
-          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
-            withNpmEnv(registryArtifactoryDown) {
-              sh 'npm ci'
-              sh 'npm install mocha-jenkins-reporter --no-save'
+        container('node18') {
+          withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+            withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+              withNpmEnv(registryArtifactoryDown) {
+                sh 'npm ci'
+                sh 'npm install mocha-jenkins-reporter --no-save'
+              }
             }
           }
         }
@@ -177,20 +178,26 @@ pipeline {
         // Stages that run on LTS version from full agent default container
         stage('Lint') {
           steps {
-            sh 'npm run lint'
+            container('node18') {
+              sh 'npm run lint'
+            }
           }
         }
         stage('Node LTS') {
           steps {
-            script{
-              runTest('18')
+            container('node18') {
+              script{
+                runTest('18')
+              }
             }
           }
         }
         stage('IAM Node LTS') {
           steps {
-            script{
-              runTest('18', '-i -g \'#unit|#slowe\'', 'test-iam')
+            container('node18') {
+              script{
+                runTest('18', '-i -g \'#unit|#slowe\'', 'test-iam')
+              }
             }
           }
         }
@@ -200,8 +207,10 @@ pipeline {
             environment name: 'RUN_TOXY_TESTS', value: 'true'
           }
           steps {
-            script{
-              runTest('18', '', 'toxytests/toxy')
+            container('node18') {
+              script{
+                runTest('18', '', 'toxytests/toxy')
+              }
             }
           }
         }
@@ -213,10 +222,8 @@ pipeline {
             branch '583-*'
           }
           steps {
-            container('node20') {
-              script{
-                runTest('20')
-              }
+            script{
+              runTest('20')
             }
           }
         }
@@ -248,26 +255,28 @@ pipeline {
         branch 'main'
       }
       steps {
-        script {
-          def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
-          String version = v.version
-          boolean isReleaseVersion = v.isReleaseVersion
+        container('node18') {
+          script {
+            def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
+            String version = v.version
+            boolean isReleaseVersion = v.isReleaseVersion
 
-          // Upload using the NPM creds
-          withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
-                          usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
-            // Actions:
-            // 1. add the build ID to any snapshot version for uniqueness
-            // 2. publish the build to NPM adding a snapshot tag if pre-release
-            sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
-            withNpmEnv(registryPublic) {
-              sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+            // Upload using the NPM creds
+            withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
+                            usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
+              // Actions:
+              // 1. add the build ID to any snapshot version for uniqueness
+              // 2. publish the build to NPM adding a snapshot tag if pre-release
+              sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
+              withNpmEnv(registryPublic) {
+                sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+              }
             }
-          }
-          // Run the gitTagAndPublish which tags/publishes to github for release builds
-          gitTagAndPublish {
-              versionFile='package.json'
-              releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
+            // Run the gitTagAndPublish which tags/publishes to github for release builds
+            gitTagAndPublish {
+                versionFile='package.json'
+                releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
+            }
           }
         }
       }
