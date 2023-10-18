@@ -22,15 +22,31 @@ const debug = require('debug');
 const logProcess = debug('couchbackup:test:process');
 
 class TestProcess {
-  constructor(cmd, args) {
+  constructor(cmd, args, mode) {
     this.cmd = cmd;
-    const childProcessOptions = { stdio: ['pipe', 'pipe', 'pipe'] };
+    // Child process stdio [stdin, stdout, stderr, ...extra channels]
+    const childProcessOptions = { stdio: [] };
+    switch (mode) {
+      case 'readable':
+        // Readable only, no writing to stdin so ignore it
+        childProcessOptions.stdio = ['ignore', 'pipe', 'inherit'];
+        break;
+      case 'writable':
+        // Writable only, no reading from stdout so ignore it
+        childProcessOptions.stdio = ['pipe', 'ignore', 'inherit'];
+        break;
+      default:
+        // Default Duplex mode pipe both stdin and stdout
+        childProcessOptions.stdio = ['pipe', 'pipe', 'inherit'];
+        break;
+    }
     if (cmd.endsWith('.js')) {
+      // Add Node fork ipc channel
       childProcessOptions.stdio.push('ipc');
-      logProcess(`Forking Node process for ${cmd}`);
+      logProcess(`Forking Node process for ${cmd} with stdio:[${childProcessOptions.stdio}]`);
       this.childProcess = fork(cmd, args, childProcessOptions);
     } else {
-      logProcess(`Spawning process for ${cmd}`);
+      logProcess(`Spawning process for ${cmd} with stdio:[${childProcessOptions.stdio}]`);
       this.childProcess = spawn(cmd, args, childProcessOptions);
     }
 
@@ -49,9 +65,20 @@ class TestProcess {
         return Promise.reject(e);
       }
     });
-    // Make sure we get error output on the main process error log too
-    this.childProcess.stderr.pipe(process.stderr);
-    this.stream = Duplex.from({ writable: this.childProcess.stdin, readable: this.childProcess.stdout });
+
+    switch (mode) {
+      case 'readable':
+        this.duplexFrom = this.childProcess.stdout;
+        break;
+      case 'writable':
+        this.duplexFrom = this.childProcess.stdin;
+        break;
+      default:
+        // Default is duplex
+        this.duplexFrom = { writable: this.childProcess.stdin, readable: this.childProcess.stdout };
+    }
+
+    this.stream = Duplex.from(this.duplexFrom);
   }
 }
 
@@ -85,7 +112,7 @@ module.exports = {
         args.push(params.opts.iamApiKey);
       }
     }
-    return new TestProcess('./bin/couchbackup.bin.js', args);
+    return new TestProcess('./bin/couchbackup.bin.js', args, 'readable');
   },
   cliRestore: function(databaseName, params) {
     const args = ['--db', databaseName];
@@ -107,7 +134,7 @@ module.exports = {
         args.push(params.opts.iamApiKey);
       }
     }
-    return new TestProcess('./bin/couchrestore.bin.js', args);
+    return new TestProcess('./bin/couchrestore.bin.js', args, 'writable');
   },
   cliGzip: function() {
     return new TestProcess('gzip', []);
