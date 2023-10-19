@@ -126,7 +126,6 @@ def runTest(version, filter=null, testSuite='test') {
         // For the IAM tests we want to run the normal 'test' suite, but we
         // want to keep the report named 'test-iam'
         def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
-        def dbPassword = java.net.URLEncoder.encode(DB_PASSWORD, "UTF-8")
         
         // Actions:
         //  3. Install mocha-jenkins-reporter so that we can get junit style output
@@ -135,9 +134,16 @@ def runTest(version, filter=null, testSuite='test') {
         withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
             withNpmEnv(registryArtifactoryDown) {
+              // A note on credential encoding
+              // The couchbackup tool requires legacy credentials in the user-info portion of a URL, so creds in the URL must be encoded.
+              // Encoding in the Jenkins credentials store is not an option because the creds are also used [unencoded] in other places.
+              // Encoding in the couchbackup test code is not an option because the environment variable is used directly by couchbackup during tests.
+              // Encoding in this file is not an option because the credential must be interpolated by groovy which is a Jenkins "no no".
+              // Ergo we need to encode when we expand the env var in the shell. We do this by running $(node -e ...) as node is always available
+              // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
               sh """
                 set +x
-                export COUCH_BACKEND_URL="https://\${DB_USER}:${dbPassword}@\${SDKS_TEST_SERVER_HOST}"
+                export COUCH_BACKEND_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
                 export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
                 set -x
                 ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
