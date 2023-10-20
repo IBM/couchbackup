@@ -101,10 +101,6 @@ function validateArgs(url, opts, cb) {
       cb(new error.BackupError('InvalidOption', 'Invalid URL protocol.'));
       return;
     }
-    if (!urlObject.host) {
-      cb(new error.BackupError('InvalidOption', 'Invalid URL host.'));
-      return;
-    }
     if (!urlObject.pathname || urlObject.pathname === '/') {
       cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
       return;
@@ -114,7 +110,7 @@ function validateArgs(url, opts, cb) {
       return;
     }
   } catch (err) {
-    cb(err);
+    cb(error.wrapPossibleInvalidUrlError(err));
     return;
   }
 

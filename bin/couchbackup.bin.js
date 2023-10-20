@@ -25,53 +25,57 @@ const backupBatchDebug = debug('couchbackup:backup:batch');
 
 backupDebug.enabled = true;
 
-const program = parser.parseBackupArgs();
+try {
+  const program = parser.parseBackupArgs();
+  const databaseUrl = cliutils.databaseUrl(program.url, program.db);
 
-const databaseUrl = cliutils.databaseUrl(program.url, program.db);
-const opts = {
-  bufferSize: program.bufferSize,
-  log: program.log,
-  mode: program.mode,
-  parallelism: program.parallelism,
-  requestTimeout: program.requestTimeout,
-  resume: program.resume,
-  iamApiKey: program.iamApiKey,
-  iamTokenUrl: program.iamTokenUrl
-};
+  const opts = {
+    bufferSize: program.bufferSize,
+    log: program.log,
+    mode: program.mode,
+    parallelism: program.parallelism,
+    requestTimeout: program.requestTimeout,
+    resume: program.resume,
+    iamApiKey: program.iamApiKey,
+    iamTokenUrl: program.iamTokenUrl
+  };
 
-// log configuration to console
-console.error('='.repeat(80));
-console.error('Performing backup on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
-console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
-console.error('='.repeat(80));
+  // log configuration to console
+  console.error('='.repeat(80));
+  console.error('Performing backup on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
+  console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
+  console.error('='.repeat(80));
 
-backupBatchDebug.enabled = !program.quiet;
+  backupBatchDebug.enabled = !program.quiet;
 
-let ws = process.stdout;
+  let ws = process.stdout;
 
-// open output file
-if (program.output) {
-  let flags = 'w';
-  if (program.log && program.resume) {
-    flags = 'a';
+  // open output file
+  if (program.output) {
+    let flags = 'w';
+    if (program.log && program.resume) {
+      flags = 'a';
+    }
+    const fd = fs.openSync(program.output, flags);
+    ws = fs.createWriteStream(null, { fd });
   }
-  const fd = fs.openSync(program.output, flags);
-  ws = fs.createWriteStream(null, { fd: fd });
+
+  backupDebug('Fetching all database changes...');
+
+  return couchbackup.backup(
+    databaseUrl,
+    ws,
+    opts,
+    error.terminationCallback
+  ).on('changes', function(batch) {
+    backupBatchDebug('Total batches received:', batch + 1);
+  }).on('written', function(obj) {
+    backupBatchDebug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
+  }).on('error', function(e) {
+    backupDebug('ERROR', e);
+  }).on('finished', function(obj) {
+    backupDebug('Finished - Total document revisions written:', obj.total);
+  });
+} catch (err) {
+  error.terminationCallback(err);
 }
-
-backupDebug('Fetching all database changes...');
-
-return couchbackup.backup(
-  databaseUrl,
-  ws,
-  opts,
-  error.terminationCallback
-).on('changes', function(batch) {
-  backupBatchDebug('Total batches received:', batch + 1);
-}).on('written', function(obj) {
-  backupBatchDebug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
-}).on('error', function(e) {
-  backupDebug('ERROR', e);
-}).on('finished', function(obj) {
-  backupDebug('Finished - Total document revisions written:', obj.total);
-});

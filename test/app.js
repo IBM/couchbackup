@@ -61,8 +61,8 @@ function releaseStderr() {
 }
 
 // Return a validation object for use with assert.rejects
-function assertErrorMessage(msg, name = 'InvalidOption') {
-  return { name, message: msg };
+function assertErrorMessage(msg) {
+  return { name: 'InvalidOption', message: msg };
 }
 
 // For cases where validation should pass we reach a real backup that hits a 404
@@ -77,10 +77,10 @@ describe('#unit Validate arguments', function() {
     return validateArgs(goodUrl, {}, assertNoValidationError());
   });
   it('returns error for invalid (no host) URL', async function() {
-    return validateArgs('http://', {}, assertErrorMessage('Invalid URL', 'TypeError'));
+    return validateArgs('http://', {}, assertErrorMessage('Invalid URL'));
   });
   it('returns error for invalid (no protocol) URL', async function() {
-    return validateArgs('invalid', {}, assertErrorMessage('Invalid URL', 'TypeError'));
+    return validateArgs('invalid', {}, assertErrorMessage('Invalid URL'));
   });
   it('returns error for invalid (wrong protocol) URL', async function() {
     return validateArgs('ftp://invalid.example.com', {}, assertErrorMessage('Invalid URL protocol.'));
@@ -89,7 +89,7 @@ describe('#unit Validate arguments', function() {
     return validateArgs('https://invalid.example.com', {}, assertErrorMessage('Invalid URL, missing path element (no database).'));
   });
   it('returns error for invalid (no protocol, no host) URL', async function() {
-    return validateArgs('invalid', {}, assertErrorMessage('Invalid URL', 'TypeError'));
+    return validateArgs('invalid', {}, assertErrorMessage('Invalid URL'));
   });
   it('returns error for invalid buffer size type', async function() {
     return validateArgs(goodUrl, { bufferSize: '123' }, assertErrorMessage('Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'));

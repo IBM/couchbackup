@@ -24,33 +24,37 @@ const restoreBatchDebug = debug('couchbackup:restore:batch');
 
 restoreDebug.enabled = true;
 
-const program = parser.parseRestoreArgs();
-const databaseUrl = cliutils.databaseUrl(program.url, program.db);
-const opts = {
-  bufferSize: program.bufferSize,
-  parallelism: program.parallelism,
-  requestTimeout: program.requestTimeout,
-  iamApiKey: program.iamApiKey,
-  iamTokenUrl: program.iamTokenUrl
-};
+try {
+  const program = parser.parseRestoreArgs();
+  const databaseUrl = cliutils.databaseUrl(program.url, program.db);
+  const opts = {
+    bufferSize: program.bufferSize,
+    parallelism: program.parallelism,
+    requestTimeout: program.requestTimeout,
+    iamApiKey: program.iamApiKey,
+    iamTokenUrl: program.iamTokenUrl
+  };
 
-// log configuration to console
-console.error('='.repeat(80));
-console.error('Performing restore on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
-console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
-console.error('='.repeat(80));
+  // log configuration to console
+  console.error('='.repeat(80));
+  console.error('Performing restore on ' + databaseUrl.replace(/\/\/.+@/g, '//****:****@') + ' using configuration:');
+  console.error(JSON.stringify(opts, null, 2).replace(/"iamApiKey": "[^"]+"/, '"iamApiKey": "****"'));
+  console.error('='.repeat(80));
 
-restoreBatchDebug.enabled = !program.quiet;
+  restoreBatchDebug.enabled = !program.quiet;
 
-return couchbackup.restore(
-  process.stdin, // restore from stdin
-  databaseUrl,
-  opts,
-  error.terminationCallback
-).on('restored', function(obj) {
-  restoreBatchDebug('restored', obj.total);
-}).on('error', function(e) {
-  restoreDebug('ERROR', e);
-}).on('finished', function(obj) {
-  restoreDebug('finished', obj);
-});
+  return couchbackup.restore(
+    process.stdin, // restore from stdin
+    databaseUrl,
+    opts,
+    error.terminationCallback
+  ).on('restored', function(obj) {
+    restoreBatchDebug('restored', obj.total);
+  }).on('error', function(e) {
+    restoreDebug('ERROR', e);
+  }).on('finished', function(obj) {
+    restoreDebug('finished', obj);
+  });
+} catch (err) {
+  error.terminationCallback(err);
+}

@@ -20,6 +20,7 @@
  */
 
 const url = require('url');
+const error = require('./error.js');
 
 module.exports = {
 
@@ -37,7 +38,11 @@ module.exports = {
     if (!root.endsWith('/')) {
       root = root + '/';
     }
-    return new url.URL(encodeURIComponent(databaseName), root).toString();
+    try {
+      return new url.URL(encodeURIComponent(databaseName), root).toString();
+    } catch (err) {
+      throw error.wrapPossibleInvalidUrlError(err);
+    }
   },
 
   /**
