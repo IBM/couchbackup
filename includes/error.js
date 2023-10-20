@@ -90,10 +90,19 @@ function augmentMessage(err) {
   return err;
 }
 
+function wrapPossibleInvalidUrlError(err) {
+  if (err.code === 'ERR_INVALID_URL') {
+    // Wrap ERR_INVALID_URL in our own InvalidOption
+    return new BackupError('InvalidOption', err.message);
+  }
+  return err;
+}
+
 module.exports = {
-  BackupError: BackupError,
-  HTTPError: HTTPError,
-  convertResponseError: convertResponseError,
+  BackupError,
+  HTTPError,
+  wrapPossibleInvalidUrlError,
+  convertResponseError,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       console.error(`ERROR: ${err.message}`);
