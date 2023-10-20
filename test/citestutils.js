@@ -324,8 +324,8 @@ async function testRestoreFromFile(params, backupFile, targetDb) {
 async function testDirectBackupAndRestore(params, srcDb, targetDb) {
   // Allow a 64 MB highWaterMark for the passthrough during testing
   const passthrough = new PassThrough({ highWaterMark: 67108864 });
-  const backup = testBackup(params, srcDb, passthrough, () => {});
-  const restore = testRestore(params, passthrough, targetDb, () => {});
+  const backup = testBackup(params, srcDb, passthrough);
+  const restore = testRestore(params, passthrough, targetDb);
   return Promise.all([backup, restore]).then(() => {
     return dbCompare(srcDb, targetDb);
   });
