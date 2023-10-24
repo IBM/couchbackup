@@ -14,7 +14,7 @@
 'use strict';
 
 const fs = require('fs');
-const liner = require('./liner.js');
+const { Liner } = require('./liner.js');
 const change = require('./change.js');
 const error = require('./error.js');
 const debug = require('debug')('couchbackup:spoolchanges');
@@ -69,7 +69,7 @@ module.exports = function(db, log, bufferSize, ee, callback) {
     debug('making changes request since ' + since);
     return db.service.postChangesAsStream({ db: db.db, since: since, limit: limit, seqInterval: limit })
       .then(response => {
-        response.result.pipe(liner())
+        response.result.pipe(new Liner())
           .on('error', function(err) {
             logStream.end();
             callback(err);
