@@ -15,7 +15,7 @@
 
 const fs = require('fs');
 const stream = require('stream');
-const liner = require('./liner.js');
+const { Liner } = require('./liner.js');
 
 const onLine = function(onCommand, batches) {
   const change = new stream.Transform({ objectMode: true });
@@ -64,7 +64,7 @@ module.exports = function(log, batches, callback) {
 
   // stream through the previous log file
   fs.createReadStream(log)
-    .pipe(liner())
+    .pipe(new Liner())
     .pipe(onLine(onCommand, batches))
     .on('error', function(err) {
       callback(err);
