@@ -21,7 +21,7 @@ const nock = require('nock');
 const request = require('../includes/request.js');
 const writer = require('../includes/writer.js');
 const noopEmitter = new (require('events')).EventEmitter();
-const liner = require('../includes/liner.js');
+const { Liner } = require('../includes/liner.js');
 const { once } = require('node:events');
 const { pipeline } = require('node:stream/promises');
 const longTestTimeout = 3000;
@@ -40,7 +40,7 @@ describe('#unit Check database restore writer', function() {
       .reply(200, []); // success
 
     const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
       once(w, 'finished').then((data) => {
         assert.strictEqual(data[0].total, 15);
         assert.ok(nock.isDone());
@@ -54,7 +54,7 @@ describe('#unit Check database restore writer', function() {
 
     const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
       (err) => {
         assert.strictEqual(err.name, 'Unauthorized');
         assert.strictEqual(err.message, 'Access is denied due to invalid credentials.');
@@ -74,7 +74,7 @@ describe('#unit Check database restore writer', function() {
       .reply(200, { ok: true }); // third time lucky success
 
     const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
       once(w, 'finished').then((data) => {
         assert.strictEqual(data[0].total, 15);
         assert.ok(nock.isDone());
@@ -92,7 +92,7 @@ describe('#unit Check database restore writer', function() {
 
     const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
       (err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 : post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
@@ -108,7 +108,7 @@ describe('#unit Check database restore writer', function() {
       .reply(200, [{ ok: true, id: 'foo', rev: '1-abc' }]); // success
 
     const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_old_shallow.json'), liner(), w),
+    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_old_shallow.json'), new Liner(), w),
       once(w, 'finished').then((data) => {
         assert.strictEqual(data[0].total, 11);
         assert.ok(nock.isDone());
@@ -122,7 +122,7 @@ describe('#unit Check database restore writer', function() {
 
     const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), liner(), w),
+      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
       (err) => {
         assert.strictEqual(err.name, 'Error');
         assert.strictEqual(err.message, 'Error writing batch with new_edits:false and 1 items');
