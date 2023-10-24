@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,34 +13,33 @@
 // limitations under the License.
 'use strict';
 
-// stolen from http://strongloop.com/strongblog/practical-examples-of-the-new-node-js-streams-api/
-const stream = require('stream');
+const { once } = require('node:events');
+const { createInterface } = require('node:readline');
+const { PassThrough, Transform } = require('node:stream');
 
-module.exports = function() {
-  const liner = new stream.Transform({ objectMode: true });
+class Liner extends Transform {
+  constructor() {
+    super({ objectMode: true });
+    this.inStream = new PassThrough({ objectMode: true });
+    this.readlineInterface = createInterface({
+      input: this.inStream,
+      terminal: false
+    }).on('line', (line) => {
+      this.push(line);
+    });
+    this.readlineInterfaceClosePromise = once(this.readlineInterface, 'close');
+  }
 
-  liner._transform = function(chunk, encoding, done) {
-    let data = chunk.toString();
-    if (this._lastLineData) {
-      data = this._lastLineData + data;
-    }
+  _transform(chunk, encoding, callback) {
+    this.inStream.write(chunk, encoding, callback);
+  }
 
-    const lines = data.split('\n');
-    this._lastLineData = lines.splice(lines.length - 1, 1)[0];
+  _flush(callback) {
+    this.inStream.end();
+    this.readlineInterfaceClosePromise.then(() => { callback(); });
+  }
+}
 
-    for (const i in lines) {
-      this.push(lines[i]);
-    }
-    done();
-  };
-
-  liner._flush = function(done) {
-    if (this._lastLineData) {
-      this.push(this._lastLineData);
-    }
-    this._lastLineData = null;
-    done();
-  };
-
-  return liner;
+module.exports = {
+  Liner
 };
