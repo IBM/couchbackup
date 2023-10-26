@@ -52,6 +52,12 @@ function assertNock() {
   }
 }
 
+function testPromiseWithAssertNock(testPromise) {
+  return testPromise.finally(() => {
+    assertNock();
+  });
+}
+
 async function backupHttpError(opts, errorName, errorCode) {
   const p = u.p(opts, { expectedBackupError: { name: errorName, code: errorCode } });
 
@@ -59,18 +65,13 @@ async function backupHttpError(opts, errorName, errorCode) {
   const output = fs.createWriteStream('/dev/null');
   return once(output, 'open')
     .then(() => {
-      return u.testBackup(p, 'fakenockdb', output);
-    }).then(() => {
-      return assertNock();
+      return testPromiseWithAssertNock(u.testBackup(p, 'fakenockdb', output));
     });
 }
 
 async function restoreHttpError(opts, errorName, errorCode) {
   const q = u.p(opts, { expectedRestoreError: { name: errorName, code: errorCode } });
-  return u.testRestoreFromFile(q, './test/fixtures/animaldb_expected.json', 'fakenockdb')
-    .then(() => {
-      return assertNock();
-    });
+  return testPromiseWithAssertNock(u.testRestoreFromFile(q, './test/fixtures/animaldb_expected.json', 'fakenockdb'));
 }
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
@@ -79,21 +80,34 @@ async function restoreHttpError(opts, errorName, errorCode) {
     let proxy;
 
     before('Set process data for test', function() {
+      const proxyPort = mockServerPort + 1000;
       // Copy env and argv so we can reset them after the tests
       processEnvCopy = JSON.parse(JSON.stringify(process.env));
 
       // Set up a proxy to point to our nock server because the nock override
       // isn't visible to the spawned CLI process
       if (!params.useApi) {
-        proxy = httpProxy.createProxyServer({ target: url }).listen(mockServerPort + 1000, 'localhost');
+        proxy = httpProxy.createProxyServer({ target: url }).listen(proxyPort, 'localhost');
+        proxy.on('error', (err, req, res) => {
+          console.log(`Proxy received error ${err}`);
+          res.writeHead(400, {
+            'Content-Type': 'application/json'
+          });
+          res.end(JSON.stringify(err));
+        });
       }
 
       // setup environment variables
-      process.env.COUCH_URL = (params.useApi) ? url : `http://localhost:${mockServerPort + 1000}`;
+      process.env.COUCH_URL = (params.useApi) ? url : `http://localhost:${proxyPort}`;
+
+      nock.emitter.on('no match', (req, opts) => {
+        console.error(`Unmatched nock request ${opts.method} ${opts.protocol}${opts.host}${opts.path}`);
+      });
     });
 
     after('Reset process data', function(done) {
       process.env = processEnvCopy;
+      nock.emitter.removeAllListeners();
       if (!params.useApi) {
         proxy.close(done);
       } else {
@@ -244,9 +258,7 @@ async function restoreHttpError(opts, errorName, errorCode) {
         n.post('/_replicator/_bulk_docs').reply(400, { error: 'bad_request', reason: 'testing bad response' });
         // Use a parallelism of one and mock one response
         const q = u.p(params, { opts: { parallelism: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
-        return u.testRestore(q, new InfiniteBackupStream(), '_replicator').then(() => {
-          return assertNock();
-        });
+        return testPromiseWithAssertNock(u.testRestore(q, new InfiniteBackupStream(), '_replicator'));
       });
 
       it('should terminate on _bulk_docs HTTPFatalError large stream', function() {
@@ -257,9 +269,7 @@ async function restoreHttpError(opts, errorName, errorCode) {
         n.post('/fakenockdb/_bulk_docs', function(body) { return true; }).reply(400, { error: 'bad_request', reason: 'testing bad response' });
         // Use only parallelism 1 so we don't have to mock up loads of responses
         const q = u.p(params, { opts: { parallelism: 1 }, expectedRestoreError: { name: 'HTTPFatalError', code: 40 } });
-        return u.testRestore(q, new InfiniteBackupStream(), 'fakenockdb').then(() => {
-          return assertNock();
-        });
+        return testPromiseWithAssertNock(u.testRestore(q, new InfiniteBackupStream(), 'fakenockdb'));
       });
 
       it('should terminate on multiple _bulk_docs HTTPFatalError', function() {
