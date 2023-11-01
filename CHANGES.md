@@ -1,5 +1,8 @@
 # Unreleased
 - [FIXED] Corrected error handling for invalid URLs.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.7.2`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.1.4` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `axios` peerDependency to minimum version `1.6.0` to match version provided from `ibm-cloud-sdk-core`.
 
 # 2.9.13 (2023-09-28)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.7.1`.
