@@ -1,4 +1,4 @@
-# Unreleased
+# 2.9.14 (2023-11-02)
 - [FIXED] Corrected error handling for invalid URLs.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.7.2`.
 - [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `4.1.4` to match version provided from `@ibm-cloud/cloudant`.
