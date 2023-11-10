@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,12 +45,10 @@ module.exports = function(db, options) {
       downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
     } else {
       // create new log file and process
-      spoolchanges(db, options.log, options.bufferSize, ee, function(err) {
-        if (err) {
-          ee.emit('error', err);
-        } else {
-          downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
-        }
+      spoolchanges(db, options.log, options.bufferSize).then(() => {
+        downloadRemainingBatches(options.log, db, ee, start, batchesPerDownloadSession, options.parallelism);
+      }).catch((err) => {
+        ee.emit('error', err);
       });
     }
   }
