@@ -1,4 +1,4 @@
-// Copyright © 2017, 2022 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,98 +14,95 @@
 'use strict';
 
 const fs = require('fs');
-const { Liner } = require('./liner.js');
-const change = require('./change.js');
 const error = require('./error.js');
+const { BatchingStream, MappingStream } = require('./transforms.js');
 const debug = require('debug')('couchbackup:spoolchanges');
+const { ChangesFollower } = require('@ibm-cloud/cloudant');
+const { Writable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 
 /**
  * Write log file for all changes from a database, ready for downloading
  * in batches.
  *
- * @param {string} dbUrl - URL of database
+ * @param {string} db - object representation of db connection
  * @param {string} log - path to log file to use
  * @param {number} bufferSize - the number of changes per batch/log line
- * @param {function(err)} callback - a callback to run on completion
+ * @param {number} tolerance - changes follower error tolerance
  */
-module.exports = function(db, log, bufferSize, ee, callback) {
-  // list of document ids to process
-  const buffer = [];
+module.exports = async function(db, log, bufferSize, tolerance = 600000) {
+  let lastSeq;
   let batch = 0;
-  let lastSeq = null;
-  const logStream = fs.createWriteStream(log);
-  let pending = 0;
-  // The number of changes to fetch per request
-  const limit = 100000;
+  let totalBuffer = 0;
 
-  // send documents ids to the queue in batches of bufferSize + the last batch
-  const processBuffer = function(lastOne) {
-    if (buffer.length >= bufferSize || (lastOne && buffer.length > 0)) {
-      debug('writing', buffer.length, 'changes to the backup file');
-      const b = { docs: buffer.splice(0, bufferSize), batch: batch };
-      logStream.write(':t batch' + batch + ' ' + JSON.stringify(b.docs) + '\n');
-      ee.emit('changes', batch);
-      batch++;
+  class LogWriter extends Writable {
+    constructor(log) {
+      super({ objectMode: true });
+      this.logStream = fs.createWriteStream(log);
     }
-  };
 
-  // called once per received change
-  const onChange = function(c) {
-    if (c) {
-      if (c.error) {
-        ee.emit('error', new error.BackupError('InvalidChange', `Received invalid change: ${c}`));
-      } else if (c.changes) {
-        const obj = { id: c.id };
-        buffer.push(obj);
-        processBuffer(false);
-      } else if (c.last_seq) {
-        lastSeq = c.last_seq;
-        pending = c.pending;
-      }
-    }
-  };
-
-  function getChanges(since = 0) {
-    debug('making changes request since ' + since);
-    return db.service.postChangesAsStream({ db: db.db, since: since, limit: limit, seqInterval: limit })
-      .then(response => {
-        response.result.pipe(new Liner())
-          .on('error', function(err) {
-            logStream.end();
-            callback(err);
-          })
-          .pipe(change(onChange))
-          .on('error', function(err) {
-            logStream.end();
-            callback(err);
-          })
-          .on('finish', function() {
-            processBuffer(true);
-            if (!lastSeq) {
-              logStream.end();
-              debug('changes request terminated before last_seq was sent');
-              callback(new error.BackupError('SpoolChangesError', 'Changes request terminated before last_seq was sent'));
-            } else {
-              debug(`changes request completed with last_seq: ${lastSeq} and ${pending} changes pending.`);
-              if (pending > 0) {
-                // Return the next promise
-                return getChanges(lastSeq);
-              } else {
-                debug('finished streaming database changes');
-                logStream.end(':changes_complete ' + lastSeq + '\n', 'utf8', callback);
-              }
-            }
-          });
-      })
-      .catch(err => {
-        logStream.end();
-        if (err.status && err.status >= 400) {
-          callback(error.convertResponseError(err));
-        } else if (err.name !== 'SpoolChangesError') {
-          callback(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-        }
+    _write(logLine, encoding, callback) {
+      this.logStream.write(logLine, encoding, () => {
+        debug('completed log line write');
+        callback();
       });
+    }
+
+    _destroy(err, callback) {
+      let finalLine = null;
+      if (err) {
+        debug('error streaming database changes, closing log file');
+      } else {
+        debug('finished streaming database changes');
+        finalLine = ':changes_complete ' + lastSeq + '\n';
+      }
+      this.logStream.end(finalLine, 'utf-8', () => {
+        debug('closed log file');
+        callback();
+      });
+    }
   }
 
-  getChanges();
+  // send documents ids to the queue in batches of bufferSize + the last batch
+  const mapBatchToLogLine = function(changesBatch) {
+    totalBuffer += changesBatch.length;
+    debug('writing', changesBatch.length, 'changes to the backup file with total of', totalBuffer);
+    const logLine = ':t batch' + batch + ' ' + JSON.stringify(changesBatch) + '\n';
+    batch++;
+    return logLine;
+  };
+
+  // Map a batch of changes to document IDs, checking for errors
+  const mapChangesToIds = function(changesBatch) {
+    return changesBatch.map((changeResultItem) => {
+      if (changeResultItem.changes && changeResultItem.changes.length > 0) {
+        if (changeResultItem.seq) {
+          lastSeq = changeResultItem.seq;
+        }
+        // Extract the document ID from the change
+        return { id: changeResultItem.id };
+      } else {
+        throw new error.BackupError('InvalidChange', `Received invalid change: ${changeResultItem}`);
+      }
+    });
+  };
+
+  const changesParams = {
+    db: db.db,
+    seqInterval: 10000
+  };
+
+  const changesFollower = new ChangesFollower(db.service, changesParams, tolerance);
+  return pipeline(changesFollower.startOneOff(), // stream of changes from the DB
+    new BatchingStream(bufferSize), // group changes into bufferSize batches for mapping
+    new MappingStream(mapChangesToIds), // map a batch of ChangesResultItem to doc IDs
+    new MappingStream(mapBatchToLogLine), // convert the batch into a string to write to the log file
+    new LogWriter(log)) // file writer
+    .catch((err) => {
+      if (err.status && err.status >= 400) {
+        return Promise.reject(error.convertResponseError(err));
+      } else if (err.name !== 'SpoolChangesError') {
+        return Promise.reject(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
+      }
+    });
 };
