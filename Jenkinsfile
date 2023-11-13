@@ -221,12 +221,6 @@ pipeline {
           }
         }
         stage('Node 20x') {
-          when {
-            beforeAgent true
-            // build this stage for branches working on resolving Node 20 problems
-            // otherwise skip it for now
-            branch '583-*'
-          }
           steps {
             script{
               runTest('20')
