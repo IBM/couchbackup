@@ -22,7 +22,7 @@ def getEnvForSuite(suiteName, version) {
     case 'test':
       envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7700 + version.toInteger()}")
       break
-    case 'toxytests/toxy':
+    case 'test-network/conditions':
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
       envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7800 + version.toInteger()}")
       break
@@ -144,7 +144,7 @@ def runTest(version, filter=null, testSuite='test') {
               sh """
                 set +x
                 export COUCH_BACKEND_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
-                export COUCH_URL="${(testSuite == 'toxytests/toxy') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
+                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
                 set -x
                 ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
               """
@@ -215,7 +215,7 @@ pipeline {
           steps {
             container('node18') {
               script{
-                runTest('18', '', 'toxytests/toxy')
+                runTest('18', '', 'test-network/conditions')
               }
             }
           }
