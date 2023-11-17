@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global describe it */
+/* global beforeEach describe it */
 'use strict';
 
 const assert = require('node:assert');
 const tp = require('node:timers/promises');
 const { Readable, Writable, PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { BatchingStream, MappingStream, SplittingStream } = require('../includes/transforms.js');
+const { BatchingStream, MappingStream, SplittingStream, SideEffect } = require('../includes/transforms.js');
+const events = require('events');
 
 describe('#unit should do transforms', function() {
   describe('batching', async function() {
@@ -141,6 +142,110 @@ describe('#unit should do transforms', function() {
 
     it('map function, async concurrency', async function() {
       return testMapping(Readable.from(Array(4).keys()), async(x) => { return tp.setTimeout(Math.round(Math.random() * 50), x); }, [0, 1, 2, 3], 2);
+    });
+  });
+
+  describe('side effect', async function() {
+    // Test "streams"
+    const singleElement = [{ id: '01' }];
+    const multipleElements = [{ id: '01' }, { id: '02' }, { id: '03' }];
+
+    // Eventing
+    const ee = new events.EventEmitter();
+    const eventType = 'changes';
+    const emitterAsyncFn = async(chunk) => { ee.emit(eventType, chunk); };
+    const emitterFn = (chunk) => { ee.emit(eventType, chunk); };
+    // Before each test:
+    // remove all listeners
+    // reset the counter
+
+    beforeEach('reset listeners', function() {
+      ee.removeAllListeners();
+    });
+
+    // Run a test
+    async function testSideEffect(elements, fn) {
+      const actualElements = [];
+      let eventsCounter = 0;
+      ee.addListener(eventType, function() {
+        eventsCounter++;
+      });
+      return pipeline(Readable.from(elements), new SideEffect(fn, { objectMode: true }),
+        new Writable({
+          objectMode: true,
+          write(chunk, encoding, callback) {
+            actualElements.push(chunk);
+            callback();
+          }
+        })).then(() => {
+        assert.deepStrictEqual(actualElements, elements);
+        assert.strictEqual(eventsCounter, elements.length);
+      });
+    }
+
+    describe('success cases', async function() {
+      it('emit event in side effect, async', async function() {
+        return testSideEffect(singleElement, emitterAsyncFn);
+      });
+
+      it('emit event in side effect', async function() {
+        return testSideEffect(singleElement, emitterFn);
+      });
+
+      it('emit events in side effect, async', async function() {
+        return testSideEffect(multipleElements, emitterAsyncFn);
+      });
+
+      it('emit events in side effect', async function() {
+        return testSideEffect(multipleElements, emitterFn);
+      });
+    });
+
+    describe('error cases', function() {
+      const testError = new Error('Testing an error');
+      let counter;
+      beforeEach('reset counter', function() {
+        counter = 0;
+      });
+
+      const rejectingFn = (target) => {
+        return async function() {
+          counter++;
+          if (counter === target) {
+            return Promise.reject(testError);
+          } else {
+            return Promise.resolve(counter);
+          }
+        };
+      };
+      const throwingFn = (target) => {
+        return function() {
+          counter++;
+          if (counter === target) {
+            throw testError;
+          } else {
+            return counter;
+          }
+        };
+      };
+      it('fails for an error, async', async function() {
+        return assert.rejects(() => { return testSideEffect(singleElement, rejectingFn(1)); }, testError);
+      });
+      it('fails for an error', async function() {
+        return assert.rejects(() => { return testSideEffect(singleElement, throwingFn(1)); }, testError);
+      });
+      it('stops after error, async', async function() {
+        return assert.rejects(() => { return testSideEffect(multipleElements, rejectingFn(2)); }, testError).then(() => {
+          // Check no extra events
+          assert.strictEqual(counter, 2);
+        });
+      });
+      it('stops after error', async function() {
+        return assert.rejects(() => { return testSideEffect(multipleElements, throwingFn(2)); }, testError).then(() => {
+          // Check no extra events
+          assert.strictEqual(counter, 2);
+        });
+      });
     });
   });
 });
