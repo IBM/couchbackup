@@ -86,8 +86,29 @@ class SplittingStream extends Duplex {
   }
 }
 
+class SideEffect extends PassThrough {
+  constructor(fn, options) {
+    super(options);
+    this.fn = fn;
+  }
+
+  async doSideEffect(chunk) {
+    return await this.fn(chunk);
+  }
+
+  _transform(chunk, encoding, callback) {
+    this.doSideEffect(chunk)
+      .then(() => {
+        super._transform(chunk, encoding, callback);
+      }).catch((err) => {
+        callback(err);
+      });
+  }
+}
+
 module.exports = {
   BatchingStream,
   MappingStream,
-  SplittingStream
+  SplittingStream,
+  SideEffect
 };
