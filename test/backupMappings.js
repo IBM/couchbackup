@@ -17,7 +17,7 @@
 
 const assert = require('node:assert');
 const request = require('../includes/request.js');
-const { backupBatchToBackupFileLine, backupBatchToLogFileLine, getPendingToFetchedMapper, logLineToBackupBatch, logLineToMetadata } = require('../includes/backupMappings.js');
+const { Backup, LogMapper } = require('../includes/backupMappings.js');
 
 function assertFileLine(fileLine, expectedContent) {
   assert.ok(fileLine, 'There should be a file line.');
@@ -39,23 +39,24 @@ describe('#unit backup mappings', function() {
 
   describe('backupBatchToBackupFileLine', function() {
     it('should correctly map to a backup line', function() {
-      const fileLine = backupBatchToBackupFileLine(backupBatchDone);
+      const fileLine = new Backup(null).backupBatchToBackupFileLine(backupBatchDone);
       assertFileLine(fileLine, `${JSON.stringify(backupBatchDone.docs)}\n`);
     });
   });
 
   describe('backupBatchToLogFileLine', function() {
     it('should correctly map to a log file line', function() {
-      const fileLine = backupBatchToLogFileLine(backupBatchDone);
+      const fileLine = new Backup(null).backupBatchToLogFileLine(backupBatchDone);
       assertFileLine(fileLine, ':d batch0\n');
     });
   });
 
   describe('log line mappers', function() {
+    const logMapper = new LogMapper();
     const makeTestForLogLine = (fn, logLine, expected) => {
       return function() {
         const backupBatch = fn(logLine);
-        if (fn.name === logLineToMetadata.name) {
+        if (fn.name === logMapper.logLineToMetadata.name) {
           // In the metadata only cases we expect no docs
           expected[2] = [];
         }
@@ -63,7 +64,7 @@ describe('#unit backup mappings', function() {
       };
     };
 
-    [logLineToBackupBatch, logLineToMetadata].forEach((fn) => {
+    [logMapper.logLineToBackupBatch, logMapper.logLineToMetadata].forEach((fn) => {
       describe(`${fn.name}`, function() {
         it('should correctly map a todo log file line (static)',
           makeTestForLogLine(fn,
@@ -106,7 +107,7 @@ describe('#unit backup mappings', function() {
           // it should not throw an exception. If it does the test will fail.
           makeTestForLogLine(fn,
             ':t batch42 [{"id": "doc', // note this specifically tests a partial line
-            fn.name === logLineToMetadata.name
+            fn.name === logMapper.logLineToMetadata.name
               ? ['t', 42, []] // metadata case, metadata is valid content is ignored anyway
               : [null, null, []] // batch case, broken content means line ignored
           )
@@ -128,7 +129,7 @@ describe('#unit backup mappings', function() {
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
     const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
-    const fetcher = getPendingToFetchedMapper(db);
+    const fetcher = new Backup(db).pendingToFetched;
 
     beforeEach('setup nock', function() {
       nock(url)

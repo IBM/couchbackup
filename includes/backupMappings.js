@@ -18,177 +18,176 @@ const debug = require('debug');
 
 const mappingDebug = debug('couchbackup:mappings');
 
-const logMetadataRegex = /^(:(?:[td]\s+batch\d+|changes_complete))\s*/;
-const logCommandRegex = /^:([td]|changes_complete)/;
-const logBatchRegex = /batch(\d+)/;
+class LogMapper {
+  logMetadataRegex = /^(:(?:[td]\s+batch\d+|changes_complete))\s*/;
+  logCommandRegex = /^:([td]|changes_complete)/;
+  logBatchRegex = /batch(\d+)/;
 
-/**
- * Function for splitting log file lines into summary and content sections.
- *
- * @param {string} logFileLine
- * @returns {string[]} a max 2 element array, first element metadata, second element content
- */
-function splitLogFileLine(logFileLine) {
-  if (logFileLine && logFileLine[0] === ':') {
-    // Allow up to 3 parts:
-    // 1. an empty string from the line start (will be discarded)
-    // 2. the capturing group from the split (the command/batch metadata)
-    // 3. any remaining content
-    const splitLine = logFileLine.split(logMetadataRegex, 3);
-    // First part of the split is an empty string because we split
-    // at the start of the line, so throw that out.
-    splitLine.shift();
-    return splitLine;
-  }
-  mappingDebug('Ignoring log file line does not start with :.');
-  return [];
-}
-
-/**
- * Function to extract the command from the start of a log file line.
- *
- * @param {string} logLineMetadata the start of a log file line
- * @returns command or null
- */
-function getCommandFromMetadata(logLineMetadata) {
-  // extract command type
-  const commandMatches = logLineMetadata.match(logCommandRegex);
-  if (commandMatches) {
-    const command = commandMatches[1];
-    return command;
-  }
-  mappingDebug('Log line had no command.');
-  return null;
-}
-
-/**
- * Function to extract the batch number from the start of a log file line.
- *
- * @param {string} logLineMetadata the start of a log file line
- * @returns batch number or null
- */
-function getBatchFromMetadata(logLineMetadata) {
-  // extract batch number
-  const batchMatches = logLineMetadata.match(logBatchRegex);
-  if (batchMatches) {
-    const batch = parseInt(batchMatches[1]);
-    return batch;
-  }
-  mappingDebug('Log line had no batch number.');
-  return null;
-}
-
-/**
- * Function to parse the start of a log file line string into
- * a backup batch object for the command and batch.
- *
- * @param {string} logLineMetadata
- * @returns object with command, command and batch, or null
- */
-function parseLogMetadata(logLineMetadata) {
-  const metadata = {};
-  mappingDebug(`Parsing log metadata ${logLineMetadata}`);
-  metadata.command = getCommandFromMetadata(logLineMetadata);
-  if (metadata.command) {
-    switch (metadata.command) {
-      case 't':
-      case 'd':
-        metadata.batch = getBatchFromMetadata(logLineMetadata);
-        if (metadata.batch === null) {
-          // For t and d we should have a batch, if not the line is broken
-          // reset the command
-          metadata.command = null;
-        } else {
-          mappingDebug(`Log file line for batch ${metadata.batch} with command ${metadata.command}.`);
-        }
-        break;
-      case 'changes_complete':
-        mappingDebug(`Log file line for command ${metadata.command}.`);
-        break;
-      default:
-        mappingDebug(`Unknown command ${metadata.command} in log file`);
-        break;
+  /**
+   * Function for splitting log file lines into summary and content sections.
+   *
+   * @param {string} logFileLine
+   * @returns {string[]} a max 2 element array, first element metadata, second element content
+   */
+  splitLogFileLine(logFileLine) {
+    if (logFileLine && logFileLine[0] === ':') {
+      // Allow up to 3 parts:
+      // 1. an empty string from the line start (will be discarded)
+      // 2. the capturing group from the split (the command/batch metadata)
+      // 3. any remaining content
+      const splitLine = logFileLine.split(this.logMetadataRegex, 3);
+      // First part of the split is an empty string because we split
+      // at the start of the line, so throw that out.
+      splitLine.shift();
+      return splitLine;
     }
+    mappingDebug('Ignoring log file line does not start with :.');
+    return [];
   }
-  return metadata;
-}
 
-function handleLogLine(logFileLine, metadataOnly = false) {
-  mappingDebug(`Parsing line ${logFileLine}`);
-  let metadata = {};
-  const backupBatch = { command: null, batch: null, docs: [] };
-  // Split the line into command/batch metadata and remaining contents
-  const splitLogLine = splitLogFileLine(logFileLine);
-  if (splitLogLine.length >= 1) {
-    metadata = parseLogMetadata(splitLogLine[0]);
-    // type 't' entries have doc IDs to parse
-    if (!metadataOnly && metadata.command === 't' && splitLogLine.length === 2) {
-      const logFileContentJson = splitLogLine[1];
-      try {
-        backupBatch.docs = JSON.parse(logFileContentJson);
-        mappingDebug(`Parsed ${backupBatch.docs.length} from log file line for batch ${metadata.batch}.`);
-      } catch (err) {
-        mappingDebug(`Ignoring parsing error ${err}`);
-        // Line is broken, discard metadata
-        metadata = {};
+  /**
+   * Function to extract the command from the start of a log file line.
+   *
+   * @param {string} logLineMetadata the start of a log file line
+   * @returns command or null
+   */
+  getCommandFromMetadata(logLineMetadata) {
+    // extract command type
+    const commandMatches = logLineMetadata.match(this.logCommandRegex);
+    if (commandMatches) {
+      const command = commandMatches[1];
+      return command;
+    }
+    mappingDebug('Log line had no command.');
+    return null;
+  }
+
+  /**
+   * Function to extract the batch number from the start of a log file line.
+   *
+   * @param {string} logLineMetadata the start of a log file line
+   * @returns batch number or null
+   */
+  getBatchFromMetadata(logLineMetadata) {
+    // extract batch number
+    const batchMatches = logLineMetadata.match(this.logBatchRegex);
+    if (batchMatches) {
+      const batch = parseInt(batchMatches[1]);
+      return batch;
+    }
+    mappingDebug('Log line had no batch number.');
+    return null;
+  }
+
+  /**
+   * Function to parse the start of a log file line string into
+   * a backup batch object for the command and batch.
+   *
+   * @param {string} logLineMetadata
+   * @returns object with command, command and batch, or null
+   */
+  parseLogMetadata(logLineMetadata) {
+    const metadata = {};
+    mappingDebug(`Parsing log metadata ${logLineMetadata}`);
+    metadata.command = this.getCommandFromMetadata(logLineMetadata);
+    if (metadata.command) {
+      switch (metadata.command) {
+        case 't':
+        case 'd':
+          metadata.batch = this.getBatchFromMetadata(logLineMetadata);
+          if (metadata.batch === null) {
+            // For t and d we should have a batch, if not the line is broken
+            // reset the command
+            metadata.command = null;
+          } else {
+            mappingDebug(`Log file line for batch ${metadata.batch} with command ${metadata.command}.`);
+          }
+          break;
+        case 'changes_complete':
+          mappingDebug(`Log file line for command ${metadata.command}.`);
+          break;
+        default:
+          mappingDebug(`Unknown command ${metadata.command} in log file`);
+          break;
       }
     }
-  } else {
-    mappingDebug('Ignoring empty or unknown line in log file.');
+    return metadata;
   }
-  return { ...backupBatch, ...metadata };
+
+  handleLogLine(logFileLine, metadataOnly = false) {
+    mappingDebug(`Parsing line ${logFileLine}`);
+    let metadata = {};
+    const backupBatch = { command: null, batch: null, docs: [] };
+    // Split the line into command/batch metadata and remaining contents
+    const splitLogLine = this.splitLogFileLine(logFileLine);
+    if (splitLogLine.length >= 1) {
+      metadata = this.parseLogMetadata(splitLogLine[0]);
+      // type 't' entries have doc IDs to parse
+      if (!metadataOnly && metadata.command === 't' && splitLogLine.length === 2) {
+        const logFileContentJson = splitLogLine[1];
+        try {
+          backupBatch.docs = JSON.parse(logFileContentJson);
+          mappingDebug(`Parsed ${backupBatch.docs.length} from log file line for batch ${metadata.batch}.`);
+        } catch (err) {
+          mappingDebug(`Ignoring parsing error ${err}`);
+          // Line is broken, discard metadata
+          metadata = {};
+        }
+      }
+    } else {
+      mappingDebug('Ignoring empty or unknown line in log file.');
+    }
+    return { ...backupBatch, ...metadata };
+  }
+
+  /**
+   *
+   * This is used to create a batch completeness log without
+   * needing to parse all the document ID information.
+   *
+   */
+  logLineToMetadata = (logFileLine) => {
+    return this.handleLogLine(logFileLine, true);
+  };
+
+  /**
+   * Mapper for converting log file lines to batch objects.
+   *
+   * @param {string} logFileLine
+   * @returns {object} a batch object {command: t|d|changes_complete, batch: #, docs: [{id: id, ...}]}
+   */
+  logLineToBackupBatch = (logFileLine) => {
+    return this.handleLogLine(logFileLine);
+  };
 }
 
-/**
- *
- * This is used to create a batch completeness log without
- * needing to parse all the document ID information.
- *
- */
-function logLineToMetadata(logFileLine) {
-  return handleLogLine(logFileLine, true);
-}
+class Backup {
+  constructor(db) {
+    this.db = db;
+  }
 
-/**
- * Mapper for converting log file lines to batch objects.
- *
- * @param {string} logFileLine
- * @returns {object} a batch object {command: t|d|changes_complete, batch: #, docs: [{id: id, ...}]}
- */
-function logLineToBackupBatch(logFileLine) {
-  return handleLogLine(logFileLine);
-}
-
-/**
+  /**
  * Mapper for converting a backup batch to a backup file line
  *
  * @param {object} backupBatch a backup batch object {command: d, batch: #, docs: [{_id: id, ...}, ...]}
  * @returns {string} JSON string for the backup file
  */
-function backupBatchToBackupFileLine(backupBatch) {
-  mappingDebug(`Stringifying batch ${backupBatch.batch} with ${backupBatch.docs.length} docs.`);
-  return JSON.stringify(backupBatch.docs) + '\n';
-}
+  backupBatchToBackupFileLine = (backupBatch) => {
+    mappingDebug(`Stringifying batch ${backupBatch.batch} with ${backupBatch.docs.length} docs.`);
+    return JSON.stringify(backupBatch.docs) + '\n';
+  };
 
-/**
+  /**
  * Mapper for converting a backup batch to a log file line
  *
  * @param {object} backupBatch a backup batch object {command: d, batch: #, docs: [{_id: id, ...}, ...]}
  * @returns {string} log file batch done line
  */
-function backupBatchToLogFileLine(backupBatch) {
-  mappingDebug(`Preparing log batch completion line for batch ${backupBatch.batch}.`);
-  return `:d batch${backupBatch.batch}\n`;
-}
+  backupBatchToLogFileLine = (backupBatch) => {
+    mappingDebug(`Preparing log batch completion line for batch ${backupBatch.batch}.`);
+    return `:d batch${backupBatch.batch}\n`;
+  };
 
-/**
- * Return a mapping function for the specified db that maps a batch of pending
- * document IDs to fetched documents via a _bulk_get call.
- *
- * @param {object} db representation of the database connection
- * @returns a mapper function
- */
-function getPendingToFetchedMapper(db) {
   /**
    * Mapper for converting a type t "to do" backup batch object (docs IDs to fetch)
    * to a type d "done" backup batch object with the retrieved docs.
@@ -196,13 +195,15 @@ function getPendingToFetchedMapper(db) {
    * @param {object} backupBatch  {command: t, batch: #, docs: [{id: id}, ...]}
    * @returns {object} a backup batch object {command: d, batch: #, docs: [{_id: id, ...}, ...]}
    */
-  return async function backupBatchToBulkGetResponse(backupBatch) {
+  pendingToFetched = async(backupBatch) => {
     mappingDebug(`Fetching batch ${backupBatch.batch}.`);
-    return await db.service.postBulkGet({
-      db: db.db,
-      revs: true,
-      docs: backupBatch.docs
-    }).then(response => {
+    try {
+      const response = await this.db.service.postBulkGet({
+        db: this.db.db,
+        revs: true,
+        docs: backupBatch.docs
+      });
+
       mappingDebug(`Good server response for batch ${backupBatch.batch}.`);
       // create an output array with the docs returned
       // Bulk get response "results" array is of objects {id: "id", docs: [...]}
@@ -237,17 +238,14 @@ function getPendingToFetchedMapper(db) {
         batch: backupBatch.batch,
         docs: documentRevisions
       };
-    }).catch(err => {
+    } catch (err) {
       mappingDebug(`Error response from server for batch ${backupBatch.batch}.`);
       throw error.convertResponseError(err);
-    });
+    }
   };
 }
 
 module.exports = {
-  backupBatchToBackupFileLine,
-  backupBatchToLogFileLine,
-  getPendingToFetchedMapper,
-  logLineToBackupBatch,
-  logLineToMetadata
+  Backup,
+  LogMapper
 };
