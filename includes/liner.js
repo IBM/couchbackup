@@ -18,16 +18,22 @@ const { createInterface } = require('node:readline');
 const { PassThrough, Transform } = require('node:stream');
 
 class Liner extends Transform {
-  constructor() {
+  constructor(withNumbers = false) {
     super({ objectMode: true });
+    this.lineNumber = 0;
     this.inStream = new PassThrough({ objectMode: true });
     this.readlineInterface = createInterface({
       input: this.inStream,
       terminal: false
     }).on('line', (line) => {
-      this.push(line);
+      this.lineNumber++;
+      this.push(withNumbers ? this.wrapLine(line) : line);
     });
     this.readlineInterfaceClosePromise = once(this.readlineInterface, 'close');
+  }
+
+  wrapLine(line) {
+    return { lineNumber: this.lineNumber, line };
   }
 
   _transform(chunk, encoding, callback) {
