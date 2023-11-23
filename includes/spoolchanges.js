@@ -15,10 +15,9 @@
 
 const fs = require('fs');
 const error = require('./error.js');
-const { BatchingStream, MappingStream } = require('./transforms.js');
+const { BatchingStream, DelegateWritable, MappingStream } = require('./transforms.js');
 const debug = require('debug')('couchbackup:spoolchanges');
 const { ChangesFollower } = require('@ibm-cloud/cloudant');
-const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 
 /**
@@ -35,30 +34,11 @@ module.exports = async function(db, log, bufferSize, tolerance = 600000) {
   let batch = 0;
   let totalBuffer = 0;
 
-  class LogWriter extends Writable {
+  class LogWriter extends DelegateWritable {
     constructor(log) {
-      super({ objectMode: true });
-      this.logStream = fs.createWriteStream(log);
-    }
-
-    _write(logLine, encoding, callback) {
-      this.logStream.write(logLine, encoding, () => {
-        debug('completed log line write');
-        callback();
-      });
-    }
-
-    _destroy(err, callback) {
-      let finalLine = null;
-      if (err) {
-        debug('error streaming database changes, closing log file');
-      } else {
+      super('logFileWriter', fs.createWriteStream(log), () => {
         debug('finished streaming database changes');
-        finalLine = ':changes_complete ' + lastSeq + '\n';
-      }
-      this.logStream.end(finalLine, 'utf-8', () => {
-        debug('closed log file');
-        callback();
+        return ':changes_complete ' + lastSeq + '\n';
       });
     }
   }
