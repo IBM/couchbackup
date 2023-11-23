@@ -1,0 +1,4 @@
+:t batch0 [{"id":"1"},{"id":"2"}]
+:t batch1 [{"id":"3"},{"id":"4"}]
+:t batch2 [{"id":"5"},{"id":"6"}]
+:changes_complete 1-abcetc
