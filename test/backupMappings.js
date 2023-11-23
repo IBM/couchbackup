@@ -16,8 +16,12 @@
 'use strict';
 
 const assert = require('node:assert');
+const fs = require('node:fs');
+const { Writable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 const request = require('../includes/request.js');
 const { Liner } = require('../includes/liner.js');
+const { FilterStream, MappingStream } = require('../includes/transforms.js');
 const { Backup, LogMapper } = require('../includes/backupMappings.js');
 
 function assertFileLine(fileLine, expectedContent) {
@@ -141,11 +145,11 @@ describe('#unit backup mappings', function() {
         .times(1)
         .reply(200, (uri, requestBody) => {
           // mock a _bulk_get response
-          return JSON.stringify({
+          return {
             results: [
               { docs: backupBatchDone.docs.map((doc) => { return { ok: doc }; }) }
             ]
-          });
+          };
         });
     });
 
@@ -156,6 +160,57 @@ describe('#unit backup mappings', function() {
     it('should correctly map a batch from todo to done', async function() {
       return fetcher(backupBatchTodo).then((fetchedBatch) => {
         assertBackupBatchObject(fetchedBatch, 'd', 0, backupBatchDone.docs);
+        assert.ok(nock.isDone, 'The mocks should be done');
+      });
+    });
+  });
+
+  describe('end to end mapping', function() {
+    it('should correctly map a log file to a backup', async function() {
+      const nock = require('nock');
+      const url = 'http://localhost:7777';
+      const dbName = 'fakenockdb';
+      const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
+
+      const expected = [];
+
+      // setup nock
+      nock(url)
+        .post(`/${dbName}/_bulk_get`)
+        .query(true)
+        .times(3)
+        .reply(200, (uri, requestBody) => {
+        // mock a _bulk_get response
+          const batchDocs = requestBody.docs.map((doc) => {
+            return { _id: doc.id, foo: `bar${doc.id}` };
+          });
+          // add to the expected lines
+          expected.push(`${JSON.stringify(batchDocs)}\n`);
+          return {
+            results: [
+              { docs: batchDocs.map((doc) => { return { ok: doc }; }) }
+            ]
+          };
+        });
+
+      const backup = new Backup(db);
+      const output = [];
+      return pipeline(
+        fs.createReadStream('./test/fixtures/test2.log'), // read the log
+        new Liner(true), // break it into lines
+        new MappingStream(new LogMapper().logLineToBackupBatch), // map the lines to batches
+        new FilterStream((batch) => { return batch.command === 't'; }), // filter to type t batches
+        new MappingStream(backup.pendingToFetched), // fetch the batches
+        new MappingStream(backup.backupBatchToBackupFileLine), // stringify for the backup file
+        new Writable({
+          objectMode: true,
+          write: (line, encoding, callback) => {
+            output.push(line);
+            callback();
+          }
+        })
+      ).then(() => {
+        assert.deepStrictEqual(output, expected);
         assert.ok(nock.isDone, 'The mocks should be done');
       });
     });
