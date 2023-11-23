@@ -61,6 +61,17 @@ class BatchingStream extends Transform {
  * Input: stream of x
  * Output: stream of mappingFunction(x)
  */
+class FilterStream extends Duplex {
+  constructor(filterFunction) {
+    const inputStream = new PassThrough({ objectMode: true });
+    return Duplex.from({ readable: inputStream.filter(filterFunction), writable: inputStream });
+  }
+}
+
+/**
+ * Input: stream of x
+ * Output: stream of mappingFunction(x)
+ */
 class MappingStream extends Duplex {
   constructor(mappingFunction, concurrency = 1) {
     const inputStream = new PassThrough({ objectMode: true, highWaterMark: concurrency * 2 });
@@ -108,6 +119,7 @@ class SideEffect extends PassThrough {
 
 module.exports = {
   BatchingStream,
+  FilterStream,
   MappingStream,
   SplittingStream,
   SideEffect
