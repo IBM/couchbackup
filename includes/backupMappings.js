@@ -114,12 +114,20 @@ class LogMapper {
     return metadata;
   }
 
+  /**
+   * Function to handle parsing a log file line from a liner object.
+   *
+   * @param {object} logFileLine Liner object {lineNumber: #, line: '...data...'}
+   * @param {boolean} metadataOnly whether to process only the metadata
+   * @returns a batch object with optional batch number and docs property as determined by metadataOnly
+   * or the specific command content {command: t|d|changes_complete, batch: #, docs: [{id: id, ...}]}
+   */
   handleLogLine(logFileLine, metadataOnly = false) {
-    mappingDebug(`Parsing line ${logFileLine}`);
+    mappingDebug(`Parsing line ${logFileLine.lineNumber}`);
     let metadata = {};
     const backupBatch = { command: null, batch: null, docs: [] };
     // Split the line into command/batch metadata and remaining contents
-    const splitLogLine = this.splitLogFileLine(logFileLine);
+    const splitLogLine = this.splitLogFileLine(logFileLine.line);
     if (splitLogLine.length >= 1) {
       metadata = this.parseLogMetadata(splitLogLine[0]);
       // type 't' entries have doc IDs to parse
@@ -127,7 +135,7 @@ class LogMapper {
         const logFileContentJson = splitLogLine[1];
         try {
           backupBatch.docs = JSON.parse(logFileContentJson);
-          mappingDebug(`Parsed ${backupBatch.docs.length} from log file line for batch ${metadata.batch}.`);
+          mappingDebug(`Parsed ${backupBatch.docs.length} doc IDs from log file line ${logFileLine.lineNumber} for batch ${metadata.batch}.`);
         } catch (err) {
           mappingDebug(`Ignoring parsing error ${err}`);
           // Line is broken, discard metadata
@@ -135,7 +143,7 @@ class LogMapper {
         }
       }
     } else {
-      mappingDebug('Ignoring empty or unknown line in log file.');
+      mappingDebug(`Ignoring empty or unknown line ${logFileLine.lineNumber} in log file.`);
     }
     return { ...backupBatch, ...metadata };
   }
@@ -145,6 +153,8 @@ class LogMapper {
    * This is used to create a batch completeness log without
    * needing to parse all the document ID information.
    *
+   * @param {object} logFileLine Liner object {lineNumber: #, line: '...data...'}
+   * @returns {object} a batch object {command: t|d|changes_complete, batch: #, docs: [{id: id, ...}]}
    */
   logLineToMetadata = (logFileLine) => {
     return this.handleLogLine(logFileLine, true);
@@ -153,7 +163,7 @@ class LogMapper {
   /**
    * Mapper for converting log file lines to batch objects.
    *
-   * @param {string} logFileLine
+   * @param {object} logFileLine Liner object {lineNumber: #, line: '...data...'}
    * @returns {object} a batch object {command: t|d|changes_complete, batch: #, docs: [{id: id, ...}]}
    */
   logLineToBackupBatch = (logFileLine) => {
