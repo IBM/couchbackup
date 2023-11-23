@@ -23,7 +23,7 @@ const { BatchingStream, MappingStream, SplittingStream, SideEffect, FilterStream
 const events = require('events');
 
 describe('#unit should do transforms', function() {
-  describe('batching', async function() {
+  describe('BatchingStream', async function() {
     async function testBatching(elements, batchSize) {
       let batchCounter = 0;
       let fullBatchCounter = 0;
@@ -84,43 +84,8 @@ describe('#unit should do transforms', function() {
     });
   });
 
-  describe('splitting', async function() {
-    async function testSplitting(elements, batchSize, concurrency) {
-      let elementCounter = 0;
-      return pipeline(Readable.from(Array(elements).keys()), new BatchingStream(batchSize), new SplittingStream(concurrency),
-        new Writable({
-          objectMode: true,
-          write(chunk, encoding, callback) {
-            elementCounter++;
-            callback();
-          }
-        })).then(() => {
-        assert.strictEqual(elementCounter, elements, 'There should be the correct number of elements.');
-      });
-    }
 
-    it('single batch', async function() {
-      return testSplitting(2, 2);
-    });
-
-    it('multiple batches, same size', async function() {
-      return testSplitting(15, 3);
-    });
-
-    it('multiple batches, different size', async function() {
-      return testSplitting(29, 8);
-    });
-
-    it('multiple batches, concurrency', async function() {
-      return testSplitting(25, 5, 5);
-    });
-
-    it('multiple batches, different size, concurrency', async function() {
-      return testSplitting(27, 5, 5);
-    });
-  });
-
-  describe('mapping', async function() {
+  describe('MappingStream', async function() {
     async function testMapping(input, mapping, expected, concurrency) {
       const output = new PassThrough({ objectMode: true });
       return pipeline(input, new MappingStream(mapping, concurrency), output).then(() => {
@@ -155,7 +120,7 @@ describe('#unit should do transforms', function() {
     });
   });
 
-  describe('side effect', async function() {
+  describe('SideEffect', async function() {
     // Test "streams"
     const singleElement = [{ id: '01' }];
     const multipleElements = [{ id: '01' }, { id: '02' }, { id: '03' }];
@@ -256,6 +221,42 @@ describe('#unit should do transforms', function() {
           assert.strictEqual(counter, 2);
         });
       });
+    });
+  });
+
+  describe('SplittingStream', async function() {
+    async function testSplitting(elements, batchSize, concurrency) {
+      let elementCounter = 0;
+      return pipeline(Readable.from(Array(elements).keys()), new BatchingStream(batchSize), new SplittingStream(concurrency),
+        new Writable({
+          objectMode: true,
+          write(chunk, encoding, callback) {
+            elementCounter++;
+            callback();
+          }
+        })).then(() => {
+        assert.strictEqual(elementCounter, elements, 'There should be the correct number of elements.');
+      });
+    }
+
+    it('single batch', async function() {
+      return testSplitting(2, 2);
+    });
+
+    it('multiple batches, same size', async function() {
+      return testSplitting(15, 3);
+    });
+
+    it('multiple batches, different size', async function() {
+      return testSplitting(29, 8);
+    });
+
+    it('multiple batches, concurrency', async function() {
+      return testSplitting(25, 5, 5);
+    });
+
+    it('multiple batches, different size, concurrency', async function() {
+      return testSplitting(27, 5, 5);
     });
   });
 });
