@@ -17,6 +17,7 @@
 
 const assert = require('node:assert');
 const request = require('../includes/request.js');
+const { Liner } = require('../includes/liner.js');
 const { Backup, LogMapper } = require('../includes/backupMappings.js');
 
 function assertFileLine(fileLine, expectedContent) {
@@ -52,8 +53,10 @@ describe('#unit backup mappings', function() {
   });
 
   describe('log line mappers', function() {
+    const liner = new Liner(true);
     const logMapper = new LogMapper();
     const makeTestForLogLine = (fn, logLine, expected) => {
+      logLine = liner.wrapLine(logLine);
       return function() {
         const backupBatch = fn(logLine);
         if (fn.name === logMapper.logLineToMetadata.name) {
