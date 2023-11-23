@@ -76,6 +76,10 @@ async function restoreHttpError(opts, errorName, errorCode) {
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('#unit Fatal errors', params), function() {
+    // These tests do real requests with mocks and if they run slowly
+    // the 2 second default mocha timeout can be insufficient, use 10 s
+    this.timeout(10000);
+
     let processEnvCopy;
     let proxy;
 
