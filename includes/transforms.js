@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict';
 
-const { Duplex, PassThrough, Transform } = require('node:stream');
+const { Duplex, PassThrough, Transform, Writable } = require('node:stream');
 const debug = require('debug');
 
 /**
@@ -57,6 +57,56 @@ class BatchingStream extends Transform {
   }
 }
 
+class DelegateWritable extends Writable {
+  constructor(name, targetWritable, lastChunkFunction) {
+    super({ objectMode: true });
+    this.name = name;
+    this.targetWritable = targetWritable;
+    this.lastChunkFunction = lastChunkFunction;
+    this.log = debug((`couchbackup:transform:delegate:${name}`));
+  }
+
+  _write(chunk, encoding, callback) {
+    this.targetWritable.write(chunk, encoding, (err) => {
+      if (!err) {
+        this.log('completed target chunk write');
+      }
+      callback(err);
+    });
+  }
+
+  _final(callback) {
+    this.log('Finalizing');
+    const lastChunk = (this.lastChunkFunction && this.lastChunkFunction()) || null;
+    // We can't 'end' stdout, so use a final write instead for that case
+    if (this.targetWritable === process.stdout) {
+      // we can't 'write' null, so don't do anything if there is no last chunk
+      if (lastChunk) {
+        this.targetWritable.write(lastChunk, 'utf-8', (err) => {
+          if (!err) {
+            this.log('wrote last chunk to stdout');
+          } else {
+            this.log('error writing last chunk to stdout');
+          }
+          callback(err);
+        });
+      } else {
+        this.log('no last chunk to write to stdout');
+        callback();
+      }
+    } else {
+      this.targetWritable.end(lastChunk, 'utf-8', (err) => {
+        if (!err) {
+          this.log('wrote last chunk and ended target writable');
+        } else {
+          this.log('error ending target writable');
+        }
+        callback(err);
+      });
+    }
+  }
+}
+
 /**
  * Input: stream of x
  * Output: stream of mappingFunction(x)
@@ -87,17 +137,21 @@ class SideEffect extends PassThrough {
   constructor(fn, options) {
     super(options);
     this.fn = fn;
+    this.log = debug(('couchbackup:transform:sideeffect'));
   }
 
-  async doSideEffect(chunk) {
-    return await this.fn(chunk);
+  async doSideEffect(chunk, encoding) {
+    return await this.fn(chunk, encoding);
   }
 
   _transform(chunk, encoding, callback) {
-    this.doSideEffect(chunk)
+    this.log('Performing side effect');
+    this.doSideEffect(chunk, encoding)
       .then(() => {
+        this.log('Passing through');
         super._transform(chunk, encoding, callback);
       }).catch((err) => {
+        this.log(`Caught error ${err}`);
         callback(err);
       });
   }
@@ -121,10 +175,36 @@ class SplittingStream extends Duplex {
   }
 }
 
+class WritableWithPassThrough extends SideEffect {
+  constructor(name, targetWritable, lastChunkFunction) {
+    super(null, { objectMode: true });
+    this.log = debug(`couchbackup:transform:writablepassthrough:${name}`);
+    this.delegateWritable = new DelegateWritable(name, targetWritable, lastChunkFunction);
+    this.fn = (chunk, encoding) => {
+      return new Promise((resolve, reject) => {
+        this.delegateWritable.write(chunk, encoding, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    };
+  }
+
+  _flush(callback) {
+    this.log('Flushing writable passthrough');
+    this.delegateWritable.end(callback);
+  }
+}
+
 module.exports = {
   BatchingStream,
+  DelegateWritable,
   FilterStream,
   MappingStream,
   SideEffect,
-  SplittingStream
+  SplittingStream,
+  WritableWithPassThrough
 };

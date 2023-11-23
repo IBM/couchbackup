@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const tp = require('node:timers/promises');
 const { Readable, Writable, PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { BatchingStream, MappingStream, SplittingStream, SideEffect, FilterStream } = require('../includes/transforms.js');
+const { BatchingStream, DelegateWritable, FilterStream, MappingStream, SplittingStream, SideEffect, WritableWithPassThrough } = require('../includes/transforms.js');
 const events = require('events');
 
 describe('#unit should do transforms', function() {
@@ -75,6 +75,59 @@ describe('#unit should do transforms', function() {
     });
   });
 
+  describe('DelegateWritable', function() {
+    // Make tests for both the writable and stdout cases
+    ['writable', 'stdout'].forEach((dest) => {
+      describe(`to ${dest}`, function() {
+        // Make a test for the no last chunk (undefined) case
+        // and a test for a last chunk function case
+        [undefined, () => { return 'd'; }].forEach((lastChunk) => {
+          it(`write test${lastChunk ? ' with last chunk' : ''}`, async function() {
+            const output = [];
+            const delegateWritable = new DelegateWritable(dest,
+              (dest === 'stdout')
+                ? process.stdout
+                : new Writable({
+                  objectMode: true,
+                  write: (chunk, encoding, callback) => {
+                    output.push(chunk);
+                    callback();
+                  }
+                }),
+              lastChunk
+            );
+
+            const input = ['a', 'b', 'c'];
+            let originalStdoutWrite;
+            // hijack process.stdout so we can assert the writes
+            if (dest === 'stdout') {
+              originalStdoutWrite = process.stdout.write;
+              process.stdout.write = function(chunk, encoding, cb) {
+                output.push(chunk);
+                cb();
+              };
+            }
+            try {
+              await pipeline(input, delegateWritable);
+              let expected = input;
+              // For the last chunk cases, we expect an additional chunk
+              if (lastChunk) {
+                expected = Array.from(input);
+                expected.push('d');
+              }
+              assert.deepStrictEqual(output, expected);
+            } finally {
+            // revert stdout to normal
+              if (originalStdoutWrite) {
+                process.stdout.write = originalStdoutWrite;
+              }
+            }
+          });
+        });
+      });
+    });
+  });
+
   describe('FilterStream', async function() {
     it('should filter', async function() {
       const out = new PassThrough({ objectMode: true });
@@ -83,7 +136,6 @@ describe('#unit should do transforms', function() {
       assert.deepStrictEqual(actual, [2, 4, 6]);
     });
   });
-
 
   describe('MappingStream', async function() {
     async function testMapping(input, mapping, expected, concurrency) {
@@ -257,6 +309,35 @@ describe('#unit should do transforms', function() {
 
     it('multiple batches, different size, concurrency', async function() {
       return testSplitting(27, 5, 5);
+    });
+  });
+
+  describe('WritableWithPassthrough', function() {
+    [undefined, () => 8].forEach((lastChunk) => {
+      it(`writes out and passes throught${lastChunk ? ' with last chunk' : ''}`, async function() {
+        const passedThrough = [];
+        const passedThroughWritable = new Writable({
+          objectMode: true,
+          write: (chunk, encoding, callback) => {
+            passedThrough.push(chunk);
+            callback();
+          }
+        });
+        const writtenOut = [];
+        const writtenOutWritable = new Writable({
+          objectMode: true,
+          write: (chunk, encoding, callback) => {
+            writtenOut.push(chunk);
+            callback();
+          }
+        });
+        const input = [1, 2, 3, 4, 5, 6, 7];
+        const expected = Array.from(input);
+        if (lastChunk) expected.push(8);
+        await pipeline(input, new WritableWithPassThrough('write_out', writtenOutWritable, lastChunk), passedThroughWritable);
+        assert.deepStrictEqual(passedThrough, input, 'The input should pass through.');
+        assert.deepStrictEqual(writtenOut, expected, 'The expected content should be written out.');
+      });
     });
   });
 });
