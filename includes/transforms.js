@@ -80,23 +80,9 @@ class MappingStream extends Duplex {
 }
 
 /**
- * Input: stream of arrays
- * Output: stream of elements
+ * PassThrough stream that calls another function
+ * to perform a side effect.
  */
-class SplittingStream extends Duplex {
-  constructor(concurrency = 1, outHighWaterMarkScale = 500, inHighWaterMarkScale = 1) {
-    const inputStream = new PassThrough({ objectMode: true, readableHighWaterMark: concurrency * outHighWaterMarkScale, writableHighWaterMark: concurrency * inHighWaterMarkScale });
-    return Duplex.from({
-      objectMode: true,
-      readable: inputStream.flatMap(
-        (input) => {
-          return input;
-        }, { concurrency }),
-      writable: inputStream
-    });
-  }
-}
-
 class SideEffect extends PassThrough {
   constructor(fn, options) {
     super(options);
@@ -117,10 +103,28 @@ class SideEffect extends PassThrough {
   }
 }
 
+/**
+ * Input: stream of arrays
+ * Output: stream of elements
+ */
+class SplittingStream extends Duplex {
+  constructor(concurrency = 1, outHighWaterMarkScale = 500, inHighWaterMarkScale = 1) {
+    const inputStream = new PassThrough({ objectMode: true, readableHighWaterMark: concurrency * outHighWaterMarkScale, writableHighWaterMark: concurrency * inHighWaterMarkScale });
+    return Duplex.from({
+      objectMode: true,
+      readable: inputStream.flatMap(
+        (input) => {
+          return input;
+        }, { concurrency }),
+      writable: inputStream
+    });
+  }
+}
+
 module.exports = {
   BatchingStream,
   FilterStream,
   MappingStream,
-  SplittingStream,
-  SideEffect
+  SideEffect,
+  SplittingStream
 };
