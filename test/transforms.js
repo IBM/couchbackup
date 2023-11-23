@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const tp = require('node:timers/promises');
 const { Readable, Writable, PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { BatchingStream, MappingStream, SplittingStream, SideEffect } = require('../includes/transforms.js');
+const { BatchingStream, MappingStream, SplittingStream, SideEffect, FilterStream } = require('../includes/transforms.js');
 const events = require('events');
 
 describe('#unit should do transforms', function() {
@@ -74,6 +74,16 @@ describe('#unit should do transforms', function() {
       return testBatching(25, 4);
     });
   });
+
+  describe('FilterStream', async function() {
+    it('should filter', async function() {
+      const out = new PassThrough({ objectMode: true });
+      await pipeline([1, 2, 3, 4, 5, 6], new FilterStream((i) => { return i % 2 === 0; }), out);
+      const actual = await out.toArray();
+      assert.deepStrictEqual(actual, [2, 4, 6]);
+    });
+  });
+
   describe('splitting', async function() {
     async function testSplitting(elements, batchSize, concurrency) {
       let elementCounter = 0;
