@@ -79,11 +79,35 @@ describe('#unit should do transforms', function() {
     // Make tests for both the writable and stdout cases
     ['writable', 'stdout'].forEach((dest) => {
       describe(`to ${dest}`, function() {
-        // Make a test for the no last chunk (undefined) case
-        // and a test for a last chunk function case
-        [undefined, () => { return 'd'; }].forEach((lastChunk) => {
-          it(`write test${lastChunk ? ' with last chunk' : ''}`, async function() {
+        let postWriteCollector;
+        // Functions optionally added to test
+        const lastChunkFn = () => { return 'd'; }; // write a "d" as the last chunk
+        const chunkMapFn = (chunk) => { const map = { a: 1, b: 2, c: 3 }; return map[chunk]; }; // map values to other values
+        const postWriteFn = (chunk) => { postWriteCollector.push(chunk); }; // push the chunk after a write
+
+        // Iterate through the available functions
+        // [lastChunkFn, chunkMapFn, postWriteFn]
+        // test none, each individually and all
+        [[undefined, undefined, undefined], // none
+          [lastChunkFn, undefined, undefined], // lastChunkFn
+          [undefined, chunkMapFn, undefined], // chunkMapFn
+          [undefined, undefined, postWriteFn], // postWriteFn
+          [lastChunkFn, chunkMapFn, postWriteFn] // all
+        ].forEach((params) => {
+          let testName = 'write test';
+          if (params[0]) {
+            testName += ' with last chunk';
+          }
+          if (params[1]) {
+            testName += ' with chunk mapping';
+          }
+          if (params[2]) {
+            testName += ' with post write';
+          }
+          it(`${testName}`, async function() {
             const output = [];
+            // clean postWriteCollector for each test
+            postWriteCollector = [];
             const delegateWritable = new DelegateWritable(dest,
               (dest === 'stdout')
                 ? process.stdout
@@ -94,7 +118,7 @@ describe('#unit should do transforms', function() {
                     callback();
                   }
                 }),
-              lastChunk
+              ...params
             );
 
             const input = ['a', 'b', 'c'];
@@ -109,13 +133,20 @@ describe('#unit should do transforms', function() {
             }
             try {
               await pipeline(input, delegateWritable);
-              let expected = input;
+              let expected = Array.from(input);
+              // For the chunk mapping case, we expect the chunks to be mapped
+              if (params[1]) {
+                expected = expected.map(chunkMapFn);
+              }
               // For the last chunk cases, we expect an additional chunk
-              if (lastChunk) {
-                expected = Array.from(input);
+              if (params[0]) {
                 expected.push('d');
               }
               assert.deepStrictEqual(output, expected);
+              // If we were doing postWrite we should assert the collector
+              if (params[2]) {
+                assert.deepStrictEqual(postWriteCollector, input);
+              }
             } finally {
             // revert stdout to normal
               if (originalStdoutWrite) {
@@ -314,7 +345,7 @@ describe('#unit should do transforms', function() {
 
   describe('WritableWithPassthrough', function() {
     [undefined, () => 8].forEach((lastChunk) => {
-      it(`writes out and passes throught${lastChunk ? ' with last chunk' : ''}`, async function() {
+      it(`writes out and passes through${lastChunk ? ' with last chunk' : ''}`, async function() {
         const passedThrough = [];
         const passedThroughWritable = new Writable({
           objectMode: true,
