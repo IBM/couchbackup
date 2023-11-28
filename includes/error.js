@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,12 @@ class BackupError extends Error {
   constructor(name, message) {
     super(message);
     this.name = name;
+  }
+}
+
+class OptionError extends BackupError {
+  constructor(message) {
+    super('InvalidOption', message);
   }
 }
 
@@ -93,13 +99,14 @@ function augmentMessage(err) {
 function wrapPossibleInvalidUrlError(err) {
   if (err.code === 'ERR_INVALID_URL') {
     // Wrap ERR_INVALID_URL in our own InvalidOption
-    return new BackupError('InvalidOption', err.message);
+    return new OptionError(err.message);
   }
   return err;
 }
 
 module.exports = {
   BackupError,
+  OptionError,
   HTTPError,
   wrapPossibleInvalidUrlError,
   convertResponseError,
