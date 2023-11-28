@@ -58,18 +58,35 @@ class BatchingStream extends Transform {
 }
 
 class DelegateWritable extends Writable {
-  constructor(name, targetWritable, lastChunkFunction) {
+  /**
+   * A Writable that delegates to another writable wrapping it in some
+   * helpful operations and handling "ending" of special streams like
+   * process.stdout.
+   *
+   * @param {string} name - the name of this DelegateWritable for logging
+   * @param {Writable} targetWritable - the Writable stream to write to
+   * @param {function} lastChunkFn - a no-args function to call to get a final chunk to write
+   * @param {function} chunkMapFn - a function(chunk) that can transform/map a chunk before writing
+   * @param {function} postWriteFn - a function(chunk) that can perform an action after a write completes
+   */
+  constructor(name, targetWritable, lastChunkFn, chunkMapFn, postWriteFn) {
     super({ objectMode: true });
     this.name = name;
     this.targetWritable = targetWritable;
-    this.lastChunkFunction = lastChunkFunction;
+    this.lastChunkFn = lastChunkFn;
+    this.chunkMapFn = chunkMapFn;
+    this.postWriteFn = postWriteFn;
     this.log = debug((`couchbackup:transform:delegate:${name}`));
   }
 
   _write(chunk, encoding, callback) {
-    this.targetWritable.write(chunk, encoding, (err) => {
+    const toWrite = (this.chunkMapFn) ? this.chunkMapFn(chunk) : chunk;
+    this.targetWritable.write(toWrite, encoding, (err) => {
       if (!err) {
         this.log('completed target chunk write');
+        if (this.postWriteFn) {
+          this.postWriteFn(chunk);
+        }
       }
       callback(err);
     });
@@ -77,7 +94,7 @@ class DelegateWritable extends Writable {
 
   _final(callback) {
     this.log('Finalizing');
-    const lastChunk = (this.lastChunkFunction && this.lastChunkFunction()) || null;
+    const lastChunk = (this.lastChunkFn && this.lastChunkFn()) || null;
     // We can't 'end' stdout, so use a final write instead for that case
     if (this.targetWritable === process.stdout) {
       // we can't 'write' null, so don't do anything if there is no last chunk
@@ -176,10 +193,23 @@ class SplittingStream extends Duplex {
 }
 
 class WritableWithPassThrough extends SideEffect {
-  constructor(name, targetWritable, lastChunkFunction) {
+  /**
+   * A Writable that passes through the original chunk.
+   * The chunk is also passed to a SideEffect which behaves as DelegateWritable does.
+   *
+   * @param {string} name - the name of the DelegateWritable for logging
+   * @param {Writable} targetWritable - the Writable stream to write to
+   * @param {function} lastChunkFn - a no-args function to call to get a final chunk to write
+   * @param {function} chunkMapFn - a function(chunk) that can transform/map a chunk before writing
+   * @param {function} postWriteFn - a function(chunk) that can perform an action after a write completes
+   */
+  constructor(name, targetWritable, lastChunkFn, chunkMapFn, postWriteFn) {
+    // Initialize super without a side effect fn because we need to set some
+    // properties before we can define it.
     super(null, { objectMode: true });
     this.log = debug(`couchbackup:transform:writablepassthrough:${name}`);
-    this.delegateWritable = new DelegateWritable(name, targetWritable, lastChunkFunction);
+    this.delegateWritable = new DelegateWritable(name, targetWritable, lastChunkFn, chunkMapFn, postWriteFn);
+    // Now set the side effect fn we omitted earlier
     this.fn = (chunk, encoding) => {
       return new Promise((resolve, reject) => {
         this.delegateWritable.write(chunk, encoding, (err) => {
