@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,16 +30,17 @@ const events = require('events');
 const fs = require('fs');
 const URL = require('url').URL;
 
+const OptionError = error.OptionError;
+
 /**
  * Test for a positive, safe integer.
  *
- * @param {object} x - Object under test.
+ * @param {any} x - Object under test.
  */
 function isSafePositiveInteger(x) {
   // https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
   const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER || 9007199254740991;
-  // Is it a number?
-  return Object.prototype.toString.call(x) === '[object Number]' &&
+  return (typeof x === 'number' || typeof x === 'bigint') &&
     // Is it an integer?
     x % 1 === 0 &&
     // Is it positive?
@@ -49,94 +50,145 @@ function isSafePositiveInteger(x) {
 }
 
 /**
- * Validate arguments.
+ * Validate URL.
  *
- * @param {object} url - URL of database.
- * @param {object} opts - Options.
- * @param {function} cb - Callback to be called on error.
+ * @param {string} url - URL of database.
+ * @param {boolean} isIAM - A flag if IAM authentication been used.
+ * @returns Boolean true if all checks are passing.
  */
-function validateArgs(url, opts, cb) {
+function validateURL(url, isIAM) {
   if (typeof url !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'Invalid URL, must be type string'), null);
-    return;
+    throw new OptionError('Invalid URL, must be type string');
   }
-  if (opts && typeof opts.bufferSize !== 'undefined' && !isSafePositiveInteger(opts.bufferSize)) {
-    cb(new error.BackupError('InvalidOption', 'Invalid buffer size option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
-    return;
-  }
-  if (opts && typeof opts.iamApiKey !== 'undefined' && typeof opts.iamApiKey !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'Invalid iamApiKey option, must be type string'), null);
-    return;
-  }
-  if (opts && typeof opts.log !== 'undefined' && typeof opts.log !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'Invalid log option, must be type string'), null);
-    return;
-  }
-  if (opts && typeof opts.mode !== 'undefined' && ['full', 'shallow'].indexOf(opts.mode) === -1) {
-    cb(new error.BackupError('InvalidOption', 'Invalid mode option, must be either "full" or "shallow"'), null);
-    return;
-  }
-  if (opts && typeof opts.output !== 'undefined' && typeof opts.output !== 'string') {
-    cb(new error.BackupError('InvalidOption', 'Invalid output option, must be type string'), null);
-    return;
-  }
-  if (opts && typeof opts.parallelism !== 'undefined' && !isSafePositiveInteger(opts.parallelism)) {
-    cb(new error.BackupError('InvalidOption', 'Invalid parallelism option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
-    return;
-  }
-  if (opts && typeof opts.requestTimeout !== 'undefined' && !isSafePositiveInteger(opts.requestTimeout)) {
-    cb(new error.BackupError('InvalidOption', 'Invalid request timeout option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]'), null);
-    return;
-  }
-  if (opts && typeof opts.resume !== 'undefined' && typeof opts.resume !== 'boolean') {
-    cb(new error.BackupError('InvalidOption', 'Invalid resume option, must be type boolean'), null);
-    return;
-  }
-
   // Validate URL and ensure no auth if using key
+  let urlObject
   try {
-    const urlObject = new URL(url);
-    // We require a protocol, host and path (for db), fail if any is missing.
-    if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
-      cb(new error.BackupError('InvalidOption', 'Invalid URL protocol.'));
-      return;
-    }
-    if (!urlObject.pathname || urlObject.pathname === '/') {
-      cb(new error.BackupError('InvalidOption', 'Invalid URL, missing path element (no database).'));
-      return;
-    }
-    if (opts && opts.iamApiKey && (urlObject.username || urlObject.password)) {
-      cb(new error.BackupError('InvalidOption', 'URL user information must not be supplied when using IAM API key.'));
-      return;
-    }
+    urlObject = new URL(url);
   } catch (err) {
-    cb(error.wrapPossibleInvalidUrlError(err));
+    throw error.wrapPossibleInvalidUrlError(err);
+  }
+  // We require a protocol, host and path (for db), fail if any is missing.
+  if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
+    throw new OptionError('Invalid URL protocol.');
+  }
+  if (!urlObject.pathname || urlObject.pathname === '/') {
+    throw new OptionError('Invalid URL, missing path element (no database).');
+  }
+  if (isIAM && (urlObject.username || urlObject.password)) {
+    throw new OptionError('URL user information must not be supplied when using IAM API key.');
+  }
+  return true
+}
+
+/**
+ * Validate options.
+ *
+ * @param {object} opts - Options.
+ * @returns Boolean true if all checks are passing.
+ */
+function validateOptions(opts) {
+  // if we don't have opts then we are using defaults and have nothing else to validate
+  if (!opts) {
+    return true;
+  }
+  const rules = [
+    {key: 'iamApiKey', type: 'string'},
+    {key: 'log', type: 'string'},
+    {key: 'output', type: 'string'},
+    {key: 'bufferSize', type: 'number'},
+    {key: 'parallelism', type: 'number'},
+    {key: 'requestTimeout', type: 'number'},
+    {key: 'mode', type: 'enum', values: ['full', 'shallow']},
+    {key: 'resume', type: 'boolean'}
+  ];
+
+  for (const rule of rules) {
+    const val = opts[rule.key];
+    switch(rule.type) {
+      case 'string':
+        if (typeof val !== 'undefined' && typeof val !== 'string') {
+          throw new OptionError(`Invalid ${rule.key} option, must be type string`);
+        }
+        break;
+      case 'number':
+        if (typeof val !== 'undefined' && !isSafePositiveInteger(val)) {
+          const humanized = rule.key.replace(/[A-Z]/g, l => ` ${l.toLowerCase()}`);
+          throw new OptionError(`Invalid ${humanized} option, must be a positive integer in the range (0, MAX_SAFE_INTEGER]`);
+        }
+        break;
+      case 'enum':
+        if (typeof val !== 'undefined' && rule.values.indexOf(val) === -1) {
+          const humanized = rule.values
+            .map(w => `"${w}"`)
+            .reduce((acc, w, i, arr) => {
+              return acc + (i < arr.length - 1 ? ', ' : ' or ') + w
+            });
+          throw new OptionError(`Invalid mode option, must be either ${humanized}`);
+        }
+        break;
+      case 'boolean':
+        if (typeof val !== 'undefined' && typeof val !== 'boolean') {
+          throw new OptionError(`Invalid ${rule.key} option, must be type boolean`);
+        }
+    }
+  }
+  return true
+}
+
+/**
+ * Show warning on invalid params in shallow mode.
+ *
+ * @param {object} opts - Options.
+ */
+function shallowModeWarnings(opts) {
+  if (!opts || opts.mode !== 'shallow') {
     return;
   }
-
   // Perform validation of invalid options for shallow mode and WARN
   // We don't error for backwards compatibility with scripts that may have been
   // written passing complete sets of options through
-  if (opts && opts.mode === 'shallow') {
-    if (opts.log || opts.resume) {
-      console.warn('WARNING: the options "log" and "resume" are invalid when using shallow mode.');
-    }
-    if (opts.parallelism) {
-      console.warn('WARNING: the option "parallelism" has no effect when using shallow mode.');
-    }
+  if (opts.log || opts.resume) {
+    console.warn('WARNING: the options "log" and "resume" are invalid when using shallow mode.');
   }
+  if (opts.parallelism) {
+    console.warn('WARNING: the option "parallelism" has no effect when using shallow mode.');
+  }
+}
 
-  if (opts && opts.resume) {
-    if (!opts.log) {
-      // This is the second place we check for the presence of the log option in conjunction with resume
-      // It has to be here for the API case
-      cb(new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified'), null);
-      return;
-    } else if (!fs.existsSync(opts.log)) {
-      cb(new error.BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist'), null);
-      return;
-    }
+/**
+ * Additional checks for log on resume.
+ *
+ * @param {object} opts - Options.
+ * @returns Boolean true if all checks are passing.
+ */
+
+function validateLogOnResume(opts) {
+  if (!opts || !opts.resume) {
+    return true;
   }
+  if (!opts.log) {
+    // This is the second place we check for the presence of the log option in conjunction with resume
+    // It has to be here for the API case
+    throw new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified');
+  } else if (!fs.existsSync(opts.log)) {
+    throw new error.BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
+  }
+  return true;
+}
+
+/**
+ * Validate arguments.
+ *
+ * @param {string} url - URL of database.
+ * @param {object} opts - Options.
+ * @returns Boolean true if all checks are passing.
+ */
+function validateArgs(url, opts) {
+  const isIAM = opts && typeof opts.iamApiKey === 'string';
+  validateURL(url, isIAM);
+  validateOptions(opts);
+  shallowModeWarnings(opts);
+  validateLogOnResume(opts);
   return true;
 }
 
@@ -230,7 +282,10 @@ module.exports = {
       callback = opts;
       opts = {};
     }
-    if (!validateArgs(srcUrl, opts, callback)) {
+    try {
+      validateArgs(srcUrl, opts);
+    } catch(err) {
+      callback(err);
       // bad args, bail
       return;
     }
