@@ -101,6 +101,7 @@ def agentYaml() {
     |          memory: "4Gi"
     |          cpu: "4"
     ${nodeYaml(18)}
+    ${nodeYaml(21)}
     |restartPolicy: Never""".stripMargin('|')
 }
 
@@ -167,13 +168,11 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        container('node18') {
-          withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
-            withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
-              withNpmEnv(registryArtifactoryDown) {
-                sh 'npm ci'
-                sh 'npm install mocha-jenkins-reporter --no-save'
-              }
+        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+            withNpmEnv(registryArtifactoryDown) {
+              sh 'npm ci'
+              sh 'npm install mocha-jenkins-reporter --no-save'
             }
           }
         }
@@ -184,26 +183,22 @@ pipeline {
         // Stages that run on LTS version from full agent default container
         stage('Lint') {
           steps {
-            container('node18') {
+            script{
               sh 'npm run lint'
             }
           }
         }
         stage('Node LTS') {
           steps {
-            container('node18') {
-              script{
-                runTest('18')
-              }
+            script{
+              runTest('20')
             }
           }
         }
         stage('IAM Node LTS') {
           steps {
-            container('node18') {
-              script{
-                runTest('18', '-i -g \'#unit|#slowe\'', 'test-iam')
-              }
+            script{
+              runTest('20', '-i -g \'#unit|#slowe\'', 'test-iam')
             }
           }
         }
@@ -213,17 +208,26 @@ pipeline {
             environment name: 'RUN_TOXY_TESTS', value: 'true'
           }
           steps {
+            script{
+              runTest('20', '', 'test-network/conditions')
+            }
+          }
+        }
+        stage('Node 18x') {
+          steps {
             container('node18') {
               script{
-                runTest('18', '', 'test-network/conditions')
+                runTest('18')
               }
             }
           }
         }
-        stage('Node 20x') {
+        stage('Node 21x') {
           steps {
-            script{
-              runTest('20')
+            container('node21') {
+              script{
+                runTest('21')
+              }
             }
           }
         }
