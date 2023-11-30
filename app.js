@@ -56,28 +56,27 @@ function isSafePositiveInteger(x) {
  * @param {boolean} isIAM - A flag if IAM authentication been used.
  * @returns Boolean true if all checks are passing.
  */
-function validateURL(url, isIAM) {
+async function validateURL(url, isIAM) {
   if (typeof url !== 'string') {
     throw new OptionError('Invalid URL, must be type string');
   }
   // Validate URL and ensure no auth if using key
-  let urlObject
   try {
-    urlObject = new URL(url);
+    const urlObject = new URL(url);
+    // We require a protocol, host and path (for db), fail if any is missing.
+    if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
+      throw new OptionError('Invalid URL protocol.');
+    }
+    if (!urlObject.pathname || urlObject.pathname === '/') {
+      throw new OptionError('Invalid URL, missing path element (no database).');
+    }
+    if (isIAM && (urlObject.username || urlObject.password)) {
+      throw new OptionError('URL user information must not be supplied when using IAM API key.');
+    }
   } catch (err) {
     throw error.wrapPossibleInvalidUrlError(err);
   }
-  // We require a protocol, host and path (for db), fail if any is missing.
-  if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') {
-    throw new OptionError('Invalid URL protocol.');
-  }
-  if (!urlObject.pathname || urlObject.pathname === '/') {
-    throw new OptionError('Invalid URL, missing path element (no database).');
-  }
-  if (isIAM && (urlObject.username || urlObject.password)) {
-    throw new OptionError('URL user information must not be supplied when using IAM API key.');
-  }
-  return true
+  return true;
 }
 
 /**
@@ -86,25 +85,25 @@ function validateURL(url, isIAM) {
  * @param {object} opts - Options.
  * @returns Boolean true if all checks are passing.
  */
-function validateOptions(opts) {
-  // if we don't have opts then we are using defaults and have nothing else to validate
+async function validateOptions(opts) {
+  // if we don't have opts then we'll be using defaults
   if (!opts) {
     return true;
   }
   const rules = [
-    {key: 'iamApiKey', type: 'string'},
-    {key: 'log', type: 'string'},
-    {key: 'output', type: 'string'},
-    {key: 'bufferSize', type: 'number'},
-    {key: 'parallelism', type: 'number'},
-    {key: 'requestTimeout', type: 'number'},
-    {key: 'mode', type: 'enum', values: ['full', 'shallow']},
-    {key: 'resume', type: 'boolean'}
+    { key: 'iamApiKey', type: 'string' },
+    { key: 'log', type: 'string' },
+    { key: 'output', type: 'string' },
+    { key: 'bufferSize', type: 'number' },
+    { key: 'parallelism', type: 'number' },
+    { key: 'requestTimeout', type: 'number' },
+    { key: 'mode', type: 'enum', values: ['full', 'shallow'] },
+    { key: 'resume', type: 'boolean' }
   ];
 
   for (const rule of rules) {
     const val = opts[rule.key];
-    switch(rule.type) {
+    switch (rule.type) {
       case 'string':
         if (typeof val !== 'undefined' && typeof val !== 'string') {
           throw new OptionError(`Invalid ${rule.key} option, must be type string`);
@@ -121,7 +120,7 @@ function validateOptions(opts) {
           const humanized = rule.values
             .map(w => `"${w}"`)
             .reduce((acc, w, i, arr) => {
-              return acc + (i < arr.length - 1 ? ', ' : ' or ') + w
+              return acc + (i < arr.length - 1 ? ', ' : ' or ') + w;
             });
           throw new OptionError(`Invalid mode option, must be either ${humanized}`);
         }
@@ -132,7 +131,7 @@ function validateOptions(opts) {
         }
     }
   }
-  return true
+  return true;
 }
 
 /**
@@ -140,7 +139,7 @@ function validateOptions(opts) {
  *
  * @param {object} opts - Options.
  */
-function shallowModeWarnings(opts) {
+async function shallowModeWarnings(opts) {
   if (!opts || opts.mode !== 'shallow') {
     return;
   }
@@ -162,7 +161,7 @@ function shallowModeWarnings(opts) {
  * @returns Boolean true if all checks are passing.
  */
 
-function validateLogOnResume(opts) {
+async function validateLogOnResume(opts) {
   if (!opts || !opts.resume) {
     return true;
   }
@@ -183,13 +182,14 @@ function validateLogOnResume(opts) {
  * @param {object} opts - Options.
  * @returns Boolean true if all checks are passing.
  */
-function validateArgs(url, opts) {
+async function validateArgs(url, opts) {
   const isIAM = opts && typeof opts.iamApiKey === 'string';
-  validateURL(url, isIAM);
-  validateOptions(opts);
-  shallowModeWarnings(opts);
-  validateLogOnResume(opts);
-  return true;
+  return Promise.all([
+    validateURL(url, isIAM),
+    validateOptions(opts),
+    shallowModeWarnings(opts),
+    validateLogOnResume(opts)
+  ]);
 }
 
 function addEventListener(indicator, emitter, event, f) {
@@ -203,49 +203,61 @@ function addEventListener(indicator, emitter, event, f) {
 
 /*
   Check the backup database exists and that the credentials used have
-  visibility. Callback with a fatal error if there is a problem with the DB.
-  @param {string} db - database object
-  @param {function(err)} callback - error is undefined if DB exists
+  visibility. Throw a fatal error if there is a problem with the DB.
+  @param {object} db - database object
+  @returns Passed in database object
 */
-function proceedIfBackupDbValid(db, callback) {
-  db.service.headDatabase({ db: db.db }).then(() => callback()).catch(err => {
-    err = error.convertResponseError(err, err => parseIfDbValidResponseError(db, err));
-    callback(err);
-  });
+async function validateBackupDb(db) {
+  try {
+    await db.service.headDatabase({ db: db.db });
+    return db;
+  } catch (err) {
+    const e = parseDbResponseError(db, err);
+    if (e.name === 'DatabaseNotFound') {
+      e.message = `${err.message} Ensure the backup source database exists.`;
+    }
+    // maybe convert it to HTTPError
+    throw error.convertResponseError(e);
+  }
 }
 
 /*
   Check that the restore database exists, is new and is empty. Also verify that the credentials used have
   visibility. Callback with a fatal error if there is a problem with the DB.
   @param {string} db - database object
-  @param {function(err)} callback - error is undefined if DB exists, new and empty
+  @returns Passed in database object
 */
-function proceedIfRestoreDbValid(db, callback) {
-  db.service.getDatabaseInformation({ db: db.db }).then(response => {
+async function validateRestoreDb(db) {
+  try {
+    const response = await db.service.getDatabaseInformation({ db: db.db });
     const { doc_count: docCount, doc_del_count: deletedDocCount } = response.result;
     // The system databases can have a validation ddoc(s) injected in them on creation.
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
     if (!db.db.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
-      const notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty.`);
+      const notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty. A target database must be a new and empty database.`);
       notEmptyDBErr.name = 'DatabaseNotEmpty';
-      callback(notEmptyDBErr);
-    } else {
-      callback();
+      throw notEmptyDBErr;
     }
-  }).catch(err => {
-    err = error.convertResponseError(err, err => parseIfDbValidResponseError(db, err));
-    callback(err);
-  });
+    // good to use
+    return db;
+  } catch (err) {
+    const e = parseDbResponseError(db, err);
+    if (e.name === 'DatabaseNotFound') {
+      e.message = `${e.message} Create the target database before restoring.`;
+    }
+    // maybe convert it to HTTPError
+    throw error.convertResponseError(e);
+  }
 }
 
 /*
   Convert the database validation response error to a special DatabaseNotFound error
-  in case the database is missing. Otherwise delegate to the default error factory.
+  in case the database is missing. Otherwise returns an original error.
   @param {object} db - database object
   @param {object} err - HTTP response error
 */
-function parseIfDbValidResponseError(db, err) {
+function parseDbResponseError(db, err) {
   if (err && err.status === 404) {
     // Override the error type and message for the DB not found case
     const msg = `Database ${db.url}` +
@@ -255,8 +267,7 @@ function parseIfDbValidResponseError(db, err) {
     noDBErr.name = 'DatabaseNotFound';
     return noDBErr;
   }
-  // Delegate to the default error factory if it wasn't a 404
-  return error.convertResponseError(err);
+  return err;
 }
 
 module.exports = {
@@ -277,112 +288,104 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   backup: function(srcUrl, targetStream, opts, callback) {
-    const listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
     }
-    try {
-      validateArgs(srcUrl, opts);
-    } catch(err) {
-      callback(err);
-      // bad args, bail
-      return;
-    }
-
-    // if there is an error writing to the stream, call the completion
-    // callback with the error set
-    addEventListener(listenerErrorIndicator, targetStream, 'error', function(err) {
-      debug('Error ' + JSON.stringify(err));
-      if (callback) callback(err);
-    });
-
-    opts = Object.assign({}, defaults(), opts);
 
     const ee = new events.EventEmitter();
 
-    // Set up the DB client
-    const backupDB = request.client(srcUrl, opts);
-
-    // Validate the DB exists, before proceeding to backup
-    proceedIfBackupDbValid(backupDB, function(err) {
-      if (err) {
-        if (err.name === 'DatabaseNotFound') {
-          err.message = `${err.message} Ensure the backup source database exists.`;
-        }
-        // Didn't exist, or another fatal error, exit
+    validateArgs(srcUrl, opts)
+      // Set up the DB client
+      .then(() => {
+        opts = Object.assign({}, defaults(), opts);
+        return request.client(srcUrl, opts);
+      })
+      // Validate the DB exists, before proceeding to backup
+      .then((backupDB) => validateBackupDb(backupDB))
+      .catch((err) => {
         callback(err);
-        return;
-      }
-      let backup = null;
-      if (opts.mode === 'shallow') {
-        backup = backupShallow;
-      } else { // full mode
-        backup = backupFull;
-      }
+        throw err;
+      })
+      .then((backupDB) => {
+        // if there is an error writing to the stream, call the completion
+        // callback with the error set
+        const listenerErrorIndicator = { errored: false };
+        addEventListener(listenerErrorIndicator, targetStream, 'error', function(err) {
+          debug('Error ' + JSON.stringify(err));
+          if (callback) callback(err);
+        });
 
-      // If resuming write a newline as it's possible one would be missing from
-      // an interruption of the previous backup. If the backup was clean this
-      // will cause an empty line that will be gracefully handled by the restore.
-      if (opts.resume) {
-        targetStream.write('\n');
-      }
+        let backup = null;
+        if (opts.mode === 'shallow') {
+          backup = backupShallow;
+        } else { // full mode
+          backup = backupFull;
+        }
 
-      // Get the event emitter from the backup process so we can handle events
-      // before passing them on to the app's event emitter if needed.
-      const internalEE = backup(backupDB, opts);
-      addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
-        ee.emit('changes', batch);
-      });
-      addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
-        // this may be too verbose to have as well as the "backed up" message
-        // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        // Callback to emit the written event when the content is flushed
-        function writeFlushed() {
-          ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch });
-          if (logCompletedBatch) {
-            logCompletedBatch(obj.batch);
+        // If resuming write a newline as it's possible one would be missing from
+        // an interruption of the previous backup. If the backup was clean this
+        // will cause an empty line that will be gracefully handled by the restore.
+        if (opts.resume) {
+          targetStream.write('\n');
+        }
+
+        // Get the event emitter from the backup process so we can handle events
+        // before passing them on to the app's event emitter if needed.
+        const internalEE = backup(backupDB, opts);
+        addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
+          ee.emit('changes', batch);
+        });
+        addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
+          // this may be too verbose to have as well as the "backed up" message
+          // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
+          // Callback to emit the written event when the content is flushed
+          function writeFlushed() {
+            ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch });
+            if (logCompletedBatch) {
+              logCompletedBatch(obj.batch);
+            }
+            debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
           }
-          debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-        }
-        // Write the received content to the targetStream
-        const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
-          'utf8',
-          writeFlushed);
-        if (!continueWriting) {
-          // The buffer was full, pause the queue to stop the writes until we
-          // get a drain event
-          if (q && !q.paused) {
-            q.pause();
-            targetStream.once('drain', function() {
-              q.resume();
-            });
+          // Write the received content to the targetStream
+          const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
+            'utf8',
+            writeFlushed);
+          if (!continueWriting) {
+            // The buffer was full, pause the queue to stop the writes until we
+            // get a drain event
+            if (q && !q.paused) {
+              q.pause();
+              targetStream.once('drain', function() {
+                q.resume();
+              });
+            }
           }
-        }
+        });
+        // For errors we expect, may or may not be fatal
+        addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
+          debug('Error ' + JSON.stringify(err));
+          callback(err);
+        });
+        addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
+          function emitFinished() {
+            debug('Backup complete - written ' + JSON.stringify(obj));
+            const summary = { total: obj.total };
+            ee.emit('finished', summary);
+            if (callback) callback(null, summary);
+          }
+          if (targetStream === process.stdout) {
+            // stdout cannot emit a finish event so use a final write + callback
+            targetStream.write('', 'utf8', emitFinished);
+          } else {
+            // If we're writing to a file, end the writes and register the
+            // emitFinished function for a callback when the file stream's finish
+            // event is emitted.
+            targetStream.end('', 'utf8', emitFinished);
+          }
+        });
       });
-      // For errors we expect, may or may not be fatal
-      addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
-        debug('Error ' + JSON.stringify(err));
-        callback(err);
-      });
-      addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
-        function emitFinished() {
-          debug('Backup complete - written ' + JSON.stringify(obj));
-          const summary = { total: obj.total };
-          ee.emit('finished', summary);
-          if (callback) callback(null, summary);
-        }
-        if (targetStream === process.stdout) {
-          // stdout cannot emit a finish event so use a final write + callback
-          targetStream.write('', 'utf8', emitFinished);
-        } else {
-          // If we're writing to a file, end the writes and register the
-          // emitFinished function for a callback when the file stream's finish
-          // event is emitted.
-          targetStream.end('', 'utf8', emitFinished);
-        }
-      });
-    });
+
     return ee;
   },
 
@@ -399,64 +402,60 @@ module.exports = {
    * @param {backupRestoreCallback} callback - Called on completion.
    */
   restore: function(srcStream, targetUrl, opts, callback) {
-    const listenerErrorIndicator = { errored: false };
     if (typeof callback === 'undefined' && typeof opts === 'function') {
       callback = opts;
       opts = {};
     }
-    validateArgs(targetUrl, opts, callback);
-    opts = Object.assign({}, defaults(), opts);
 
     const ee = new events.EventEmitter();
 
-    // Set up the DB client
-    const restoreDB = request.client(targetUrl, opts);
-
-    // Validate the DB exists, before proceeding to restore
-    proceedIfRestoreDbValid(restoreDB, function(err) {
-      if (err) {
-        if (err.name === 'DatabaseNotFound') {
-          err.message = `${err.message} Create the target database before restoring.`;
-        } else if (err.name === 'DatabaseNotEmpty') {
-          err.message = `${err.message} A target database must be a new and empty database.`;
-        }
-        // Didn't exist, or another fatal error, exit
+    validateArgs(targetUrl, opts)
+      // Set up the DB client
+      .then(() => {
+        opts = Object.assign({}, defaults(), opts);
+        return request.client(targetUrl, opts);
+      })
+      // Validate the DB exists, before proceeding to restore
+      .then((restoreDB) => validateRestoreDb(restoreDB))
+      .catch((err) => {
         callback(err);
-        return;
-      }
+        throw err;
+      })
+      .then((restoreDB) => {
+        const listenerErrorIndicator = { errored: false };
+        restoreInternal(
+          restoreDB,
+          opts,
+          srcStream,
+          ee,
+          function(err, writer) {
+            if (err) {
+              callback(err, null);
+              return;
+            }
+            if (writer != null) {
+              addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
+                debug(' restored ', obj.total);
+                ee.emit('restored', { documents: obj.documents, total: obj.total });
+              });
+              addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
+                debug('Error ' + JSON.stringify(err));
+                // Only call destroy if it is available on the stream
+                if (srcStream.destroy && srcStream.destroy instanceof Function) {
+                  srcStream.destroy();
+                }
+                callback(err);
+              });
+              addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
+                debug('restore complete');
+                ee.emit('finished', { total: obj.total });
+                callback(null, obj);
+              });
+            }
+          }
+        );
+      });
 
-      restoreInternal(
-        restoreDB,
-        opts,
-        srcStream,
-        ee,
-        function(err, writer) {
-          if (err) {
-            callback(err, null);
-            return;
-          }
-          if (writer != null) {
-            addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
-              debug(' restored ', obj.total);
-              ee.emit('restored', { documents: obj.documents, total: obj.total });
-            });
-            addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
-              debug('Error ' + JSON.stringify(err));
-              // Only call destroy if it is available on the stream
-              if (srcStream.destroy && srcStream.destroy instanceof Function) {
-                srcStream.destroy();
-              }
-              callback(err);
-            });
-            addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
-              debug('restore complete');
-              ee.emit('finished', { total: obj.total });
-              callback(null, obj);
-            });
-          }
-        }
-      );
-    });
     return ee;
   }
 };
