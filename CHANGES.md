@@ -1,3 +1,7 @@
+# 2.9.15 (2023-12-04)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.8.0`.
+- [NOTE] Updated Node.js version requirement statement for LTS 18 and 20.
+
 # 2.9.14 (2023-11-02)
 - [FIXED] Corrected error handling for invalid URLs.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.7.2`.
