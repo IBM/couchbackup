@@ -28,6 +28,7 @@ const backupShallow = require('./includes/shallowbackup.js');
 const debug = require('debug')('couchbackup:app');
 const events = require('events');
 const fs = require('fs');
+const { Writable } = require('node:stream');
 const URL = require('url').URL;
 
 const OptionError = error.OptionError;
@@ -409,6 +410,9 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
+    // The total restored
+    let total = 0;
+
     validateArgs(targetUrl, opts)
       // Set up the DB client
       .then(() => {
@@ -417,45 +421,33 @@ module.exports = {
       })
       // Validate the DB exists, before proceeding to restore
       .then((restoreDB) => validateRestoreDb(restoreDB))
-      .catch((err) => {
-        callback(err);
-        throw err;
-      })
       .then((restoreDB) => {
-        const listenerErrorIndicator = { errored: false };
-        restoreInternal(
+        const output = new Writable({
+          objectMode: true,
+          write: (restoreBatch, encoding, cb) => {
+            debug(' restored ', restoreBatch.total);
+            total = restoreBatch.total;
+            try {
+              ee.emit('restored', restoreBatch);
+            } finally {
+              cb();
+            }
+          },
+          final: (cb) => {
+            debug('restore complete');
+            ee.emit('finished', { total });
+            cb();
+          }
+        });
+
+        return restoreInternal(
           restoreDB,
           opts,
           srcStream,
-          ee,
-          function(err, writer) {
-            if (err) {
-              callback(err, null);
-              return;
-            }
-            if (writer != null) {
-              addEventListener(listenerErrorIndicator, writer, 'restored', function(obj) {
-                debug(' restored ', obj.total);
-                ee.emit('restored', { documents: obj.documents, total: obj.total });
-              });
-              addEventListener(listenerErrorIndicator, writer, 'error', function(err) {
-                debug('Error ' + JSON.stringify(err));
-                // Only call destroy if it is available on the stream
-                if (srcStream.destroy && srcStream.destroy instanceof Function) {
-                  srcStream.destroy();
-                }
-                callback(err);
-              });
-              addEventListener(listenerErrorIndicator, writer, 'finished', function(obj) {
-                debug('restore complete');
-                ee.emit('finished', { total: obj.total });
-                callback(null, obj);
-              });
-            }
-          }
-        );
-      });
-
+          output);
+      })
+      .then(() => { callback(null, { total }); })
+      .catch(callback);
     return ee;
   }
 };
