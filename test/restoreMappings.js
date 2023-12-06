@@ -117,10 +117,11 @@ describe('#unit restore mappings', function() {
     const dbName = 'fakenockdb';
     const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
 
-    function mockResponse(times) {
+    function mockResponse(times, optional = false) {
       nock(url)
         .post(`/${dbName}/_bulk_docs`)
         .times(times)
+        .optionally(optional)
         .reply(200, (uri, requestBody) => {
           // mock a _bulk_get response
           return [];
@@ -158,9 +159,7 @@ describe('#unit restore mappings', function() {
     });
 
     it('should error for a restore HTTP error', async function() {
-      // add 1 more success response
-      mockResponse(1);
-      // add an error response for the last request
+      // add an error response
       nock(url)
         .post(`/${dbName}/_bulk_docs`)
         .times(1)
@@ -168,6 +167,8 @@ describe('#unit restore mappings', function() {
           // mock an error response
           return { error: 'bad request', reason: 'mocking error' };
         });
+      // add an optional additional success response
+      mockResponse(1, true);
 
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = testBatches.map((batch) => { return { ...batch }; });
