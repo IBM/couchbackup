@@ -125,12 +125,36 @@ class DelegateWritable extends Writable {
 }
 
 /**
+ * A helper PassThrough class that is used in our custom
+ * Duplex streams.
+ */
+class DuplexPassThrough extends PassThrough {
+  constructor(opts) {
+    super({ ...opts, objectMode: true });
+  }
+
+  // The destroy call on this PassThrough stream
+  // gets ahead of real errors reaching the
+  // callback/promise at the end of the pipeline.
+  // This allows an AbortError to get propagated
+  // from the micro-task queue instead because the
+  // real error is blocked behind a callback somewhere.
+  // That in turn masks the real cause of the failure,
+  // so we defer the _destroy in a setImmediate.
+  _destroy(err, cb) {
+    setImmediate(() => {
+      cb(err);
+    });
+  }
+}
+
+/**
  * Input: stream of x
  * Output: stream of mappingFunction(x)
  */
 class FilterStream extends Duplex {
   constructor(filterFunction) {
-    const inputStream = new PassThrough({ objectMode: true });
+    const inputStream = new DuplexPassThrough();
     return Duplex.from({ readable: inputStream.filter(filterFunction), writable: inputStream });
   }
 }
@@ -141,7 +165,9 @@ class FilterStream extends Duplex {
  */
 class MappingStream extends Duplex {
   constructor(mappingFunction, concurrency = 1) {
-    const inputStream = new PassThrough({ objectMode: true, highWaterMark: concurrency * 2 });
+    const inputStream = new DuplexPassThrough({
+      highWaterMark: concurrency * 2
+    });
     return Duplex.from({ readable: inputStream.map(mappingFunction, { concurrency }), writable: inputStream });
   }
 }
@@ -150,7 +176,7 @@ class MappingStream extends Duplex {
  * PassThrough stream that calls another function
  * to perform a side effect.
  */
-class SideEffect extends PassThrough {
+class SideEffect extends DuplexPassThrough {
   constructor(fn, options) {
     super(options);
     this.fn = fn;
@@ -180,7 +206,7 @@ class SideEffect extends PassThrough {
  */
 class SplittingStream extends Duplex {
   constructor(concurrency = 1, outHighWaterMarkScale = 500, inHighWaterMarkScale = 1) {
-    const inputStream = new PassThrough({ objectMode: true, readableHighWaterMark: concurrency * outHighWaterMarkScale, writableHighWaterMark: concurrency * inHighWaterMarkScale });
+    const inputStream = new DuplexPassThrough({ objectMode: true, readableHighWaterMark: concurrency * outHighWaterMarkScale, writableHighWaterMark: concurrency * inHighWaterMarkScale });
     return Duplex.from({
       objectMode: true,
       readable: inputStream.flatMap(
