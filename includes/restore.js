@@ -13,19 +13,22 @@
 // limitations under the License.
 'use strict';
 
-module.exports = function(db, options, readstream, ee, callback) {
-  const { Liner } = require('../includes/liner.js');
-  const writer = require('../includes/writer.js')(db, options.bufferSize, options.parallelism, ee);
+const { Liner } = require('../includes/liner.js');
+const { Restore } = require('../includes/restoreMappings.js');
+const { BatchingStream, MappingStream, SplittingStream } = require('./transforms.js');
+const { pipeline } = require('node:stream/promises');
 
-  // pipe the input to the output, via transformation functions
-  readstream
-    .pipe(new Liner()) // transform the input stream into per-line
-    .on('error', function(err) {
-      // Forward the error to the writer event emitter where we already have
-      // listeners on for handling errors
-      writer.emit('error', err);
-    })
-    .pipe(writer); // transform the data
+module.exports = function(db, options, readstream, outputWritable) {
+  const restore = new Restore(db);
 
-  callback(null, writer);
+  return pipeline(
+    readstream, // the backup file
+    new Liner(true), // line by line
+    new MappingStream(restore.backupLineToDocsArray), // convert line to a docs array
+    new SplittingStream(), // break down the arrays to elements
+    new BatchingStream(options.bufferSize), // make new arrays of the correct buffer size
+    new MappingStream(restore.docsToRestoreBatch), // make a restore batch
+    new MappingStream(restore.pendingToRestored, options.parallelism), // do the restore at the desired level of concurrency
+    outputWritable // any output
+  );
 };
