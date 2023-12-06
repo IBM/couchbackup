@@ -19,11 +19,8 @@ const assert = require('assert');
 const fs = require('fs');
 const nock = require('nock');
 const request = require('../includes/request.js');
-const writer = require('../includes/writer.js');
-const noopEmitter = new (require('events')).EventEmitter();
-const { Liner } = require('../includes/liner.js');
-const { once } = require('node:events');
-const { pipeline } = require('node:stream/promises');
+const restorePipeline = require('../includes/restore.js');
+const { DelegateWritable } = require('../includes/transforms.js');
 const longTestTimeout = 3000;
 
 describe('#unit Check database restore writer', function() {
@@ -34,17 +31,32 @@ describe('#unit Check database restore writer', function() {
     nock.cleanAll();
   });
 
+  function getRestorePipeline(fileName = './test/fixtures/animaldb_expected.json') {
+    let runningTotal = 0;
+    let lastTotal;
+    return restorePipeline(
+      db,
+      { bufferSize: 500, parallelism: 1 },
+      fs.createReadStream(fileName),
+      new DelegateWritable('null', fs.createWriteStream('/dev/null'), null, () => { return ''; }, (restoreResult) => {
+        runningTotal += restoreResult.documents;
+        lastTotal = restoreResult.total;
+      }) // don't care about output
+    ).then(() => {
+      assert.strictEqual(runningTotal, lastTotal);
+      assert.ok(nock.isDone());
+      return lastTotal;
+    });
+  }
+
   it('should complete successfully', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(200, []); // success
 
-    const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
-      once(w, 'finished').then((data) => {
-        assert.strictEqual(data[0].total, 15);
-        assert.ok(nock.isDone());
-      })]);
+    return getRestorePipeline().then((total) => {
+      assert.strictEqual(total, 15);
+    });
   });
 
   it('should terminate on a fatal error', async function() {
@@ -52,9 +64,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(401, { error: 'Unauthorized' }); // fatal error
 
-    const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
+      getRestorePipeline(),
       (err) => {
         assert.strictEqual(err.name, 'Unauthorized');
         assert.strictEqual(err.message, 'Access is denied due to invalid credentials.');
@@ -73,12 +84,9 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, { ok: true }); // third time lucky success
 
-    const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
-      once(w, 'finished').then((data) => {
-        assert.strictEqual(data[0].total, 15);
-        assert.ok(nock.isDone());
-      })]);
+    return getRestorePipeline().then((total) => {
+      assert.strictEqual(total, 15);
+    });
   }).timeout(longTestTimeout);
 
   it('should fail after 3 transient errors', async function() {
@@ -90,9 +98,8 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(503, { error: 'Service Unavailable' }); // Final transient error
 
-    const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
+      getRestorePipeline(),
       (err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 : post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
@@ -107,12 +114,10 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, [{ ok: true, id: 'foo', rev: '1-abc' }]); // success
 
-    const w = writer(db, 500, 1, noopEmitter);
-    return Promise.all([pipeline(fs.createReadStream('./test/fixtures/animaldb_old_shallow.json'), new Liner(), w),
-      once(w, 'finished').then((data) => {
-        assert.strictEqual(data[0].total, 11);
-        assert.ok(nock.isDone());
-      })]);
+    return getRestorePipeline('./test/fixtures/animaldb_old_shallow.json')
+      .then((total) => {
+        assert.strictEqual(total, 11);
+      });
   });
 
   it('should get a batch error for non-empty array response with new_edits false', async function() {
@@ -120,12 +125,11 @@ describe('#unit Check database restore writer', function() {
       .post('/_bulk_docs')
       .reply(200, [{ id: 'foo', error: 'foo', reason: 'bar' }]);
 
-    const w = writer(db, 500, 1, noopEmitter);
     return assert.rejects(
-      pipeline(fs.createReadStream('./test/fixtures/animaldb_expected.json'), new Liner(), w),
+      getRestorePipeline(),
       (err) => {
         assert.strictEqual(err.name, 'Error');
-        assert.strictEqual(err.message, 'Error writing batch with new_edits:false and 1 items');
+        assert.strictEqual(err.message, 'Error writing batch 0 with new_edits:false and 1 items');
         assert.ok(nock.isDone());
         return true;
       }
