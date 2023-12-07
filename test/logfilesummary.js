@@ -16,25 +16,16 @@
 'use strict';
 
 const assert = require('assert');
-const logfilesummary = require('../includes/logfilesummary.js');
+const logFileSummary = require('../includes/logfilesummary.js');
 
 describe('#unit Fetching summary from the log file', function() {
-  it('should fetch a summary correctly', function() {
-    return new Promise((resolve, reject) => {
-      logfilesummary('./test/fixtures/test.log', function(err, data) {
-        try {
-          assert.ok(!err);
-          assert.ok(data);
-          assert.strictEqual(data.changesComplete, true);
-          assert.strictEqual(typeof data.batches, 'object');
-          assert.strictEqual(Object.keys(data.batches).length, 2);
-          assert.deepStrictEqual(data.batches['1'], true);
-          assert.deepStrictEqual(data.batches['4'], true);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      });
-    });
+  it('should fetch a summary correctly', async function() {
+    const summary = await logFileSummary('./test/fixtures/test.log');
+    assert.ok(summary);
+    assert.strictEqual(summary.changesComplete, true);
+    assert.ok(summary.batches instanceof Map);
+    assert.strictEqual(summary.batches.size, 2);
+    assert.deepStrictEqual(summary.batches.get(1), true);
+    assert.deepStrictEqual(summary.batches.get(4), true);
   });
 });
