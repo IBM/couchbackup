@@ -16,26 +16,30 @@
 'use strict';
 
 const assert = require('assert');
-const logfilegetbatches = require('../includes/logfilegetbatches.js');
+const { Writable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
+const logFileGetBatches = require('../includes/logfilegetbatches.js');
 
 describe('#unit Fetching batches from a log file', function() {
   it('should fetch multiple batches correctly', async function() {
-    return new Promise((resolve, reject) => {
-      logfilegetbatches('./test/fixtures/test.log', [1, 4], function(err, data) {
-        try {
-          assert.ok(!err);
-          assert.ok(data);
-          assert.strictEqual(typeof data, 'object');
-          assert.strictEqual(Object.keys(data).length, 2);
-          assert.deepStrictEqual(data['1'].docs, [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }]);
-          assert.strictEqual(data['1'].batch, 1);
-          assert.deepStrictEqual(data['4'].docs, [{ id: '21' }, { id: '22' }]);
-          assert.strictEqual(data['4'].batch, 4);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      });
-    });
+    const output = [];
+    // Test to get batches 1 and 4
+    const summaryBatches = new Map().set(1, true).set(4, true);
+    // Make a pipeline from the logFileGetBatches source
+    await pipeline(...logFileGetBatches('./test/fixtures/test.log', summaryBatches), new Writable({
+      objectMode: true,
+      write: (chunk, encoding, callback) => {
+        output.push(chunk);
+        callback();
+      }
+    }));
+
+    // Output array should contain 2 backup batch objects
+    // one for batch 1 and one for batch 4
+    const expected = [
+      { command: 't', batch: 1, docs: [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '10' }] },
+      { command: 't', batch: 4, docs: [{ id: '21' }, { id: '22' }] }
+    ];
+    assert.deepStrictEqual(output, expected);
   });
 });
