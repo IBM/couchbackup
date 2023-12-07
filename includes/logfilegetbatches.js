@@ -1,4 +1,4 @@
-// Copyright © 2017 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,63 +13,28 @@
 // limitations under the License.
 'use strict';
 
-const fs = require('fs');
-const stream = require('stream');
+const fs = require('node:fs');
+const { LogMapper } = require('./backupMappings.js');
 const { Liner } = require('./liner.js');
+const { FilterStream, MappingStream } = require('./transforms.js');
 
-const onLine = function(onCommand, batches) {
-  const change = new stream.Transform({ objectMode: true });
-  change._transform = function(line, encoding, done) {
-    if (line && line[0] === ':') {
-      const obj = {
-        command: null,
-        batch: null,
-        docs: []
-      };
-
-      let matches;
-
-      // extract command
-      matches = line.match(/^:([a-z_]+) ?/);
-      if (matches) {
-        obj.command = matches[1];
-      }
-
-      // extract batch
-      matches = line.match(/ batch([0-9]+)/);
-      if (matches) {
-        obj.batch = parseInt(matches[1]);
-      }
-
-      // if this is one we want
-      if (obj.command === 't' && batches.indexOf(obj.batch) > -1) {
-        const json = line.replace(/^.* batch[0-9]+ /, '').trim();
-        obj.docs = JSON.parse(json);
-        onCommand(obj);
-      }
-    }
-    done();
-  };
-  return change;
-};
-
-module.exports = function(log, batches, callback) {
-  // our sense of state
-  const retval = { };
-
-  // called with each line from the log file
-  const onCommand = function(obj) {
-    retval[obj.batch] = obj;
-  };
-
-  // stream through the previous log file
-  fs.createReadStream(log)
-    .pipe(new Liner())
-    .pipe(onLine(onCommand, batches))
-    .on('error', function(err) {
-      callback(err);
-    })
-    .on('finish', function() {
-      callback(null, retval);
-    });
+/**
+ * Return an array of streams that when pipelined will produce
+ * pending backup batches from a log file.
+ *
+ * @param {string} log - log file name
+ * @param {Map} batches - a log summary batches Map of pending batch numbers
+ * @returns a log summary object
+ */
+module.exports = function(log, batches) {
+  const logMapper = new LogMapper();
+  return [
+    fs.createReadStream(log), // log file
+    new Liner(true), // split it into lines
+    new MappingStream(logMapper.logLineToBackupBatch), // parse line to a backup batch
+    new FilterStream((metadata) => {
+      // delete returns true if the key exists, false otherwise
+      return batches.delete(metadata.batch);
+    }) // filter out already done batches
+  ];
 };
