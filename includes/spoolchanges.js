@@ -15,42 +15,36 @@
 
 const fs = require('fs');
 const error = require('./error.js');
-const { BatchingStream, DelegateWritable, MappingStream } = require('./transforms.js');
+const { BatchingStream, MappingStream, WritableWithPassThrough } = require('./transforms.js');
 const debug = require('debug')('couchbackup:spoolchanges');
 const { ChangesFollower } = require('@ibm-cloud/cloudant');
-const { pipeline } = require('node:stream/promises');
 
 /**
  * Write log file for all changes from a database, ready for downloading
  * in batches.
  *
- * @param {string} db - object representation of db connection
+ * @param {object} db - object for connection to source database containing name, service and url
  * @param {string} log - path to log file to use
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {number} tolerance - changes follower error tolerance
  */
-module.exports = async function(db, log, bufferSize, tolerance = 600000) {
+module.exports = function(db, log, bufferSize, tolerance = 600000) {
   let lastSeq;
   let batch = 0;
   let totalBuffer = 0;
 
-  class LogWriter extends DelegateWritable {
+  class LogWriter extends WritableWithPassThrough {
     constructor(log) {
-      super('logFileWriter', fs.createWriteStream(log), () => {
-        debug('finished streaming database changes');
-        return ':changes_complete ' + lastSeq + '\n';
-      });
+      super('logFileChangesWriter', // name for debug
+        fs.createWriteStream(log, { flags: 'a' }), // log file write stream (append mode)
+        () => {
+          debug('finished streaming database changes');
+          return ':changes_complete ' + lastSeq + '\n';
+        }, // Function to write complete last chunk
+        mapBackupBatchToPendingLogLine // map the changes batch to a log line
+      );
     }
   }
-
-  // send documents ids to the queue in batches of bufferSize + the last batch
-  const mapBatchToLogLine = function(changesBatch) {
-    totalBuffer += changesBatch.length;
-    debug('writing', changesBatch.length, 'changes to the backup file with total of', totalBuffer);
-    const logLine = ':t batch' + batch + ' ' + JSON.stringify(changesBatch) + '\n';
-    batch++;
-    return logLine;
-  };
 
   // Map a batch of changes to document IDs, checking for errors
   const mapChangesToIds = function(changesBatch) {
@@ -67,22 +61,33 @@ module.exports = async function(db, log, bufferSize, tolerance = 600000) {
     });
   };
 
+  const mapChangesBatchToBackupBatch = function(changesBatch) {
+    return { command: 't', batch: batch++, docs: mapChangesToIds(changesBatch) };
+  };
+
+  const mapBackupBatchToPendingLogLine = function(backupBatch) {
+    totalBuffer += backupBatch.docs.length;
+    debug('writing', backupBatch.docs.length, 'changes to the backup log file with total of', totalBuffer);
+    return `:t batch${backupBatch.batch} ${JSON.stringify(backupBatch.docs)}\n`;
+  };
+
   const changesParams = {
     db: db.db,
     seqInterval: 10000
   };
 
   const changesFollower = new ChangesFollower(db.service, changesParams, tolerance);
-  return pipeline(changesFollower.startOneOff(), // stream of changes from the DB
+  return [
+    changesFollower.startOneOff(), // stream of changes from the DB
     new BatchingStream(bufferSize), // group changes into bufferSize batches for mapping
-    new MappingStream(mapChangesToIds), // map a batch of ChangesResultItem to doc IDs
-    new MappingStream(mapBatchToLogLine), // convert the batch into a string to write to the log file
-    new LogWriter(log)) // file writer
-    .catch((err) => {
-      if (err.status && err.status >= 400) {
-        return Promise.reject(error.convertResponseError(err));
-      } else if (err.name !== 'SpoolChangesError') {
-        return Promise.reject(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-      }
-    });
+    new MappingStream(mapChangesBatchToBackupBatch), // map a batch of ChangesResultItem to doc IDs
+    new LogWriter(log)
+  ];
+  // .catch((err) => {
+  //   if (err.status && err.status >= 400) {
+  //     return Promise.reject(error.convertResponseError(err));
+  //   } else if (err.name !== 'SpoolChangesError') {
+  //     return Promise.reject(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
+  //   }
+  // })
 };
