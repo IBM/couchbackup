@@ -17,9 +17,13 @@
 
 const assert = require('assert');
 const nock = require('nock');
+const fs = require('node:fs');
 const http = require('node:http');
+const { pipeline } = require('node:stream/promises');
 const request = require('../includes/request.js');
-const changes = require('../includes/spoolchanges.js');
+const spoolchanges = require('../includes/spoolchanges.js');
+const { MappingStream } = require('../includes/transforms.js');
+const { convertResponseError } = require('../includes/error.js');
 
 const host = 'localhost';
 // To avoid clashes between multiple runs use a given port (converted to a number) if configured
@@ -31,6 +35,18 @@ const longTestTimeout = 3000;
 const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
 
 const seqSuffix = Buffer.alloc(124, 'abc123').toString('base64');
+
+function changes(bufferSize, tolerance) {
+  // Make a pipeline of the spool changes source streams
+  return pipeline(...spoolchanges(db, '/dev/null', bufferSize, tolerance),
+  // add a mapping to string and send to /dev/null as we don't care about the output
+    new MappingStream(JSON.stringify), fs.createWriteStream('/dev/null'))
+    // Historically spool changes itself could return an error, but
+    // now it returns streams to be made a pipeline elsewhere.
+    // As such a conversion takes place in the pipeline level catch, we reproduce
+    // that here by calling the convertResponseError function.
+    .catch((e) => { throw convertResponseError(e); });
+}
 
 describe('Check spool changes', function() {
   describe('#unit error cases', function() {
@@ -44,7 +60,7 @@ describe('Check spool changes', function() {
       // Note this is setting changes follower tolerance to 0
       // so that the error is not suppressed beyond 3 configured retries
       // in the underlying SDK call, follower will not retry
-      return changes(db, '/dev/null', 500, 0).catch((err) => {
+      return changes(500, 0).catch((err) => {
         assert.strictEqual(err.name, 'SpoolChangesError');
         assert.strictEqual(err.message, `Failed changes request - socket hang up: post ${url}/${dbName}/_changes`);
         assert.ok(nock.isDone());
@@ -64,7 +80,7 @@ describe('Check spool changes', function() {
       // Note this is setting changes follower tolerance to 0
       // so that the error is not suppressed beyond 3 configured retries
       // in the underlying SDK call, follower will not retry
-      return changes(db, '/dev/null', 500, 0).catch((err) => {
+      return changes(500, 0).catch((err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes - Error: foo, Reason: bar`);
         assert.ok(nock.isDone());
@@ -143,7 +159,7 @@ describe('Check spool changes', function() {
         totalChanges = 400000;
         fullResponse = true;
         setupTestSize();
-        return changes(db, '/dev/null', 500).then(() => {
+        return changes(500).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
       });
@@ -158,7 +174,7 @@ describe('Check spool changes', function() {
         totalChanges = 2500;
         fullResponse = false;
         setupTestSize();
-        return changes(db, '/dev/null', 500).then(() => {
+        return changes(500).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
       });
@@ -176,7 +192,7 @@ describe('Check spool changes', function() {
         fullResponse = false;
         setupTestSize();
         // Use sparse changes for this test
-        return changes(db, '/dev/null', batchSize).then(() => {
+        return changes(batchSize).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
       });
@@ -192,7 +208,7 @@ describe('Check spool changes', function() {
         // Use full changes for this test to exercise load
         fullResponse = true;
         setupTestSize();
-        return changes(db, '/dev/null', batchSize).then(() => {
+        return changes(batchSize).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
       });

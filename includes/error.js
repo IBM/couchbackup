@@ -70,8 +70,15 @@ function checkResponse(err) {
     if (err.status >= 400) {
       return new HTTPError(err);
     } else {
+      // Historically we have a special error for problems during changes spooling.
+      // To maintain compatibility we check if the error was related to a changes request
+      // and return the special error.
+      if (err.message.includes('_changes')) {
+        return new BackupError('SpoolChangesError', `Failed changes request - ${err.message}`);
+      } else {
       // Send it back again if there was no status code, e.g. a cxn error
-      return augmentMessage(err);
+        return augmentMessage(err);
+      }
     }
   }
 }
