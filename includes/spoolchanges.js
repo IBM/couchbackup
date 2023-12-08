@@ -56,7 +56,7 @@ module.exports = function(db, log, bufferSize, tolerance = 600000) {
         // Extract the document ID from the change
         return { id: changeResultItem.id };
       } else {
-        throw new error.BackupError('InvalidChange', `Received invalid change: ${changeResultItem}`);
+        throw new error.BackupError('SpoolChangesError', `Received invalid change: ${JSON.stringify(changeResultItem)}`);
       }
     });
   };
@@ -83,11 +83,4 @@ module.exports = function(db, log, bufferSize, tolerance = 600000) {
     new MappingStream(mapChangesBatchToBackupBatch), // map a batch of ChangesResultItem to doc IDs
     new LogWriter(log)
   ];
-  // .catch((err) => {
-  //   if (err.status && err.status >= 400) {
-  //     return Promise.reject(error.convertResponseError(err));
-  //   } else if (err.name !== 'SpoolChangesError') {
-  //     return Promise.reject(new error.BackupError('SpoolChangesError', `Failed changes request - ${err.message}`));
-  //   }
-  // })
 };
