@@ -423,7 +423,8 @@ module.exports = {
           objectMode: true,
           write: (restoreBatch, encoding, cb) => {
             debug(' restored ', restoreBatch.total);
-            total = restoreBatch.total;
+            // order not guaranteed
+            if (total < restoreBatch.total) total = restoreBatch.total;
             try {
               ee.emit('restored', restoreBatch);
             } finally {
