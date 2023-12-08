@@ -20,7 +20,7 @@ const { BackupError, convertResponseError } = require('./error.js');
 const logFileSummary = require('./logfilesummary.js');
 const logFileGetBatches = require('./logfilegetbatches.js');
 const spoolchanges = require('./spoolchanges.js');
-const { MappingStream, WritableWithPassThrough, DelegateWritable } = require('./transforms.js');
+const { MappingStream, WritableWithPassThrough, DelegateWritable, SideEffect } = require('./transforms.js');
 
 /**
  * Validate /_bulk_get support for a specified database.
@@ -49,7 +49,10 @@ async function validateBulkGetSupport(db) {
  * @param {EventEmitter} ee - user facing event emitter
  * @returns pipeline promise that resolves for a successful backup or rejects on failure
  */
-module.exports = function(db, options, targetStream) {
+module.exports = function(db, options, targetStream, ee) {
+  const start = new Date().getTime(); // backup start time
+  let total = 0; // total documents backed up
+
   // Full backups use _bulk_get, validate it is available
   return validateBulkGetSupport(db)
   // Check if the backup is new or resuming and configure the source
@@ -66,7 +69,12 @@ module.exports = function(db, options, targetStream) {
         return logFileGetBatches(options.log, summary.batches);
       } else {
       // Not resuming, start from spooling changes
-        return spoolchanges(db, options.log, options.bufferSize);
+        return [
+          ...spoolchanges(db, options.log, options.bufferSize),
+          new SideEffect((backupBatch) => {
+            ee.emit('changes', backupBatch.batch);
+          }) // Emit the user facing changes event for each batch of changes
+        ];
       }
     })
   // Create a pipeline of the source streams and the backup mappings
@@ -85,9 +93,16 @@ module.exports = function(db, options, targetStream) {
           'logFileDoneWriter', // Name for debug
           createWriteStream(options.log, { flags: 'a' }), // log file for appending
           null, // no last chunk to write
-          backup.backupBatchToLogFileLine // Map the backed up batch result to a log file "done" line
+          backup.backupBatchToLogFileLine, // Map the backed up batch result to a log file "done" line
+          (backupBatch) => {
+            total += backupBatch.docs.length;
+            ee.emit('written', { total, time: (new Date().getTime() - start) / 1000, batch: backupBatch.batch });
+          } // post write function emits the written event
         ) // DelegateWritable writes the log file done lines
       );
+    })
+    .then(() => {
+      ee.emit('finished', { total });
     })
     .catch((e) => { throw convertResponseError(e); });
 };
