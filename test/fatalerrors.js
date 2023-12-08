@@ -198,13 +198,15 @@ async function restoreHttpError(opts, errorName, errorCode) {
         // Allow the existence and _bulk_get checks to pass
         const n = nock(url).head('/fakenockdb').reply(200);
         n.post('/fakenockdb/_bulk_get').reply(200, '{"results": []}');
-        // Simulate a changes without a last_seq
+        // Simulate _changes response with invalid changes property
         n.post('/fakenockdb/_changes').query(true).reply(200,
           {
+            last_seq: '2-blahblah',
+            pending: 0,
             results: [{
               seq: '2-g1AAAAEbeJzLYWBgYMlgTmFQSElKzi9KdUhJstTLTS3KLElMT9VLzskvTUnMK9HLSy3JAapkSmRIsv___39WBnMiUy5QgN3MzDIxOdEMWb85dv0gSxThigyN8diS5AAkk-pBFiUyoOkzxKMvjwVIMjQAKaDW_Zh6TQnqPQDRC7I3CwDPDV1k',
               id: 'badger',
-              changes: [{ rev: '4-51aa94e4b0ef37271082033bba52b850' }]
+              changes: [] // Invalid test, no revs here
             }]
           });
         return backupHttpError(params, 'SpoolChangesError', 30);
