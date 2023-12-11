@@ -28,7 +28,6 @@ const restoreInternal = require('./includes/restore.js');
 const debug = require('debug')('couchbackup:app');
 const events = require('events');
 const fs = require('fs');
-const { Writable } = require('node:stream');
 const URL = require('url').URL;
 
 /**
@@ -404,9 +403,6 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
-    // The total restored
-    let total = 0;
-
     validateArgs(targetUrl, opts)
       // Set up the DB client
       .then(() => {
@@ -416,32 +412,16 @@ module.exports = {
       // Validate the DB exists, before proceeding to restore
       .then((restoreDbClient) => validateRestoreDb(restoreDbClient))
       .then((restoreDbClient) => {
-        const output = new Writable({
-          objectMode: true,
-          write: (restoreBatch, encoding, cb) => {
-            debug(' restored ', restoreBatch.total);
-            // order not guaranteed
-            if (total < restoreBatch.total) total = restoreBatch.total;
-            try {
-              ee.emit('restored', restoreBatch);
-            } finally {
-              cb();
-            }
-          },
-          final: (cb) => {
-            debug('restore complete');
-            ee.emit('finished', { total });
-            cb();
-          }
-        });
-
         return restoreInternal(
           restoreDbClient,
           opts,
           srcStream,
-          output);
+          ee);
       })
-      .then(() => { callback(null, { total }); })
+      .then((total) => {
+        ee.emit('finished', total);
+        callback(null, total);
+      })
       .catch(e => callback(convertError(e)));
     return ee;
   }
