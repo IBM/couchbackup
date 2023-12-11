@@ -142,7 +142,7 @@ describe('#unit restore mappings', function() {
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = { ...testBatches[0] };
       return new Restore(dbClient).pendingToRestored(source).then((result) => {
-        assert.deepStrictEqual(result, { batch: 0, documents: 3, total: 3 });
+        assert.deepStrictEqual(result, { batch: 0, documents: 3 });
         assert.ok(nock.isDone(), 'The mocks should all be called.');
       });
     });
@@ -152,7 +152,7 @@ describe('#unit restore mappings', function() {
       const source = testBatches.map((batch) => { return { ...batch }; });
       // add two more responses
       mockResponse(2);
-      const expectedOutput = [{ batch: 0, documents: 3, total: 3 }, { batch: 1, documents: 3, total: 6 }, { batch: 2, documents: 3, total: 9 }];
+      const expectedOutput = [{ batch: 0, documents: 3 }, { batch: 1, documents: 3 }, { batch: 2, documents: 3 }];
       const output = [];
       await pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable(output));
       assert.deepStrictEqual(output, expectedOutput);
