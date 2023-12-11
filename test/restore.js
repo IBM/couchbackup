@@ -16,15 +16,16 @@
 'use strict';
 
 const assert = require('assert');
+const { EventEmitter } = require('events');
 const fs = require('fs');
 const nock = require('nock');
 const { newClient } = require('../includes/request.js');
 const restorePipeline = require('../includes/restore.js');
-const { DelegateWritable } = require('../includes/transforms.js');
+
 const { convertError } = require('../includes/error.js');
 const longTestTimeout = 3000;
 
-describe('#unit Check database restore writer', function() {
+describe('#unit Check database restore', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
   const dbClient = newClient(dbUrl, { parallelism: 1 });
 
@@ -33,20 +34,15 @@ describe('#unit Check database restore writer', function() {
   });
 
   function getRestorePipeline(fileName = './test/fixtures/animaldb_expected.json') {
-    let runningTotal = 0;
-    let lastTotal;
     return restorePipeline(
       dbClient,
       { bufferSize: 500, parallelism: 1 },
       fs.createReadStream(fileName),
-      new DelegateWritable('null', fs.createWriteStream('/dev/null'), null, () => { return ''; }, (restoreResult) => {
-        runningTotal += restoreResult.documents;
-        lastTotal = restoreResult.total;
-      }) // don't care about output
-    ).then(() => {
-      assert.strictEqual(runningTotal, lastTotal);
+      new EventEmitter()
+    ).then((summary) => {
       assert.ok(nock.isDone());
-      return lastTotal;
+      // Return the total for assertion
+      return summary.total;
     }).catch((e) => {
       // Error conversion takes place in the top level functions
       // so to facilitate unit testing we just do the same conversion here.
