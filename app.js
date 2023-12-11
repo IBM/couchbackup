@@ -375,7 +375,10 @@ module.exports = {
           }
 
           return backupFull(backupDbClient, opts, targetStream, ee)
-            .then(callback); // TODO move after shallow backup is refactored
+            .then((total) => {
+              ee.emit('finished', total);
+              callback(null, total); // TODO move after shallow backup is refactored
+            });
         }
       })
       .catch(e => callback(convertError(e)));
