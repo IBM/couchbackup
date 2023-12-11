@@ -21,7 +21,6 @@ const mappingDebug = debug('couchbackup:mappings');
 class Restore {
   constructor(dbClient) {
     this.dbClient = dbClient;
-    this.totalDocsRestored = 0;
     this.batchCounter = 0;
   }
 
@@ -69,10 +68,10 @@ class Restore {
   /**
    * Mapper for converting a pending restore batch to a _bulk_docs request
    * and awaiting the response and finally returing a "restored" object
-   * with the number of restored docs and the running total.
+   * with the batch number and number of restored docs.
    *
    * @param {object} restoreBatch a pending restore batch {batch: #, docs: [{_id: id, ...}, ...]}
-   * @returns {object} a restored batch object {documents: #, total: #}
+   * @returns {object} a restored batch object { batch: #, documents: #}
    */
   pendingToRestored = async(restoreBatch) => {
     // Save the batch number
@@ -82,7 +81,7 @@ class Restore {
     delete restoreBatch.batch;
     if (!restoreBatch.docs || restoreBatch.docs.length === 0) {
       mappingDebug(`Nothing to restore in batch ${batch}.`);
-      return { batch, documents: 0, total: this.totalDocsRestored };
+      return { batch, documents: 0 };
     }
     mappingDebug(`Restoring batch ${batch} with ${restoreBatch.docs.length} docs.`);
     // if we are restoring known revisions, we need to supply new_edits=false
@@ -101,8 +100,7 @@ class Restore {
           ` and ${response.result ? response.result.length : 'unavailable'} items`);
       }
       mappingDebug(`Successfully restored batch ${batch}.`);
-      this.totalDocsRestored += restoreBatch.docs.length;
-      return { batch, documents: restoreBatch.docs.length, total: this.totalDocsRestored };
+      return { batch, documents: restoreBatch.docs.length };
     } catch (err) {
       mappingDebug(`Error writing docs when restoring batch ${batch}`);
       throw err;
