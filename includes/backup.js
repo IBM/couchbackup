@@ -102,6 +102,6 @@ module.exports = function(dbClient, options, targetStream, ee) {
       );
     })
     .then(() => {
-      ee.emit('finished', { total });
+      return { total };
     });
 };
