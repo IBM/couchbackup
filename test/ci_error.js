@@ -16,27 +16,25 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
+const { mkdtemp, open, rm } = require('fs/promises');
 const u = require('./citestutils.js');
 
 describe('Write error tests', function() {
   it('calls callback with error set when stream is not writeable', async function() {
     u.setTimeout(this, 10);
-    const dirname = fs.mkdtempSync('test_backup_');
-    // make temp dir read only
-    fs.chmodSync(dirname, 0o444);
+    // Make a temp directory
+    const dirname = await mkdtemp('test_backup_');
     const filename = dirname + '/test.backup';
-    const backupStream = fs.createWriteStream(filename, { flags: 'w' });
+    // Create a backup file
+    const file = await open(filename, 'w');
+    // Use a read stream instead of a write stream
+    const backupStream = await file.createReadStream();
     const params = { useApi: true };
     // try to do backup and check err was set in callback
-    return u.testBackup(params, 'animaldb', backupStream).then(() => {
-      assert.fail('Should throw an "EACCES" error');
-    }).catch((resultErr) => {
-      // cleanup temp dir
-      fs.rmdirSync(dirname);
-      // error should have been set
-      assert.ok(resultErr);
-      assert.strictEqual(resultErr.code, 'EACCES');
-    });
+    return assert.rejects(u.testBackup(params, 'animaldb', backupStream), { name: 'TypeError', message: 'dest.write is not a function' })
+      .finally(async() => {
+        // cleanup temp dir
+        await rm(dirname, { recursive: true });
+      });
   });
 });
