@@ -22,7 +22,7 @@
 const backupFull = require('./includes/backup.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const defaults = require('./includes/config.js').apiDefaults;
-const error = require('./includes/error.js');
+const { convertError, BackupError, OptionError } = require('./includes/error.js');
 const { newClient } = require('./includes/request.js');
 const restoreInternal = require('./includes/restore.js');
 const debug = require('debug')('couchbackup:app');
@@ -30,8 +30,6 @@ const events = require('events');
 const fs = require('fs');
 const { Writable } = require('node:stream');
 const URL = require('url').URL;
-
-const OptionError = error.OptionError;
 
 /**
  * Test for a positive, safe integer.
@@ -75,7 +73,7 @@ async function validateURL(url, isIAM) {
       throw new OptionError('URL user information must not be supplied when using IAM API key.');
     }
   } catch (err) {
-    throw error.wrapPossibleInvalidUrlError(err);
+    throw convertError(err);
   }
   return true;
 }
@@ -169,9 +167,9 @@ async function validateLogOnResume(opts) {
   if (!opts.log) {
     // This is the second place we check for the presence of the log option in conjunction with resume
     // It has to be here for the API case
-    throw new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified');
+    throw new BackupError('NoLogFileName', 'To resume a backup, a log file must be specified');
   } else if (!fs.existsSync(opts.log)) {
-    throw new error.BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
+    throw new BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
   }
   return true;
 }
@@ -219,7 +217,7 @@ async function validateBackupDb(dbClient) {
       e.message = `${err.message} Ensure the backup source database exists.`;
     }
     // maybe convert it to HTTPError
-    throw error.convertResponseError(e);
+    throw convertError(e);
   }
 }
 
@@ -238,9 +236,7 @@ async function validateRestoreDb(dbClient) {
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
     if (!dbClient.dbName.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
-      const notEmptyDBErr = new Error(`Target database ${dbClient.url}${dbClient.dbName} is not empty. A target database must be a new and empty database.`);
-      notEmptyDBErr.name = 'DatabaseNotEmpty';
-      throw notEmptyDBErr;
+      throw new BackupError('DatabaseNotEmpty', `Target database ${dbClient.url}${dbClient.dbName} is not empty. A target database must be a new and empty database.`);
     }
     // good to use
     return dbClient;
@@ -250,7 +246,7 @@ async function validateRestoreDb(dbClient) {
       e.message = `${e.message} Create the target database before restoring.`;
     }
     // maybe convert it to HTTPError
-    throw error.convertResponseError(e);
+    throw convertError(e);
   }
 }
 
@@ -267,9 +263,7 @@ function parseDbResponseError(dbClient, err) {
     const msg = `Database ${dbClient.url}` +
     `${dbClient.dbName} does not exist. ` +
     'Check the URL and database name have been specified correctly.';
-    const noDBErr = new Error(msg);
-    noDBErr.name = 'DatabaseNotFound';
-    return noDBErr;
+    return new BackupError('DatabaseNotFound', msg);
   }
   return err;
 }
@@ -385,7 +379,7 @@ module.exports = {
             .then(callback); // TODO move after shallow backup is refactored
         }
       })
-      .catch(callback);
+      .catch(e => callback(convertError(e)));
 
     return ee;
   },
@@ -448,7 +442,7 @@ module.exports = {
           output);
       })
       .then(() => { callback(null, { total }); })
-      .catch(callback);
+      .catch(e => callback(convertError(e)));
     return ee;
   }
 };

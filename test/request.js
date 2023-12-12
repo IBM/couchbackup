@@ -18,7 +18,7 @@
 const assert = require('assert');
 const nock = require('nock');
 const { newClient } = require('../includes/request.js');
-const error = require('../includes/error.js');
+const { convertError } = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
 const dbClient = newClient(url, { parallelism: 1 });
@@ -66,7 +66,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `500 Internal Server Error: get ${url}/bad - Error: foo, Reason: bar`);
         assert.ok(couch.isDone());
@@ -87,7 +87,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       dbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }),
       (err) => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `503 Service Unavailable: post ${url}/_bulk_get - Error: service_unavailable, Reason: Service unavailable`);
         assert.ok(couch.isDone());
@@ -107,7 +107,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `429 Too Many Requests: get ${url}/bad - Error: foo, Reason: bar`);
         assert.ok(couch.isDone());
@@ -126,7 +126,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
         assert.strictEqual(err.message, `404 Not Found: get ${url}/bad - Error: foo, Reason: bar`);
         assert.ok(couch.isDone());
@@ -143,7 +143,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
-        const err2 = error.convertResponseError(err);
+        const err2 = convertError(err);
         assert.strictEqual(err, err2);
         assert.ok(couch.isDone());
         return true;
@@ -183,7 +183,7 @@ describe('#unit Check request response error callback', function() {
     return assert.rejects(
       timeoutDbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }),
       (err) => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         // Note axios returns ECONNABORTED rather than ESOCKETTIMEDOUT
         // See https://github.com/axios/axios/issues/2710 via https://github.com/axios/axios/issues/1543`
         assert.strictEqual(err.statusText, 'ECONNABORTED');

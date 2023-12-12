@@ -23,7 +23,7 @@ const { pipeline } = require('node:stream/promises');
 const { newClient } = require('../includes/request.js');
 const spoolchanges = require('../includes/spoolchanges.js');
 const { MappingStream } = require('../includes/transforms.js');
-const { convertResponseError } = require('../includes/error.js');
+const { convertError } = require('../includes/error.js');
 
 const host = 'localhost';
 // To avoid clashes between multiple runs use a given port (converted to a number) if configured
@@ -43,9 +43,9 @@ function changes(bufferSize, tolerance) {
     new MappingStream(JSON.stringify), fs.createWriteStream('/dev/null'))
     // Historically spool changes itself could return an error, but
     // now it returns streams to be made a pipeline elsewhere.
-    // As such a conversion takes place in the pipeline level catch, we reproduce
-    // that here by calling the convertResponseError function.
-    .catch((e) => { throw convertResponseError(e); });
+    // Error conversion takes place in the top level functions
+    // so to facilitate unit testing we just do the same conversion here.
+    .catch((e) => { throw convertError(e); });
 }
 
 describe('Check spool changes', function() {
@@ -61,8 +61,8 @@ describe('Check spool changes', function() {
       // so that the error is not suppressed beyond 3 configured retries
       // in the underlying SDK call, follower will not retry
       return changes(500, 0).catch((err) => {
-        assert.strictEqual(err.name, 'SpoolChangesError');
-        assert.strictEqual(err.message, `Failed changes request - socket hang up: post ${url}/${dbName}/_changes`);
+        assert.strictEqual(err.name, 'Error');
+        assert.strictEqual(err.message, `socket hang up: post ${url}/${dbName}/_changes ECONNRESET`);
         assert.ok(nock.isDone());
       });
     }).timeout(longTestTimeout);
