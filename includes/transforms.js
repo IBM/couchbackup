@@ -150,7 +150,7 @@ class DuplexPassThrough extends PassThrough {
 
 /**
  * Input: stream of x
- * Output: stream of mappingFunction(x)
+ * Output: stream of x with elements not passing the filter removed
  */
 class FilterStream extends Duplex {
   constructor(filterFunction) {
