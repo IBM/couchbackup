@@ -21,6 +21,7 @@ const nock = require('nock');
 const { newClient } = require('../includes/request.js');
 const restorePipeline = require('../includes/restore.js');
 const { DelegateWritable } = require('../includes/transforms.js');
+const { convertError } = require('../includes/error.js');
 const longTestTimeout = 3000;
 
 describe('#unit Check database restore writer', function() {
@@ -46,6 +47,10 @@ describe('#unit Check database restore writer', function() {
       assert.strictEqual(runningTotal, lastTotal);
       assert.ok(nock.isDone());
       return lastTotal;
+    }).catch((e) => {
+      // Error conversion takes place in the top level functions
+      // so to facilitate unit testing we just do the same conversion here.
+      throw convertError(e);
     });
   }
 
