@@ -14,68 +14,44 @@
 'use strict';
 
 const pkg = require('../package.json');
-const stream = require('stream');
 const { CloudantV1, CouchdbSessionAuthenticator } = require('@ibm-cloud/cloudant');
 const { IamAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
 const retryPlugin = require('retry-axios');
+const debug = require('debug')('couchbackup:request');
 
 const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
       process.version + ')';
-
-// Class for streaming _changes error responses into
-// In general the response is a small error/reason JSON object
-// so it is OK to have this in memory.
-class ResponseWriteable extends stream.Writable {
-  constructor(options) {
-    super(options);
-    this.data = [];
-  }
-
-  _write(chunk, encoding, callback) {
-    this.data.push(chunk);
-    callback();
-  }
-
-  stringBody() {
-    return Buffer.concat(this.data).toString();
-  }
-}
 
 // An interceptor function to help augment error bodies with a little
 // extra information so we can continue to use consistent messaging
 // after the ugprade to @ibm-cloud/cloudant
 const errorHelper = async function(err) {
+  debug('Entering error helper interceptor');
   let method;
   let requestUrl;
   if (err.response) {
+    debug('Error has a response');
     if (err.response.config.url) {
+      debug('Getting request URL and method for error');
       requestUrl = err.response.config.url;
       method = err.response.config.method;
     }
+    debug('Applying response error message with status, url, and method');
     // Override the status text with an improved message
     let errorMsg = `${err.response.status} ${err.response.statusText || ''}: ` +
     `${method} ${requestUrl}`;
     if (err.response.data) {
+      debug('Found response data');
       // Check if we have a JSON response and try to get the error/reason
       if (err.response.headers['content-type'] === 'application/json') {
-        if (!err.response.data.error && err.response.data.pipe) {
-          // If we didn't find a JSON object with `error` then we might have a stream response.
-          // Detect the stream by the presence of `pipe` and use it to get the body and parse
-          // the error information.
-          const p = new Promise((resolve, reject) => {
-            const errorBody = new ResponseWriteable();
-            err.response.data.pipe(errorBody)
-              .on('finish', () => { resolve(JSON.parse(errorBody.stringBody())); })
-              .on('error', () => { reject(err); });
-          });
-          // Replace the stream on the response with the parsed object
-          err.response.data = await p;
-        }
+        debug('Response data is JSON');
         // Append the error/reason if available
         if (err.response.data.error) {
+          debug('Augmenting error message with error property');
           // Override the status text with our more complete message
           errorMsg += ` - Error: ${err.response.data.error}`;
           if (err.response.data.reason) {
+            debug('Augmenting error message with reason property');
             errorMsg += `, Reason: ${err.response.data.reason}`;
           }
         }
@@ -88,10 +64,14 @@ const errorHelper = async function(err) {
       err.response.data.errors = [{ message: errorMsg }];
     }
   } else if (err.request) {
+    debug('Error did not include a response');
     if (!err.message.includes(err.config.url)) {
+      debug('Augmenting request error message with URL and method');
       // Augment the message with the URL and method
       // but don't do it again if we already have the URL.
       err.message = `${err.message}: ${err.config.method} ${err.config.url}`;
+    } else {
+      debug('Request error message already augmented');
     }
   }
   return Promise.reject(err);
@@ -121,7 +101,7 @@ module.exports = {
       authenticator = new NoAuthAuthenticator();
     }
     const serviceOpts = {
-      authenticator: authenticator,
+      authenticator,
       timeout: opts.requestTimeout,
       // Axios performance options
       maxContentLength: -1
@@ -173,6 +153,6 @@ module.exports = {
       return requestConfig;
     }, null);
 
-    return { service: service, db: dbName, url: actUrl.toString() };
+    return { service, db: dbName, url: actUrl.toString() };
   }
 };
