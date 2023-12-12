@@ -16,7 +16,7 @@
 const { createWriteStream } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const { Backup } = require('./backupMappings.js');
-const { BackupError, convertResponseError } = require('./error.js');
+const { BackupError } = require('./error.js');
 const logFileSummary = require('./logfilesummary.js');
 const logFileGetBatches = require('./logfilegetbatches.js');
 const spoolchanges = require('./spoolchanges.js');
@@ -103,6 +103,5 @@ module.exports = function(dbClient, options, targetStream, ee) {
     })
     .then(() => {
       ee.emit('finished', { total });
-    })
-    .catch((e) => { throw convertResponseError(e); });
+    });
 };

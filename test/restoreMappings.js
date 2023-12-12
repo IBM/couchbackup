@@ -22,6 +22,7 @@ const { Liner } = require('../includes/liner.js');
 const { newClient } = require('../includes/request.js');
 const { Restore } = require('../includes/restoreMappings.js');
 const { MappingStream } = require('../includes/transforms.js');
+const { convertError } = require('../includes/error.js');
 
 describe('#unit restore mappings', function() {
   const testDocs = [
@@ -172,7 +173,9 @@ describe('#unit restore mappings', function() {
 
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = testBatches.map((batch) => { return { ...batch }; });
-      return assert.rejects(pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable([])),
+      return assert.rejects(
+        pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable([]))
+          .catch((e) => { throw convertError(e); }), // perform an error conversion as would happen at the top level
         { name: 'HTTPFatalError' }
       ).then(() => { assert.ok(nock.isDone(), 'The mocks should all be called.'); });
     });

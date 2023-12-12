@@ -13,7 +13,6 @@
 // limitations under the License.
 'use strict';
 
-const error = require('./error.js');
 const debug = require('debug');
 
 const mappingDebug = debug('couchbackup:mappings');
@@ -250,7 +249,7 @@ class Backup {
       };
     } catch (err) {
       mappingDebug(`Error response from server for batch ${backupBatch.batch}.`);
-      throw error.convertResponseError(err);
+      throw err;
     }
   };
 }
