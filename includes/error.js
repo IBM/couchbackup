@@ -59,64 +59,47 @@ class HTTPError extends BackupError {
   }
 }
 
-// Default function to return an error for HTTP status codes
-// < 400 -> OK
-// 4XX (except 429) -> Fatal
-// 429 & >=500 -> Transient
-function checkResponse(err) {
-  if (err) {
-    // Construct an HTTPError if there is request information on the error
-    // Codes < 400 are considered OK
-    if (err.status >= 400) {
-      return new HTTPError(err);
-    } else {
-      // Historically we have a special error for problems during changes spooling.
-      // To maintain compatibility we check if the error was related to a changes request
-      // and return the special error.
-      if (err.message.includes('_changes')) {
-        return new BackupError('SpoolChangesError', `Failed changes request - ${err.message}`);
-      } else {
-      // Send it back again if there was no status code, e.g. a cxn error
-        return augmentMessage(err);
-      }
-    }
-  }
-}
-
-function convertResponseError(responseError, errorFactory) {
-  if (!errorFactory) {
-    errorFactory = checkResponse;
-  }
-  return errorFactory(responseError);
-}
-
-function augmentMessage(err) {
-  // For errors that don't have a status code, we are likely looking at a cxn
-  // error.
-  // Try to augment the message with more detail (core puts the code in statusText)
-  if (err && err.statusText) {
-    err.message = `${err.message} ${err.statusText}`;
-  }
-  if (err && err.description) {
-    err.message = `${err.message} ${err.description}`;
-  }
-  return err;
-}
-
-function wrapPossibleInvalidUrlError(err) {
-  if (err.code === 'ERR_INVALID_URL') {
+/**
+ * A function for converting between error types and improving error messages.
+ *
+ * Cases:
+ * - BackupError - return as is.
+ * - response "like" errors - convert to HTTPError.
+ * - ERR_INVALID_URL - convert to OptionError.
+ * - Error (general case) - augment with additional statusText
+ *   or description if available.
+ *
+ * @param {Error} e
+ * @returns {Error} the modified error
+ */
+function convertError(e) {
+  if (e instanceof BackupError) {
+    // If it's already a BackupError just pass it on
+    return e;
+  } else if (e && e.status && e.status >= 400) {
+    return new HTTPError(e);
+  } else if (e.code === 'ERR_INVALID_URL') {
     // Wrap ERR_INVALID_URL in our own InvalidOption
-    return new OptionError(err.message);
+    return new OptionError(e.message);
+  } else {
+    // For errors that don't have a status code, we are likely looking at a cxn
+    // error.
+    // Try to augment the message with more detail (core puts the code in statusText)
+    if (e && e.statusText) {
+      e.message = `${e.message} ${e.statusText}`;
+    }
+    if (e && e.description) {
+      e.message = `${e.message} ${e.description}`;
+    }
+    return e;
   }
-  return err;
 }
 
 module.exports = {
   BackupError,
   OptionError,
   HTTPError,
-  wrapPossibleInvalidUrlError,
-  convertResponseError,
+  convertError,
   terminationCallback: function terminationCallback(err, data) {
     if (err) {
       console.error(`ERROR: ${err.message}`);

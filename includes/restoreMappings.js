@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict';
 
-const error = require('./error.js');
+const { BackupError } = require('./error.js');
 const debug = require('debug');
 
 const mappingDebug = debug('couchbackup:mappings');
@@ -40,7 +40,7 @@ class Restore {
       } catch (err) {
         // If the line can't be parsed as JSON it is most likely an incomplete write.
         // If the backup was resumed we can ignore the error because the line will be repeated.
-        const parseError = new error.BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - cannot parse as JSON`);
+        const parseError = new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - cannot parse as JSON`);
         // If the backup wasn't resumed then it is invalid and we should error, but we have no way to detect this atm.
         mappingDebug(`${parseError}`);
         // Return an empty array if there was an ignorable line
@@ -50,7 +50,7 @@ class Restore {
       if (arr && Array.isArray(arr)) {
         return arr;
       } else {
-        throw new error.BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - not an array`);
+        throw new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - not an array`);
       }
     }
     // Return an empty array if there was a blank line
@@ -104,9 +104,8 @@ class Restore {
       this.totalDocsRestored += restoreBatch.docs.length;
       return { batch, documents: restoreBatch.docs.length, total: this.totalDocsRestored };
     } catch (err) {
-      const errToThrow = error.convertResponseError(err);
-      mappingDebug(`Error writing docs ${errToThrow.name} ${errToThrow.message} when restoring batch ${batch}`);
-      throw errToThrow;
+      mappingDebug(`Error writing docs when restoring batch ${batch}`);
+      throw err;
     }
   };
 }
