@@ -14,7 +14,7 @@
 'use strict';
 
 const async = require('async');
-const error = require('./error.js');
+const { convertError, BackupError } = require('./error.js');
 const events = require('events');
 
 module.exports = function(dbClient, options) {
@@ -39,7 +39,7 @@ module.exports = function(dbClient, options) {
       dbClient.service.postAllDocs(opts).then(response => {
         const body = response.result;
         if (!body.rows) {
-          ee.emit('error', new error.BackupError(
+          ee.emit('error', new BackupError(
             'AllDocsError', 'ERROR: Invalid all docs response'));
           callback();
         } else {
@@ -66,7 +66,7 @@ module.exports = function(dbClient, options) {
           callback();
         }
       }).catch(err => {
-        err = error.convertResponseError(err);
+        err = convertError(err);
         ee.emit('error', err);
         hasErrored = true;
         callback();
