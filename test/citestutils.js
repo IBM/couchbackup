@@ -26,7 +26,7 @@ const { Tail } = require('tail');
 const app = require('../app.js');
 const dbUrl = require('../includes/cliutils.js').databaseUrl;
 const compare = require('./compare.js');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const { cliBackup, cliDecrypt, cliEncrypt, cliGzip, cliGunzip, cliRestore } = require('./test_process.js');
 const testLogger = debug('couchbackup:test:utils');
 
@@ -360,7 +360,7 @@ async function testBackupAbortResumeRestore(params, srcDb, backupFile, targetDb)
 }
 
 async function dbCompare(db1Name, db2Name) {
-  const client = request.client(process.env.COUCH_BACKEND_URL, {});
+  const client = newClient(process.env.COUCH_BACKEND_URL, {});
   return compare.compare(db1Name, db2Name, client.service)
     .then(result => {
       return assert.strictEqual(result, true, 'The database comparison should succeed, but failed');
