@@ -23,12 +23,12 @@ const { ChangesFollower } = require('@ibm-cloud/cloudant');
  * Write log file for all changes from a database, ready for downloading
  * in batches.
  *
- * @param {object} db - object for connection to source database containing name, service and url
+ * @param {object} dbClient - object for connection to source database containing name, service and url
  * @param {string} log - path to log file to use
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {number} tolerance - changes follower error tolerance
  */
-module.exports = function(db, log, bufferSize, tolerance = 600000) {
+module.exports = function(dbClient, log, bufferSize, tolerance = 600000) {
   let lastSeq;
   let batch = 0;
   let totalBuffer = 0;
@@ -72,11 +72,11 @@ module.exports = function(db, log, bufferSize, tolerance = 600000) {
   };
 
   const changesParams = {
-    db: db.db,
+    db: dbClient.dbName,
     seqInterval: 10000
   };
 
-  const changesFollower = new ChangesFollower(db.service, changesParams, tolerance);
+  const changesFollower = new ChangesFollower(dbClient.service, changesParams, tolerance);
   return [
     changesFollower.startOneOff(), // stream of changes from the DB
     new BatchingStream(bufferSize), // group changes into bufferSize batches for mapping
