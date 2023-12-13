@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { Liner } = require('../includes/liner.js');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const { Restore } = require('../includes/restoreMappings.js');
 const { MappingStream } = require('../includes/transforms.js');
 
@@ -115,7 +115,7 @@ describe('#unit restore mappings', function() {
     const nock = require('nock');
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
-    const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
+    const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
 
     function mockResponse(times, optional = false) {
       nock(url)
@@ -140,7 +140,7 @@ describe('#unit restore mappings', function() {
     it('should restore a docs array', async function() {
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = { ...testBatches[0] };
-      return new Restore(db).pendingToRestored(source).then((result) => {
+      return new Restore(dbClient).pendingToRestored(source).then((result) => {
         assert.deepStrictEqual(result, { batch: 0, documents: 3, total: 3 });
         assert.ok(nock.isDone(), 'The mocks should all be called.');
       });
@@ -153,7 +153,7 @@ describe('#unit restore mappings', function() {
       mockResponse(2);
       const expectedOutput = [{ batch: 0, documents: 3, total: 3 }, { batch: 1, documents: 3, total: 6 }, { batch: 2, documents: 3, total: 9 }];
       const output = [];
-      await pipeline(source, new MappingStream(new Restore(db).pendingToRestored), outputAsWritable(output));
+      await pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable(output));
       assert.deepStrictEqual(output, expectedOutput);
       assert.ok(nock.isDone(), 'The mocks should all be called.');
     });
@@ -172,7 +172,7 @@ describe('#unit restore mappings', function() {
 
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = testBatches.map((batch) => { return { ...batch }; });
-      return assert.rejects(pipeline(source, new MappingStream(new Restore(db).pendingToRestored), outputAsWritable([])),
+      return assert.rejects(pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable([])),
         { name: 'HTTPFatalError' }
       ).then(() => { assert.ok(nock.isDone(), 'The mocks should all be called.'); });
     });

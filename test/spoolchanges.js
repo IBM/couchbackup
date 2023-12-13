@@ -20,7 +20,7 @@ const nock = require('nock');
 const fs = require('node:fs');
 const http = require('node:http');
 const { pipeline } = require('node:stream/promises');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const spoolchanges = require('../includes/spoolchanges.js');
 const { MappingStream } = require('../includes/transforms.js');
 const { convertResponseError } = require('../includes/error.js');
@@ -32,13 +32,13 @@ const url = `http://${host}:${port}`;
 const dbName = 'fakenockdb';
 const longTestTimeout = 3000;
 
-const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
+const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
 
 const seqSuffix = Buffer.alloc(124, 'abc123').toString('base64');
 
 function changes(bufferSize, tolerance) {
   // Make a pipeline of the spool changes source streams
-  return pipeline(...spoolchanges(db, '/dev/null', bufferSize, tolerance),
+  return pipeline(...spoolchanges(dbClient, '/dev/null', bufferSize, tolerance),
   // add a mapping to string and send to /dev/null as we don't care about the output
     new MappingStream(JSON.stringify), fs.createWriteStream('/dev/null'))
     // Historically spool changes itself could return an error, but

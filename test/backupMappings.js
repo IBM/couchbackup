@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const { Liner } = require('../includes/liner.js');
 const { FilterStream, MappingStream } = require('../includes/transforms.js');
 const { Backup, LogMapper } = require('../includes/backupMappings.js');
@@ -135,8 +135,8 @@ describe('#unit backup mappings', function() {
     const nock = require('nock');
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
-    const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
-    const fetcher = new Backup(db).pendingToFetched;
+    const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
+    const fetcher = new Backup(dbClient).pendingToFetched;
 
     beforeEach('setup nock', function() {
       nock(url)
@@ -170,7 +170,7 @@ describe('#unit backup mappings', function() {
       const nock = require('nock');
       const url = 'http://localhost:7777';
       const dbName = 'fakenockdb';
-      const db = request.client(`${url}/${dbName}`, { parallelism: 1 });
+      const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
 
       const expected = [];
 
@@ -193,7 +193,7 @@ describe('#unit backup mappings', function() {
           };
         });
 
-      const backup = new Backup(db);
+      const backup = new Backup(dbClient);
       const output = [];
       return pipeline(
         fs.createReadStream('./test/fixtures/test2.log'), // read the log

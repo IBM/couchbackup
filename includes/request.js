@@ -78,7 +78,7 @@ const errorHelper = async function(err) {
 };
 
 module.exports = {
-  client: function(rawUrl, opts) {
+  newClient: function(rawUrl, opts) {
     const url = new URL(rawUrl);
     // Split the URL to separate service from database
     // Use origin as the "base" to remove auth elements
@@ -153,6 +153,6 @@ module.exports = {
       return requestConfig;
     }, null);
 
-    return { service, db: dbName, url: actUrl.toString() };
+    return { service, dbName, url: actUrl.toString() };
   }
 };

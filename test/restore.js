@@ -18,14 +18,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const nock = require('nock');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const restorePipeline = require('../includes/restore.js');
 const { DelegateWritable } = require('../includes/transforms.js');
 const longTestTimeout = 3000;
 
 describe('#unit Check database restore writer', function() {
   const dbUrl = 'http://localhost:5984/animaldb';
-  const db = request.client(dbUrl, { parallelism: 1 });
+  const dbClient = newClient(dbUrl, { parallelism: 1 });
 
   beforeEach('Reset nocks', function() {
     nock.cleanAll();
@@ -35,7 +35,7 @@ describe('#unit Check database restore writer', function() {
     let runningTotal = 0;
     let lastTotal;
     return restorePipeline(
-      db,
+      dbClient,
       { bufferSize: 500, parallelism: 1 },
       fs.createReadStream(fileName),
       new DelegateWritable('null', fs.createWriteStream('/dev/null'), null, () => { return ''; }, (restoreResult) => {

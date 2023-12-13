@@ -172,8 +172,8 @@ class LogMapper {
 }
 
 class Backup {
-  constructor(db) {
-    this.db = db;
+  constructor(dbClient) {
+    this.dbClient = dbClient;
   }
 
   /**
@@ -208,8 +208,8 @@ class Backup {
   pendingToFetched = async(backupBatch) => {
     mappingDebug(`Fetching batch ${backupBatch.batch}.`);
     try {
-      const response = await this.db.service.postBulkGet({
-        db: this.db.db,
+      const response = await this.dbClient.service.postBulkGet({
+        db: this.dbClient.dbName,
         revs: true,
         docs: backupBatch.docs
       });

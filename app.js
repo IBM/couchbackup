@@ -23,7 +23,7 @@ const backupFull = require('./includes/backup.js');
 const backupShallow = require('./includes/shallowbackup.js');
 const defaults = require('./includes/config.js').apiDefaults;
 const error = require('./includes/error.js');
-const request = require('./includes/request.js');
+const { newClient } = require('./includes/request.js');
 const restoreInternal = require('./includes/restore.js');
 const debug = require('debug')('couchbackup:app');
 const events = require('events');
@@ -202,18 +202,19 @@ function addEventListener(indicator, emitter, event, f) {
   });
 }
 
-/*
-  Check the backup database exists and that the credentials used have
-  visibility. Throw a fatal error if there is a problem with the DB.
-  @param {object} db - database object
-  @returns Passed in database object
-*/
-async function validateBackupDb(db) {
+/**
+ * Check the backup database exists and that the credentials used have
+ * visibility. Throw a fatal error if there is a problem with the DB.
+ *
+ * @param {object} dbClient - database client object
+ * @returns Passed in database client object
+ */
+async function validateBackupDb(dbClient) {
   try {
-    await db.service.headDatabase({ db: db.db });
-    return db;
+    await dbClient.service.headDatabase({ db: dbClient.dbName });
+    return dbClient;
   } catch (err) {
-    const e = parseDbResponseError(db, err);
+    const e = parseDbResponseError(dbClient, err);
     if (e.name === 'DatabaseNotFound') {
       e.message = `${err.message} Ensure the backup source database exists.`;
     }
@@ -222,28 +223,29 @@ async function validateBackupDb(db) {
   }
 }
 
-/*
-  Check that the restore database exists, is new and is empty. Also verify that the credentials used have
-  visibility. Callback with a fatal error if there is a problem with the DB.
-  @param {string} db - database object
-  @returns Passed in database object
-*/
-async function validateRestoreDb(db) {
+/**
+ * Check that the restore database exists, is new and is empty. Also verify that the credentials used have
+ * visibility. Callback with a fatal error if there is a problem with the DB.
+ *
+ * @param {object} dbClient - database client object
+ * @returns Passed in database client object
+ */
+async function validateRestoreDb(dbClient) {
   try {
-    const response = await db.service.getDatabaseInformation({ db: db.db });
+    const response = await dbClient.service.getDatabaseInformation({ db: dbClient.dbName });
     const { doc_count: docCount, doc_del_count: deletedDocCount } = response.result;
     // The system databases can have a validation ddoc(s) injected in them on creation.
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
-    if (!db.db.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
-      const notEmptyDBErr = new Error(`Target database ${db.url}${db.db} is not empty. A target database must be a new and empty database.`);
+    if (!dbClient.dbName.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
+      const notEmptyDBErr = new Error(`Target database ${dbClient.url}${dbClient.dbName} is not empty. A target database must be a new and empty database.`);
       notEmptyDBErr.name = 'DatabaseNotEmpty';
       throw notEmptyDBErr;
     }
     // good to use
-    return db;
+    return dbClient;
   } catch (err) {
-    const e = parseDbResponseError(db, err);
+    const e = parseDbResponseError(dbClient, err);
     if (e.name === 'DatabaseNotFound') {
       e.message = `${e.message} Create the target database before restoring.`;
     }
@@ -252,17 +254,18 @@ async function validateRestoreDb(db) {
   }
 }
 
-/*
-  Convert the database validation response error to a special DatabaseNotFound error
-  in case the database is missing. Otherwise returns an original error.
-  @param {object} db - database object
-  @param {object} err - HTTP response error
-*/
-function parseDbResponseError(db, err) {
+/**
+ * Convert the database validation response error to a special DatabaseNotFound error
+ * in case the database is missing. Otherwise returns an original error.
+ * @param {object} dbClient - database client object
+ * @param {object} err - HTTP response error
+ * @returns {Error} - DatabaseNotFound error or passed in err
+ */
+function parseDbResponseError(dbClient, err) {
   if (err && err.status === 404) {
     // Override the error type and message for the DB not found case
-    const msg = `Database ${db.url}` +
-    `${db.db} does not exist. ` +
+    const msg = `Database ${dbClient.url}` +
+    `${dbClient.dbName} does not exist. ` +
     'Check the URL and database name have been specified correctly.';
     const noDBErr = new Error(msg);
     noDBErr.name = 'DatabaseNotFound';
@@ -300,11 +303,11 @@ module.exports = {
       // Set up the DB client
       .then(() => {
         opts = Object.assign({}, defaults(), opts);
-        return request.client(srcUrl, opts);
+        return newClient(srcUrl, opts);
       })
       // Validate the DB exists, before proceeding to backup
-      .then((backupDB) => validateBackupDb(backupDB))
-      .then((backupDB) => {
+      .then((backupDbClient) => validateBackupDb(backupDbClient))
+      .then((backupDbClient) => {
         if (opts.mode === 'shallow') {
           // TODO make the backup function adjust the pipeline for shallow mode as part of i267
 
@@ -318,7 +321,7 @@ module.exports = {
 
           // Get the event emitter from the backup process so we can handle events
           // before passing them on to the app's event emitter if needed.
-          const internalEE = backupShallow(backupDB, opts);
+          const internalEE = backupShallow(backupDbClient, opts);
           addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
             ee.emit('changes', batch);
           });
@@ -378,7 +381,7 @@ module.exports = {
             targetStream.write('\n');
           }
 
-          return backupFull(backupDB, opts, targetStream, ee)
+          return backupFull(backupDbClient, opts, targetStream, ee)
             .then(callback); // TODO move after shallow backup is refactored
         }
       })
@@ -414,11 +417,11 @@ module.exports = {
       // Set up the DB client
       .then(() => {
         opts = Object.assign({}, defaults(), opts);
-        return request.client(targetUrl, opts);
+        return newClient(targetUrl, opts);
       })
       // Validate the DB exists, before proceeding to restore
-      .then((restoreDB) => validateRestoreDb(restoreDB))
-      .then((restoreDB) => {
+      .then((restoreDbClient) => validateRestoreDb(restoreDbClient))
+      .then((restoreDbClient) => {
         const output = new Writable({
           objectMode: true,
           write: (restoreBatch, encoding, cb) => {
@@ -439,7 +442,7 @@ module.exports = {
         });
 
         return restoreInternal(
-          restoreDB,
+          restoreDbClient,
           opts,
           srcStream,
           output);
