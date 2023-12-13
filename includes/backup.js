@@ -25,11 +25,11 @@ const { MappingStream, WritableWithPassThrough, DelegateWritable, SideEffect } =
 /**
  * Validate /_bulk_get support for a specified database.
  *
- * @param {object} db - object for connection to source database containing name, service and url
+ * @param {object} dbClient - object for connection to source database containing name, service and url
  */
-async function validateBulkGetSupport(db) {
+async function validateBulkGetSupport(dbClient) {
   try {
-    await db.service.postBulkGet({ db: db.db, docs: [] });
+    await dbClient.service.postBulkGet({ db: dbClient.dbName, docs: [] });
   } catch (err) {
     // if _bulk_get isn't available throw a special error
     if (err.status === 404) {
@@ -43,18 +43,18 @@ async function validateBulkGetSupport(db) {
 /**
  * Read documents from a database to be backed up.
  *
- * @param {object} db - object for connection to source database containing name, service and url
+ * @param {object} dbClient - object for connection to source database containing name, service and url
  * @param {number} options - backup configuration
  * @param {Writable} targetStream - destination for the backup contents
  * @param {EventEmitter} ee - user facing event emitter
  * @returns pipeline promise that resolves for a successful backup or rejects on failure
  */
-module.exports = function(db, options, targetStream, ee) {
+module.exports = function(dbClient, options, targetStream, ee) {
   const start = new Date().getTime(); // backup start time
   let total = 0; // total documents backed up
 
   // Full backups use _bulk_get, validate it is available
-  return validateBulkGetSupport(db)
+  return validateBulkGetSupport(dbClient)
   // Check if the backup is new or resuming and configure the source
     .then(async() => {
       if (options.resume) {
@@ -70,7 +70,7 @@ module.exports = function(db, options, targetStream, ee) {
       } else {
       // Not resuming, start from spooling changes
         return [
-          ...spoolchanges(db, options.log, options.bufferSize),
+          ...spoolchanges(dbClient, options.log, options.bufferSize),
           new SideEffect((backupBatch) => {
             ee.emit('changes', backupBatch.batch);
           }) // Emit the user facing changes event for each batch of changes
@@ -79,7 +79,7 @@ module.exports = function(db, options, targetStream, ee) {
     })
   // Create a pipeline of the source streams and the backup mappings
     .then((srcStreams) => {
-      const backup = new Backup(db);
+      const backup = new Backup(dbClient);
       return pipeline(
         ...srcStreams, // the source streams from the previous block (spool changes or resumed log)
         new MappingStream(backup.pendingToFetched, options.parallelism), // fetch the batches at the configured concurrency
