@@ -17,12 +17,12 @@
 
 const assert = require('assert');
 const nock = require('nock');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const error = require('../includes/error.js');
 
 const url = 'http://localhost:7777/testdb';
-const db = request.client(url, { parallelism: 1 });
-const timeoutDb = request.client(url, { parallelism: 1, requestTimeout: 500 });
+const dbClient = newClient(url, { parallelism: 1 });
+const timeoutDbClient = newClient(url, { parallelism: 1, requestTimeout: 500 });
 const longTestTimeout = 3000;
 
 beforeEach('Clean nock', function() {
@@ -36,7 +36,7 @@ describe('#unit Check request headers', function() {
       .head('/good')
       .reply(200);
 
-    return db.service.headDocument({ db: db.db, docId: 'good' }).then(() => {
+    return dbClient.service.headDocument({ db: dbClient.dbName, docId: 'good' }).then(() => {
       assert.ok(couch.isDone());
     });
   });
@@ -48,7 +48,7 @@ describe('#unit Check request response error callback', function() {
       .get('/good')
       .reply(200, { ok: true });
 
-    return db.service.getDocument({ db: db.db, docId: 'good' }).then(response => {
+    return dbClient.service.getDocument({ db: dbClient.dbName, docId: 'good' }).then(response => {
       assert.ok(response.result);
       assert.ok(couch.isDone());
     });
@@ -64,7 +64,7 @@ describe('#unit Check request response error callback', function() {
       });
 
     return assert.rejects(
-      db.service.getDocument({ db: db.db, docId: 'bad' }),
+      dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
         err = error.convertResponseError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
@@ -85,7 +85,7 @@ describe('#unit Check request response error callback', function() {
       });
 
     return assert.rejects(
-      db.service.postBulkGet({ db: db.db, revs: true, docs: [] }),
+      dbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }),
       (err) => {
         err = error.convertResponseError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
@@ -105,7 +105,7 @@ describe('#unit Check request response error callback', function() {
       });
 
     return assert.rejects(
-      db.service.getDocument({ db: db.db, docId: 'bad' }),
+      dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
         err = error.convertResponseError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
@@ -124,7 +124,7 @@ describe('#unit Check request response error callback', function() {
       });
 
     return assert.rejects(
-      db.service.getDocument({ db: db.db, docId: 'bad' }),
+      dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
         err = error.convertResponseError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
@@ -141,7 +141,7 @@ describe('#unit Check request response error callback', function() {
       .replyWithError('testing badness');
 
     return assert.rejects(
-      db.service.getDocument({ db: db.db, docId: 'bad' }),
+      dbClient.service.getDocument({ db: dbClient.dbName, docId: 'bad' }),
       (err) => {
         const err2 = error.convertResponseError(err);
         assert.strictEqual(err, err2);
@@ -160,7 +160,7 @@ describe('#unit Check request response error callback', function() {
       .query(true)
       .reply(200, { results: { docs: [{ id: '1', ok: { _id: '1' } }, { id: '2', ok: { _id: '2' } }] } });
 
-    return timeoutDb.service.postBulkGet({ db: db.db, revs: true, docs: [] }).then((response) => {
+    return timeoutDbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }).then((response) => {
       assert.ok(response);
       assert.ok(response.result);
       assert.ok(response.result.results);
@@ -181,7 +181,7 @@ describe('#unit Check request response error callback', function() {
       .reply(200, { ok: true });
 
     return assert.rejects(
-      timeoutDb.service.postBulkGet({ db: db.db, revs: true, docs: [] }),
+      timeoutDbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }),
       (err) => {
         err = error.convertResponseError(err);
         // Note axios returns ECONNABORTED rather than ESOCKETTIMEDOUT
@@ -203,7 +203,7 @@ describe('#unit Check request response error callback', function() {
         .reply(200, { ok: true }, { 'Set-Cookie': 'AuthSession=ABC123DEF4356;' })
         .get('/')
         .reply(200);
-      const db = request.client(url, { parallelism: 1 });
+      const db = newClient(url, { parallelism: 1 });
       return db.service.getServerInformation().then(response => {
         assert.ok(response);
         assert.ok(couch.isDone());

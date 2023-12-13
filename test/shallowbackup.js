@@ -17,17 +17,17 @@
 
 const assert = require('assert');
 const backup = require('../includes/shallowbackup.js');
-const request = require('../includes/request.js');
+const { newClient } = require('../includes/request.js');
 const fs = require('fs');
 const nock = require('nock');
 
 // Function to create a DB object and call the shallow backup function
 // This is normally done by app.js
 function shallowBackup(dbUrl, opts) {
-  const db = request.client(dbUrl, opts);
+  const dbClient = newClient(dbUrl, opts);
   // Disable compression to make body assertions easier
-  db.service.setEnableGzipCompression(false);
-  return backup(db, opts);
+  dbClient.service.setEnableGzipCompression(false);
+  return backup(dbClient, opts);
 }
 
 // Note all these tests include a body parameter of include_docs and a query

@@ -19,8 +19,8 @@ const debug = require('debug');
 const mappingDebug = debug('couchbackup:mappings');
 
 class Restore {
-  constructor(db) {
-    this.db = db;
+  constructor(dbClient) {
+    this.dbClient = dbClient;
     this.totalDocsRestored = 0;
     this.batchCounter = 0;
   }
@@ -91,8 +91,8 @@ class Restore {
       mappingDebug('Using new_edits false mode.');
     }
     try {
-      const response = await this.db.service.postBulkDocs({
-        db: this.db.db,
+      const response = await this.dbClient.service.postBulkDocs({
+        db: this.dbClient.dbName,
         bulkDocs: restoreBatch
       });
       if (!response.result || (restoreBatch.new_edits === false && response.result.length > 0)) {
