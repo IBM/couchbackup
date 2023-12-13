@@ -17,7 +17,7 @@ const async = require('async');
 const error = require('./error.js');
 const events = require('events');
 
-module.exports = function(db, options) {
+module.exports = function(dbClient, options) {
   const ee = new events.EventEmitter();
   const start = new Date().getTime();
   let batch = 0;
@@ -29,14 +29,14 @@ module.exports = function(db, options) {
     function(callback) {
       // Note, include_docs: true is set automatically when using the
       // fetch function.
-      const opts = { db: db.db, limit: options.bufferSize, includeDocs: true };
+      const opts = { db: dbClient.dbName, limit: options.bufferSize, includeDocs: true };
 
       // To avoid double fetching a document solely for the purposes of getting
       // the next ID to use as a startKey for the next page we instead use the
       // last ID of the current page and append the lowest unicode sort
       // character.
       if (startKey) opts.startKey = `${startKey}\0`;
-      db.service.postAllDocs(opts).then(response => {
+      dbClient.service.postAllDocs(opts).then(response => {
         const body = response.result;
         if (!body.rows) {
           ee.emit('error', new error.BackupError(

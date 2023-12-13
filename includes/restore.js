@@ -18,8 +18,8 @@ const { Restore } = require('../includes/restoreMappings.js');
 const { BatchingStream, MappingStream, SplittingStream } = require('./transforms.js');
 const { pipeline } = require('node:stream/promises');
 
-module.exports = function(db, options, readstream, outputWritable) {
-  const restore = new Restore(db);
+module.exports = function(dbClient, options, readstream, outputWritable) {
+  const restore = new Restore(dbClient);
 
   return pipeline(
     readstream, // the backup file
