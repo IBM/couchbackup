@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,9 @@
 // limitations under the License.
 'use strict';
 
-const path = require('path');
-const tmp = require('tmp');
+const { mkdtempSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join, normalize } = require('node:path');
 
 /**
   Return API default settings.
@@ -24,7 +25,7 @@ function apiDefaults() {
     parallelism: 5,
     bufferSize: 500,
     requestTimeout: 120000,
-    log: tmp.tmpNameSync(),
+    log: join(mkdtempSync(join(tmpdir(), 'couchbackup-')), `${Date.now()}`),
     resume: false,
     mode: 'full'
   };
@@ -77,7 +78,7 @@ function applyEnvironmentVariables(opts) {
 
   // if we have a specified log file
   if (typeof process.env.COUCH_LOG !== 'undefined') {
-    opts.log = path.normalize(process.env.COUCH_LOG);
+    opts.log = normalize(process.env.COUCH_LOG);
   }
 
   // if we are instructed to resume
@@ -87,7 +88,7 @@ function applyEnvironmentVariables(opts) {
 
   // if we are given an output filename
   if (typeof process.env.COUCH_OUTPUT !== 'undefined') {
-    opts.output = path.normalize(process.env.COUCH_OUTPUT);
+    opts.output = normalize(process.env.COUCH_OUTPUT);
   }
 
   // if we only want a shallow copy
