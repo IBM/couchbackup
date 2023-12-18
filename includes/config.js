@@ -112,7 +112,7 @@ function applyEnvironmentVariables(opts) {
 }
 
 module.exports = {
-  apiDefaults: apiDefaults,
-  cliDefaults: cliDefaults,
-  applyEnvironmentVariables: applyEnvironmentVariables
+  apiDefaults,
+  cliDefaults,
+  applyEnvironmentVariables
 };
