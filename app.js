@@ -173,6 +173,10 @@ async function validateLogOnResume(opts) {
     } else if (!logFileExists) {
       throw new BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
     }
+    if (opts.bufferSize) {
+      // Warn that the bufferSize is already fixed
+      console.warn('WARNING: the original backup "bufferSize" applies when resuming a backup.');
+    }
   } else {
     // Not resuming
     if (logFileExists) {
