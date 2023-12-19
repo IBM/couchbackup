@@ -20,7 +20,7 @@ const url = new URL((process.env.COUCH_BACKEND_URL) ? process.env.COUCH_BACKEND_
 const { BasicAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
 const authenticator = (url.username) ? new BasicAuthenticator({ username: url.username, password: decodeURIComponent(url.password) }) : new NoAuthAuthenticator();
 const serviceOpts = {
-  authenticator: authenticator
+  authenticator
 };
 const cloudant = new CloudantV1(serviceOpts);
 // Remove auth from URL before using for service
