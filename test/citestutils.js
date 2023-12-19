@@ -18,6 +18,7 @@
 const assert = require('node:assert');
 const { once } = require('node:events');
 const fs = require('node:fs');
+const { basename, dirname } = require('node:path');
 const { PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { createGzip, createGunzip } = require('node:zlib');
@@ -95,22 +96,28 @@ async function testBackup(params, databaseName, outputStream) {
     backupStream = backup.stream;
     backupPromise = backup.childProcessPromise;
     if (params.abort) {
-      // Create the log file for abort tests so we can tail it, other tests assert
-      // the log file is usually created normally by the backup process.
-      const f = fs.openSync(params.opts.log, 'w');
-      fs.closeSync(f);
-
-      // Use tail to watch the log file for a batch to be completed then abort
-      tail = new Tail(params.opts.log, { useWatchFile: true, fsWatchOptions: { interval: 500 }, follow: false });
-      tail.on('line', function(data) {
-        const matches = data.match(/:d batch\d+/);
-        if (matches !== null) {
-          // Turn off the tail.
-          tail.unwatch();
-          // Abort the backup
-          backup.childProcess.kill();
-        }
-      });
+      // Watch the directory where we expect the log file.
+      // Once the log file appears set up the tail.
+      // Use an AbortController to shutdown the directory watch as soon as we've triggered.
+      const ac = new AbortController();
+      fs.watch(dirname(params.opts.log), { persistent: false, signal: ac.signal },
+        (eventType, filename) => {
+          if (eventType === 'rename' && basename(params.opts.log) === filename) {
+            // Use tail to watch the log file for a batch to be completed then abort the backup
+            tail = new Tail(params.opts.log, { follow: false });
+            tail.on('line', (data) => {
+              const matches = data.match(/:d batch\d+/);
+              if (matches !== null) {
+                // Turn off the tail.
+                tail.unwatch();
+                // Abort the backup
+                backup.childProcess.kill();
+              }
+            });
+            // Stop the original directory watcher
+            ac.abort();
+          }
+        });
     }
     if (params.resume) {
       const listenerPromise = new Promise((resolve, reject) => {
