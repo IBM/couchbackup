@@ -37,19 +37,24 @@ const validateArgs = async function(url, opts, errorValidationForAssertRejects) 
   return assert.rejects(backupPromise(url, nullStream, opts), errorValidationForAssertRejects);
 };
 
-const validateShallowModeArgs = async function(url, opts, msg) {
-  // We pass assertNoValidationError because for these shallow opts
+const validateStdErrWarning = async function(url, opts, msg) {
+  captureStderr();
+  // We pass assertNoValidationError because for these opts
   // we are expecting only a stderr warning
   return validateArgs(url, opts, assertNoValidationError()).then(() => {
     // Assert the warning message was in stderr
-    assert(capturedStderr.indexOf(msg) > -1, 'Log warning message was not present');
+    assert.ok(capturedStderr, 'There should be captured stderr');
+    assert.ok(capturedStderr.indexOf(msg) > -1, 'Log warning message was not present');
+  }).finally(() => {
+    releaseStderr();
   });
 };
 
 const stderrWriteFun = process.stderr.write;
-let capturedStderr;
+let capturedStderr = '';
 
 function captureStderr() {
+  // Redefine the stderr write to capture
   process.stderr.write = function(string, encoding, fd) {
     capturedStderr += string;
   };
@@ -167,27 +172,19 @@ describe('#unit Validate arguments', function() {
     });
   });
   it('warns for log arg in shallow mode', async function() {
-    captureStderr();
-    return validateShallowModeArgs(goodUrl, { mode: 'shallow', log: 'test' },
-      'the options "log" and "resume" are invalid when using shallow mode.').finally(
-      () => {
-        releaseStderr();
-      });
+    return validateStdErrWarning(goodUrl, { mode: 'shallow', log: 'test' },
+      'the options "log" and "resume" are invalid when using shallow mode.');
   });
   it('warns for resume arg in shallow mode', async function() {
-    captureStderr();
-    return validateShallowModeArgs(goodUrl, { mode: 'shallow', log: 'test', resume: true },
-      'the options "log" and "resume" are invalid when using shallow mode.').finally(
-      () => {
-        releaseStderr();
-      });
+    return validateStdErrWarning(goodUrl, { mode: 'shallow', log: 'test', resume: true },
+      'the options "log" and "resume" are invalid when using shallow mode.');
   });
   it('warns for parallelism arg in shallow mode', async function() {
-    captureStderr();
-    return validateShallowModeArgs(goodUrl, { mode: 'shallow', parallelism: 10 },
-      'the option "parallelism" has no effect when using shallow mode.').finally(
-      () => {
-        releaseStderr();
-      });
+    return validateStdErrWarning(goodUrl, { mode: 'shallow', parallelism: 10 },
+      'the option "parallelism" has no effect when using shallow mode.');
+  });
+  it('warns for buffer size arg when resuming', async function() {
+    return validateStdErrWarning(goodUrl, { log: './test/fixtures/test.log', resume: true, bufferSize: 100 },
+      'the original backup "bufferSize" applies when resmuming a backup.');
   });
 });
