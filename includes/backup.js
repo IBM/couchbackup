@@ -21,6 +21,7 @@ const logFileSummary = require('./logfilesummary.js');
 const logFileGetBatches = require('./logfilegetbatches.js');
 const spoolchanges = require('./spoolchanges.js');
 const { MappingStream, WritableWithPassThrough, DelegateWritable, SideEffect } = require('./transforms.js');
+const allDocsGenerator = require('./allDocsGenerator.js');
 
 /**
  * Validate /_bulk_get support for a specified database.
@@ -53,11 +54,16 @@ module.exports = function(dbClient, options, targetStream, ee) {
   const start = new Date().getTime(); // backup start time
   let total = 0; // total documents backed up
 
-  // Full backups use _bulk_get, validate it is available
-  return validateBulkGetSupport(dbClient)
+  // Full backups use _bulk_get, validate it is available, shallow skips that check
+  return (options.mode === 'full' ? validateBulkGetSupport(dbClient) : Promise.resolve())
   // Check if the backup is new or resuming and configure the source
     .then(async() => {
-      if (options.resume) {
+      if (options.mode === 'shallow') {
+        // shallow backup, start from async _all_docs generator
+        return [
+          allDocsGenerator(dbClient, options)
+        ];
+      } else if (options.resume) {
       // Resuming a backup, get the log file summary
       // (changes complete and remaining batch numbers to backup)
         const summary = await logFileSummary(options.log);
@@ -80,25 +86,46 @@ module.exports = function(dbClient, options, targetStream, ee) {
   // Create a pipeline of the source streams and the backup mappings
     .then((srcStreams) => {
       const backup = new Backup(dbClient);
+      const postWrite = (backupBatch) => {
+        total += backupBatch.docs.length;
+        ee.emit('written', { total, time: (new Date().getTime() - start) / 1000, batch: backupBatch.batch });
+      };
+
+      const destinationStreams = [];
+      if (options.mode === 'shallow') {
+        // shallow mode writes only to backup file
+        destinationStreams.push(
+          new DelegateWritable(
+            'backup', // Name for debug
+            targetStream, // backup file
+            null, // no last chunk to write
+            backup.backupBatchToBackupFileLine, // map the backup batch to a string for the backup file
+            postWrite // post write function emits the written event
+          ) // DelegateWritable writes the log file done lines
+        );
+      } else {
+        // full mode needs to fetch spooled changes and writes a backup file then finally a log file
+        destinationStreams.push(...[
+          new MappingStream(backup.pendingToFetched, options.parallelism), // fetch the batches at the configured concurrency
+          new WritableWithPassThrough(
+            'backup', // name for logging
+            targetStream, // backup file
+            null, // no need to write a last chunk
+            backup.backupBatchToBackupFileLine // map the backup batch to a string for the backup file
+          ), // WritableWithPassThrough writes the fetched docs to the backup file and passes on the result metadata
+          new DelegateWritable(
+            'logFileDoneWriter', // Name for debug
+            createWriteStream(options.log, { flags: 'a' }), // log file for appending
+            null, // no last chunk to write
+            backup.backupBatchToLogFileLine, // Map the backed up batch result to a log file "done" line
+            postWrite // post write function emits the written event
+          ) // DelegateWritable writes the log file done lines
+        ]);
+      }
+
       return pipeline(
-        ...srcStreams, // the source streams from the previous block (spool changes or resumed log)
-        new MappingStream(backup.pendingToFetched, options.parallelism), // fetch the batches at the configured concurrency
-        new WritableWithPassThrough(
-          'backup', // name for logging
-          targetStream, // backup file
-          null, // no need to write a last chunk
-          backup.backupBatchToBackupFileLine // map the backup batch to a string for the backup file
-        ), // WritableWithPassThrough writes the fetched docs to the backup file and passes on the result metadata
-        new DelegateWritable(
-          'logFileDoneWriter', // Name for debug
-          createWriteStream(options.log, { flags: 'a' }), // log file for appending
-          null, // no last chunk to write
-          backup.backupBatchToLogFileLine, // Map the backed up batch result to a log file "done" line
-          (backupBatch) => {
-            total += backupBatch.docs.length;
-            ee.emit('written', { total, time: (new Date().getTime() - start) / 1000, batch: backupBatch.batch });
-          } // post write function emits the written event
-        ) // DelegateWritable writes the log file done lines
+        ...srcStreams, // the source streams from the previous block (all docs async generator for shallow or for full either spool changes or resumed log)
+        ...destinationStreams // the appropriate destination streams for the mode
       );
     })
     .then(() => {
