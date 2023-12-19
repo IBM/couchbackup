@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@ibm-cloud/cloudant": "0.8.2",
-    "async": "3.2.5",
     "commander": "11.1.0",
     "debug": "4.3.4"
   },
