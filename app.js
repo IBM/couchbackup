@@ -19,8 +19,7 @@
  * @see module:couchbackup
  */
 
-const backupFull = require('./includes/backup.js');
-const backupShallow = require('./includes/shallowbackup.js');
+const backup = require('./includes/backup.js');
 const defaults = require('./includes/config.js').apiDefaults;
 const { convertError, BackupError, OptionError } = require('./includes/error.js');
 const { newClient } = require('./includes/request.js');
@@ -190,15 +189,6 @@ async function validateArgs(url, opts) {
   ]);
 }
 
-function addEventListener(indicator, emitter, event, f) {
-  emitter.on(event, function(...args) {
-    if (!indicator.errored) {
-      if (event === 'error') indicator.errored = true;
-      f(...args);
-    }
-  });
-}
-
 /**
  * Check the backup database exists and that the credentials used have
  * visibility. Throw a fatal error if there is a problem with the DB.
@@ -301,85 +291,18 @@ module.exports = {
       // Validate the DB exists, before proceeding to backup
       .then((backupDbClient) => validateBackupDb(backupDbClient))
       .then((backupDbClient) => {
-        if (opts.mode === 'shallow') {
-          // TODO make the backup function adjust the pipeline for shallow mode as part of i267
-
-          // if there is an error writing to the stream, call the completion
-          // callback with the error set
-          const listenerErrorIndicator = { errored: false };
-          addEventListener(listenerErrorIndicator, targetStream, 'error', function(err) {
-            debug('Error ' + JSON.stringify(err));
-            if (callback) callback(err);
-          });
-
-          // Get the event emitter from the backup process so we can handle events
-          // before passing them on to the app's event emitter if needed.
-          const internalEE = backupShallow(backupDbClient, opts);
-          addEventListener(listenerErrorIndicator, internalEE, 'changes', function(batch) {
-            ee.emit('changes', batch);
-          });
-          addEventListener(listenerErrorIndicator, internalEE, 'received', function(obj, q, logCompletedBatch) {
-          // this may be too verbose to have as well as the "backed up" message
-          // debug(' received batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-          // Callback to emit the written event when the content is flushed
-            function writeFlushed() {
-              ee.emit('written', { total: obj.total, time: obj.time, batch: obj.batch });
-              if (logCompletedBatch) {
-                logCompletedBatch(obj.batch);
-              }
-              debug(' backed up batch', obj.batch, ' docs: ', obj.total, 'Time', obj.time);
-            }
-            // Write the received content to the targetStream
-            const continueWriting = targetStream.write(JSON.stringify(obj.data) + '\n',
-              'utf8',
-              writeFlushed);
-            if (!continueWriting) {
-            // The buffer was full, pause the queue to stop the writes until we
-            // get a drain event
-              if (q && !q.paused) {
-                q.pause();
-                targetStream.once('drain', function() {
-                  q.resume();
-                });
-              }
-            }
-          });
-          // For errors we expect, may or may not be fatal
-          addEventListener(listenerErrorIndicator, internalEE, 'error', function(err) {
-            debug('Error ' + JSON.stringify(err));
-            callback(err);
-          });
-          addEventListener(listenerErrorIndicator, internalEE, 'finished', function(obj) {
-            function emitFinished() {
-              debug('Backup complete - written ' + JSON.stringify(obj));
-              const summary = { total: obj.total };
-              ee.emit('finished', summary);
-              if (callback) callback(null, summary);
-            }
-            if (targetStream === process.stdout) {
-            // stdout cannot emit a finish event so use a final write + callback
-              targetStream.write('', 'utf8', emitFinished);
-            } else {
-            // If we're writing to a file, end the writes and register the
-            // emitFinished function for a callback when the file stream's finish
-            // event is emitted.
-              targetStream.end('', 'utf8', emitFinished);
-            }
-          });
-        } else {
-          // If resuming write a newline as it's possible one would be missing from
-          // an interruption of the previous backup. If the backup was clean this
-          // will cause an empty line that will be gracefully handled by the restore.
-          if (opts.resume) {
-            targetStream.write('\n');
-          }
-
-          return backupFull(backupDbClient, opts, targetStream, ee)
-            .then((total) => {
-              ee.emit('finished', total);
-              callback(null, total); // TODO move after shallow backup is refactored
-            });
+        // If resuming write a newline as it's possible one would be missing from
+        // an interruption of the previous backup. If the backup was clean this
+        // will cause an empty line that will be gracefully handled by the restore.
+        if (opts.mode === 'full' && opts.resume) { // resume is valid in full mode only
+          targetStream.write('\n');
         }
+        return backup(backupDbClient, opts, targetStream, ee);
+      })
+      .then((total) => {
+        debug(`Finished backup with total doc count of ${total}`);
+        ee.emit('finished', total);
+        callback(null, total);
       })
       .catch(e => callback(convertError(e)));
 
