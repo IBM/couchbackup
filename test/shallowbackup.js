@@ -16,19 +16,12 @@
 'use strict';
 
 const assert = require('assert');
-const backup = require('../includes/shallowbackup.js');
+const backup = require('../includes/backup.js');
+const { convertError } = require('../includes/error.js');
 const { newClient } = require('../includes/request.js');
 const fs = require('fs');
 const nock = require('nock');
-
-// Function to create a DB object and call the shallow backup function
-// This is normally done by app.js
-function shallowBackup(dbUrl, opts) {
-  const dbClient = newClient(dbUrl, opts);
-  // Disable compression to make body assertions easier
-  dbClient.service.setEnableGzipCompression(false);
-  return backup(dbClient, opts);
-}
+const events = require('events');
 
 // Note all these tests include a body parameter of include_docs and a query
 // string of include_docs because of a quirk of nano that when using the fetch
@@ -39,8 +32,27 @@ describe('#unit Perform backup using shallow backup', function() {
   const badgerKey = 'badger\0';
   const kookaburraKey = 'kookaburra\0';
   const snipeKey = 'snipe\0';
+  let counter;
+  let totals;
+  let ee;
 
-  beforeEach('Reset nocks', function() {
+  // Function to create a DB object and call the shallow backup function
+  // This is normally done by app.js
+  function shallowBackup(opts) {
+    const db = newClient(dbUrl, opts);
+    // Disable compression to make body assertions easier
+    db.service.setEnableGzipCompression(false);
+    opts.mode = 'shallow';
+    return backup(db, opts, fs.createWriteStream('/dev/null'), ee);
+  }
+
+  beforeEach('Reset nocks and event emitter', function() {
+    counter = 0;
+    totals = [];
+    ee = new events.EventEmitter().on('written', (batchSummary) => {
+      counter++;
+      totals.push(batchSummary.total);
+    });
     nock.cleanAll();
   });
 
@@ -58,33 +70,17 @@ describe('#unit Perform backup using shallow backup', function() {
       // batch 4
       .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
-
-    return new Promise((resolve, reject) => {
-      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-        .on('error', function(err) {
-          reject(err);
-        })
-        .on('received', function(data) {
-          try {
-            if (data.batch === 3) {
-              assert.strictEqual(data.length, 2); // smaller last batch
-            } else {
-              assert.strictEqual(data.length, 3);
-            }
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('finished', function(data) {
-          try {
-            assert.strictEqual(data.total, 11);
-            assert.ok(couch.isDone());
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        });
-    });
+    return shallowBackup({ bufferSize: 3, parallelism: 1 })
+      .then((summary) => {
+        // Assert the promise total
+        assert.strictEqual(summary.total, 11);
+        // Assert the correct number of written events
+        assert.strictEqual(counter, 4);
+        // Assert correct batche increments
+        assert.deepStrictEqual(totals, [3, 6, 9, 11]);
+        // Assert nocks complete
+        assert.ok(couch.isDone());
+      });
   });
 
   it('should perform a shallow backup with transient error', async function() {
@@ -105,36 +101,17 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true })
       .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
 
-    return new Promise((resolve, reject) => {
-      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-        .on('error', function(err) {
-          try {
-            assert.strictEqual(err.name, 'HTTPError');
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('received', function(data) {
-          try {
-            if (data.batch === 3) {
-              assert.strictEqual(data.length, 2); // smaller last batch
-            } else {
-              assert.strictEqual(data.length, 3);
-            }
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('finished', function(data) {
-          try {
-            assert.strictEqual(data.total, 11);
-            assert.ok(couch.isDone());
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        });
-    });
+    return shallowBackup({ bufferSize: 3, parallelism: 1 })
+      .then((summary) => {
+        // Assert the promise total
+        assert.strictEqual(summary.total, 11);
+        // Assert the correct number of written events
+        assert.strictEqual(counter, 4);
+        // Assert correct batche increments
+        assert.deepStrictEqual(totals, [3, 6, 9, 11]);
+        // Assert nocks complete
+        assert.ok(couch.isDone());
+      });
   });
 
   it('should fail to perform a shallow backup on fatal error', async function() {
@@ -149,35 +126,17 @@ describe('#unit Perform backup using shallow backup', function() {
       .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true })
       .reply(401, { error: 'Unauthorized' });
 
-    let errCount = 0;
-
-    return new Promise((resolve, reject) => {
-      shallowBackup(dbUrl, { bufferSize: 3, parallelism: 1 })
-        .on('error', function(err) {
-          try {
-            errCount++;
-            assert.strictEqual(err.name, 'Unauthorized');
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('received', function(data) {
-          try {
-            assert.strictEqual(data.length, 3);
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('finished', function(data) {
-          try {
-            assert.strictEqual(data.total, 6);
-            assert.ok(couch.isDone());
-            assert.strictEqual(errCount, 1);
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        });
-    });
+    return assert.rejects(
+      shallowBackup({ bufferSize: 3, parallelism: 1 })
+      // Error conversion is handled in app.js, add here for ease of testing
+        .catch(err => { throw convertError(err); }),
+      { name: 'Unauthorized' })
+      .then(() => {
+        // Assert the correct number of written events
+        assert.strictEqual(counter, 2);
+        // Assert correct batche increments
+        assert.deepStrictEqual(totals, [3, 6]);
+        assert.ok(couch.isDone);
+      });
   });
 });
