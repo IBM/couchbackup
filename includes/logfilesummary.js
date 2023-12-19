@@ -36,7 +36,7 @@ module.exports = async function(log) {
 
   await pipeline(
     createReadStream(log), // read the log file
-    new Liner(true), // split it into lines
+    new Liner(), // split it into lines
     new MappingStream(logMapper.logLineToMetadata), // parse line to metadata
     new Writable({
       objectMode: true,
