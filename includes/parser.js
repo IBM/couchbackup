@@ -124,6 +124,6 @@ function parseRestoreArgs() {
 }
 
 module.exports = {
-  parseBackupArgs: parseBackupArgs,
-  parseRestoreArgs: parseRestoreArgs
+  parseBackupArgs,
+  parseRestoreArgs
 };

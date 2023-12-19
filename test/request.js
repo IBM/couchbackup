@@ -199,7 +199,7 @@ describe('#unit Check request response error callback', function() {
       const url = `http://${encodeURIComponent(username)}:${encodeURIComponent(password)}@localhost:7777/testdb`;
       const sessionUrl = 'http://localhost:7777';
       const couch = nock(sessionUrl)
-        .post('/_session', { username: username, password: password })
+        .post('/_session', { username, password })
         .reply(200, { ok: true }, { 'Set-Cookie': 'AuthSession=ABC123DEF4356;' })
         .get('/')
         .reply(200);
