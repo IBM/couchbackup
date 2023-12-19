@@ -57,7 +57,7 @@ describe('#unit backup mappings', function() {
   });
 
   describe('log line mappers', function() {
-    const liner = new Liner(true);
+    const liner = new Liner();
     const logMapper = new LogMapper();
     const makeTestForLogLine = (fn, logLine, expected) => {
       logLine = liner.wrapLine(logLine);
@@ -197,7 +197,7 @@ describe('#unit backup mappings', function() {
       const output = [];
       return pipeline(
         fs.createReadStream('./test/fixtures/test2.log'), // read the log
-        new Liner(true), // break it into lines
+        new Liner(), // break it into lines
         new MappingStream(new LogMapper().logLineToBackupBatch), // map the lines to batches
         new FilterStream((batch) => { return batch.command === 't'; }), // filter to type t batches
         new MappingStream(backup.pendingToFetched), // fetch the batches

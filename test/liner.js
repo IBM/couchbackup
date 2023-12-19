@@ -48,4 +48,12 @@ describe('#unit liner', function() {
     await pipeline(fs.createReadStream('./test/fixtures/test.log'), liner, destination);
     assert.strictEqual(liner.lineNumber, 10);
   });
+
+  it('should stream line numbers correctly', async function() {
+    const input = Array.from({ length: 10000 }, (_, i) => `A test line with a number ${i}`);
+    const inputLines = input.map(e => `${e}\n`);
+    const expected = input.map((e, i) => { return { lineNumber: i + 1, line: e }; });
+    await pipeline(inputLines, liner, destination);
+    assert.deepStrictEqual(output, expected);
+  });
 });
