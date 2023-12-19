@@ -107,7 +107,7 @@ describe('#unit Validate arguments', function() {
     return validateArgs(goodUrl, { log: true }, assertErrorMessage('Invalid log option, must be type string'));
   });
   it('returns no error for valid log type', async function() {
-    return validateArgs(goodUrl, { log: 'log.txt' }, assertNoValidationError());
+    return validateArgs(goodUrl, { log: './test/fixtures/test.log', resume: true }, assertNoValidationError());
   });
   it('returns error for invalid mode type', async function() {
     return validateArgs(goodUrl, { mode: true }, assertErrorMessage('Invalid mode option, must be either "full" or "shallow"'));
@@ -159,6 +159,12 @@ describe('#unit Validate arguments', function() {
   });
   it('returns error for key and URL credentials supplied', async function() {
     return validateArgs('https://a:b@example.com/db', { iamApiKey: 'abc123' }, assertErrorMessage('URL user information must not be supplied when using IAM API key.'));
+  });
+  it('returns error for existing log file without resume', async function() {
+    return validateArgs(goodUrl, { log: './test/fixtures/test.log' }, {
+      name: 'LogFileExists',
+      message: 'The log file ./test/fixtures/test.log exists. Use the resume option if you want to resume a backup from an existing log file.'
+    });
   });
   it('warns for log arg in shallow mode', async function() {
     captureStderr();
