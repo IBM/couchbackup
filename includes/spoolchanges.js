@@ -28,7 +28,7 @@ const { ChangesFollower } = require('@ibm-cloud/cloudant');
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {number} tolerance - changes follower error tolerance
  */
-module.exports = function(dbClient, log, bufferSize, tolerance = 600000) {
+module.exports = function(dbClient, log, bufferSize = 500, tolerance = 600000) {
   let lastSeq;
   let batch = 0;
   let totalBuffer = 0;
@@ -73,7 +73,7 @@ module.exports = function(dbClient, log, bufferSize, tolerance = 600000) {
 
   const changesParams = {
     db: dbClient.dbName,
-    seqInterval: 10000
+    seqInterval: bufferSize
   };
 
   const changesFollower = new ChangesFollower(dbClient.service, changesParams, tolerance);
