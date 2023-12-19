@@ -159,15 +159,26 @@ async function shallowModeWarnings(opts) {
  */
 
 async function validateLogOnResume(opts) {
-  if (!opts || !opts.resume) {
+  const logFileExists = opts && opts.log && fs.existsSync(opts.log);
+  if (!opts || opts.mode === 'shallow') {
+    // No opts specified, defaults will be populated.
+    // In shallow mode log/resume are irrelevant and we'll have warned already.
     return true;
-  }
-  if (!opts.log) {
-    // This is the second place we check for the presence of the log option in conjunction with resume
-    // It has to be here for the API case
-    throw new BackupError('NoLogFileName', 'To resume a backup, a log file must be specified');
-  } else if (!fs.existsSync(opts.log)) {
-    throw new BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
+  } else if (opts.resume) {
+    // Expecting to resume
+    if (!opts.log) {
+      // This is the second place we check for the presence of the log option in conjunction with resume
+      // It has to be here for the API case
+      throw new BackupError('NoLogFileName', 'To resume a backup, a log file must be specified');
+    } else if (!logFileExists) {
+      throw new BackupError('LogDoesNotExist', 'To resume a backup, the log file must exist');
+    }
+  } else {
+    // Not resuming
+    if (logFileExists) {
+      throw new BackupError('LogFileExists', `The log file ${opts.log} exists. ` +
+      'Use the resume option if you want to resume a backup from an existing log file.');
+    }
   }
   return true;
 }
@@ -177,16 +188,22 @@ async function validateLogOnResume(opts) {
  *
  * @param {string} url - URL of database.
  * @param {object} opts - Options.
+ * @param {boolean} backup - true for backup, false for restore
  * @returns Boolean true if all checks are passing.
  */
-async function validateArgs(url, opts) {
+async function validateArgs(url, opts, isBackup = true) {
   const isIAM = opts && typeof opts.iamApiKey === 'string';
-  return Promise.all([
+  const validations = [
     validateURL(url, isIAM),
-    validateOptions(opts),
-    shallowModeWarnings(opts),
-    validateLogOnResume(opts)
-  ]);
+    validateOptions(opts)
+  ];
+  if (isBackup) {
+    validations.push(
+      shallowModeWarnings(opts),
+      validateLogOnResume(opts)
+    );
+  }
+  return Promise.all(validations);
 }
 
 /**
@@ -329,7 +346,7 @@ module.exports = {
 
     const ee = new events.EventEmitter();
 
-    validateArgs(targetUrl, opts)
+    validateArgs(targetUrl, opts, false)
       // Set up the DB client
       .then(() => {
         opts = Object.assign({}, defaults(), opts);
