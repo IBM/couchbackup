@@ -17,8 +17,18 @@ const { once } = require('node:events');
 const { createInterface } = require('node:readline');
 const { PassThrough, Transform } = require('node:stream');
 
+/**
+ * A transform stream that transforms a stream to a stream
+ * of line objects using the built-in readLineInterface.
+ * The new stream line objects have the form
+ * {lineNumber: #, line: content}
+ *
+ * Note that it uses the `line` event and not `for await...of`
+ * for performance reasons. See Node Readline module docs for
+ * details.
+ */
 class Liner extends Transform {
-  constructor(withNumbers = false) {
+  constructor() {
     super({ objectMode: true });
     this.lineNumber = 0;
     this.inStream = new PassThrough({ objectMode: true });
@@ -27,7 +37,7 @@ class Liner extends Transform {
       terminal: false
     }).on('line', (line) => {
       this.lineNumber++;
-      this.push(withNumbers ? this.wrapLine(line) : line);
+      this.push(this.wrapLine(line));
     });
     this.readlineInterfaceClosePromise = once(this.readlineInterface, 'close');
   }

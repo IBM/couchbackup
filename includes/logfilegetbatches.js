@@ -30,7 +30,7 @@ module.exports = function(log, batches) {
   const logMapper = new LogMapper();
   return [
     fs.createReadStream(log), // log file
-    new Liner(true), // split it into lines
+    new Liner(), // split it into lines
     new MappingStream(logMapper.logLineToBackupBatch), // parse line to a backup batch
     new FilterStream((metadata) => {
       // delete returns true if the key exists, false otherwise

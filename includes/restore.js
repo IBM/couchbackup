@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2023 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ module.exports = function(dbClient, options, readstream, ee) {
 
   return pipeline(
     readstream, // the backup file
-    new Liner(true), // line by line
+    new Liner(), // line by line
     new MappingStream(restore.backupLineToDocsArray), // convert line to a docs array
     new SplittingStream(), // break down the arrays to elements
     new BatchingStream(options.bufferSize), // make new arrays of the correct buffer size
