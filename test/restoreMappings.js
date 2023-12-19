@@ -47,7 +47,7 @@ describe('#unit restore mappings', function() {
 
   describe('backupLineToDocsArray', function() {
     // Use a liner to make the line objects with line numbers
-    const liner = new Liner(true);
+    const liner = new Liner();
 
     // The class under test
     const restore = new Restore(null);
