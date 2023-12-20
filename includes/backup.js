@@ -88,7 +88,8 @@ module.exports = function(dbClient, options, targetStream, ee) {
       const backup = new Backup(dbClient);
       const postWrite = (backupBatch) => {
         total += backupBatch.docs.length;
-        ee.emit('written', { total, time: (new Date().getTime() - start) / 1000, batch: backupBatch.batch });
+        const totalRunningTimeSec = (new Date().getTime() - start) / 1000;
+        ee.emit('written', { total, time: totalRunningTimeSec, batch: backupBatch.batch });
       };
 
       const destinationStreams = [];
