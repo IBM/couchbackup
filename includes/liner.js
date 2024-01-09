@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,14 @@
 // limitations under the License.
 'use strict';
 
-const { once } = require('node:events');
 const { createInterface } = require('node:readline');
-const { PassThrough, Transform } = require('node:stream');
+const { PassThrough, Duplex } = require('node:stream');
+const debug = require('debug');
 
 /**
- * A transform stream that transforms a stream to a stream
- * of line objects using the built-in readLineInterface.
+ * A Duplex stream that converts the input stream to a stream
+ * of line objects using the built-in readline interface.
+ *
  * The new stream line objects have the form
  * {lineNumber: #, line: content}
  *
@@ -27,32 +28,128 @@ const { PassThrough, Transform } = require('node:stream');
  * for performance reasons. See Node Readline module docs for
  * details.
  */
-class Liner extends Transform {
+class Liner extends Duplex {
+  // Configure logging
+  log = debug(('couchbackup:liner'));
+  // Flag for whether the readline interface is running
+  isRunning = true;
+  // Line number state
+  lineNumber = 0;
+  // Buffer of processed lines
+  lines = [];
+  // Stream of bytes that will be processed to lines.
+  inStream = new PassThrough({ objectMode: false })
+    // if there is an error destroy this Duplex with it
+    .on('error', e => this.destroy(e));
+
   constructor() {
-    super({ objectMode: true });
-    this.lineNumber = 0;
-    this.inStream = new PassThrough({ objectMode: true });
+    // Configuration of this Duplex:
+    // objectMode: false on the writable input (file chunks), true on the readable output (line objects)
+    // The readableHighWaterMark controls the number of lines buffered after this implementation calls
+    // "push". Backup lines are potentially large (default 500 documents - i.e. potentially MBs). Since
+    // there is additional buffering downstream and file processing is faster than the network ops
+    // we don't bottleneck here even without a large buffer.
+    super({ readableObjectMode: true, readableHighWaterMark: 0, writableObjectMode: false });
+    // Built-in readline interface over the inStream
     this.readlineInterface = createInterface({
-      input: this.inStream,
-      terminal: false
+      input: this.inStream, // the writable side of Liner, passed through
+      terminal: false, // expect to read from files
+      crlfDelay: Infinity // couchbackup files should only use "/n" EOL, but allow for all "/r/n" to be single EOL
     }).on('line', (line) => {
+      // For each line received increment the line number
+      // Wrap the line in the object format and store it an array waiting to be pushed
+      // when downstream is ready to receive.
       this.lineNumber++;
-      this.push(this.wrapLine(line));
+      const bufferedLines = this.lines.push(this.wrapLine(line));
+      this.log(`Liner processed line ${this.lineNumber}. Buffered lines available: ${bufferedLines}.`);
+      this.pushAvailable();
+    }).on('close', () => {
+      this.log('Liner readline interface closed.');
+      // Push null onto our lines buffer to signal EOF to downstream consumers.
+      this.lines.push(null);
+      this.pushAvailable();
     });
-    this.readlineInterfaceClosePromise = once(this.readlineInterface, 'close');
   }
 
+  /**
+   * Helper function to wrap a line in the object format that Liner
+   * pushes to downstream consumers.
+   *
+   * @param {string} line
+   * @returns {object} {"lineNumber: #, line"}
+   */
   wrapLine(line) {
     return { lineNumber: this.lineNumber, line };
   }
 
-  _transform(chunk, encoding, callback) {
+  /**
+   * Function that pushes any available lines downstream.
+   */
+  pushAvailable() {
+    // Check readline is running flag and whether there is content to push.
+    while (this.isRunning && this.lines.length > 0) {
+      if (!this.push(this.lines.shift())) {
+        // Push returned false, this indicates downstream back-pressure.
+        // Pause the readline interface to stop pushing more lines downstream.
+        // Resumption is triggered by downstream calling _read which happens
+        // when it is ready for more data.
+        this.log(`Liner pausing after back-pressure from push. Buffered lines available: ${this.lines.length}.`);
+        this.isRunning = false;
+        this.readlineInterface.pause();
+        break;
+      } else {
+        this.log(`Liner pushed. Buffered lines available: ${this.lines.length}.`);
+      }
+    }
+  }
+
+  /**
+   * Implementation of the Readable side of the Duplex.
+   *
+   *
+   * @param {number} size - ignored as the Readable side is objectMode: true
+   */
+  _read(size) {
+    // As per the Readable contract if read has been called it won't be called
+    // again until after there has been a call to push.
+    // As part of flow control if we are not running we must resume when read
+    // is called to ensure that pushes are able to happen (and thereby trigger)
+    // subsequent reads.
+    if (!this.isRunning) {
+      this.log('Liner resuming after read.');
+      this.isRunning = true;
+      this.readlineInterface.resume();
+    }
+    this.pushAvailable();
+  }
+
+  /**
+   * Implementation for the Writable side of the Duplex.
+   * Delegates to the inStream PassThrough.
+   *
+   * @param {*} chunk
+   * @param {string} encoding
+   * @param {function} callback
+   */
+  _write(chunk, encoding, callback) {
+    // Note that the passed callback function controls flow from upstream.
+    // When the readable side is paused by downstream the inStream buffer
+    // will fill and then the callback will be delayed until that buffer
+    // is drained by the readline interface starting up again.
     this.inStream.write(chunk, encoding, callback);
   }
 
-  _flush(callback) {
-    this.inStream.end();
-    this.readlineInterfaceClosePromise.then(() => { callback(); });
+  /**
+   * Cleanup after the last write to the Duplex.
+   *
+   * @param {function} callback
+   */
+  _final(callback) {
+    this.log('Finalizing liner.');
+    // Nothing more will be written, end our inStream which will
+    // cause the readLineInterface to emit 'close' and signal EOF
+    // to our readers after the line buffer is emptied.
+    this.inStream.end(callback);
   }
 }
 
