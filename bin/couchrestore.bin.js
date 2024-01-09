@@ -49,7 +49,7 @@ try {
     opts,
     error.terminationCallback
   ).on('restored', function(obj) {
-    restoreBatchDebug('restored', obj.total);
+    restoreBatchDebug('Restored batch ID:', obj.batch, 'Total document revisions restored:', obj.total, 'Time:', obj.time);
   }).on('error', function(e) {
     restoreDebug('ERROR', e);
   }).on('finished', function(obj) {

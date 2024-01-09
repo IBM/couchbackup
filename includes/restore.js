@@ -31,6 +31,7 @@ const { pipeline } = require('node:stream/promises');
  */
 module.exports = function(dbClient, options, readstream, ee) {
   const restore = new Restore(dbClient);
+  const start = new Date().getTime(); // restore start time
   let total = 0; // the total restored
 
   const output = new Writable({
@@ -38,8 +39,9 @@ module.exports = function(dbClient, options, readstream, ee) {
     write: (restoreBatch, encoding, cb) => {
       debug(' restored ', restoreBatch.documents);
       total += restoreBatch.documents;
+      const totalRunningTimeSec = (new Date().getTime() - start) / 1000;
       try {
-        ee.emit('restored', { ...restoreBatch, total });
+        ee.emit('restored', { ...restoreBatch, total, time: totalRunningTimeSec });
       } finally {
         cb();
       }
