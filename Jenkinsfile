@@ -96,7 +96,7 @@ def agentYaml() {
     |      resources:
     |        requests:
     |          memory: "2Gi"
-    |          cpu: "650m"
+    |          cpu: "1"
     |        limits:
     |          memory: "4Gi"
     |          cpu: "4"
@@ -164,6 +164,9 @@ pipeline {
     kubernetes {
       yaml "${agentYaml()}"
     }
+  }
+  options {
+    disableConcurrentBuilds()
   }
   stages {
     stage('Build') {
