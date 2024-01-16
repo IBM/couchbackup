@@ -130,7 +130,7 @@ class DelegateWritable extends Writable {
  */
 class DuplexPassThrough extends PassThrough {
   constructor(opts) {
-    super({ ...opts, objectMode: true });
+    super({ objectMode: true, readableHighWaterMark: 0, writableHighWaterMark: 0, ...opts });
   }
 
   // The destroy call on this PassThrough stream
@@ -155,7 +155,7 @@ class DuplexPassThrough extends PassThrough {
 class FilterStream extends Duplex {
   constructor(filterFunction) {
     const inputStream = new DuplexPassThrough();
-    return Duplex.from({ readable: inputStream.filter(filterFunction), writable: inputStream });
+    return Duplex.from({ readable: inputStream.filter(filterFunction, { concurrency: 1, highWaterMark: 0 }), writable: inputStream });
   }
 }
 
@@ -164,11 +164,9 @@ class FilterStream extends Duplex {
  * Output: stream of mappingFunction(x)
  */
 class MappingStream extends Duplex {
-  constructor(mappingFunction, concurrency = 1) {
-    const inputStream = new DuplexPassThrough({
-      highWaterMark: concurrency * 2
-    });
-    return Duplex.from({ readable: inputStream.map(mappingFunction, { concurrency }), writable: inputStream });
+  constructor(mappingFunction, concurrency = 1, highWaterMark = 0) {
+    const inputStream = new DuplexPassThrough();
+    return Duplex.from({ readable: inputStream.map(mappingFunction, { concurrency, highWaterMark: 0 }), writable: inputStream });
   }
 }
 
