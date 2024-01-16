@@ -202,7 +202,7 @@ class DelegateWritable extends Writable {
  */
 class DuplexPassThrough extends PassThrough {
   constructor(opts) {
-    super({ ...opts, objectMode: true });
+    super({ objectMode: true, readableHighWaterMark: 0, writableHighWaterMark: 0, ...opts });
   }
 
   // The destroy call on this PassThrough stream
