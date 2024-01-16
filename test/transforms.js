@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const tp = require('node:timers/promises');
 const { Readable, Writable, PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { BatchingStream, DelegateWritable, FilterStream, MappingStream, SplittingStream, SideEffect, WritableWithPassThrough } = require('../includes/transforms.js');
+const { BatchingStream, DelegateWritable, FilterStream, MappingStream, SideEffect, WritableWithPassThrough } = require('../includes/transforms.js');
 const events = require('events');
 
 describe('#unit should do transforms', function() {
@@ -307,39 +307,50 @@ describe('#unit should do transforms', function() {
     });
   });
 
-  describe('SplittingStream', async function() {
-    async function testSplitting(elements, batchSize, concurrency) {
+  describe('RebatchingStream', async function() {
+    async function testSplitting(elements, batchSize, reBatchSize = 1) {
       let elementCounter = 0;
-      return pipeline(Readable.from(Array(elements).keys()), new BatchingStream(batchSize), new SplittingStream(concurrency),
+      let batchCounter = 0;
+      const expectedBatches = Math.floor(elements / reBatchSize) + (elements % reBatchSize === 0 ? 0 : 1);
+
+      return pipeline(Readable.from(Array(elements).keys()), new BatchingStream(batchSize), new BatchingStream(reBatchSize, true),
         new Writable({
           objectMode: true,
           write(chunk, encoding, callback) {
-            elementCounter++;
+            batchCounter++;
+            elementCounter += chunk.length;
             callback();
           }
         })).then(() => {
         assert.strictEqual(elementCounter, elements, 'There should be the correct number of elements.');
+        assert.strictEqual(batchCounter, expectedBatches, 'There should be the correct number of batches.');
       });
     }
+    describe('Splitting to 1 element batches', function() {
+      it('single batch', async function() {
+        return testSplitting(2, 2);
+      });
 
-    it('single batch', async function() {
-      return testSplitting(2, 2);
+      it('multiple batches, same size', async function() {
+        return testSplitting(15, 3);
+      });
+
+      it('multiple batches, different size', async function() {
+        return testSplitting(29, 8);
+      });
     });
+    describe('Rebatching to other sizes', function() {
+      it('single batch', async function() {
+        return testSplitting(2, 2, 2);
+      });
 
-    it('multiple batches, same size', async function() {
-      return testSplitting(15, 3);
-    });
+      it('multiple batches, same size', async function() {
+        return testSplitting(15, 3, 3);
+      });
 
-    it('multiple batches, different size', async function() {
-      return testSplitting(29, 8);
-    });
-
-    it('multiple batches, concurrency', async function() {
-      return testSplitting(25, 5, 5);
-    });
-
-    it('multiple batches, different size, concurrency', async function() {
-      return testSplitting(27, 5, 5);
+      it('multiple batches, different size', async function() {
+        return testSplitting(29, 8, 3);
+      });
     });
   });
 
