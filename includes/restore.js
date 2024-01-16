@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 const debug = require('debug')('couchbackup:restore');
 const { Liner } = require('../includes/liner.js');
 const { Restore } = require('../includes/restoreMappings.js');
-const { BatchingStream, MappingStream, SplittingStream } = require('./transforms.js');
+const { BatchingStream, MappingStream } = require('./transforms.js');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 
@@ -52,8 +52,7 @@ module.exports = function(dbClient, options, readstream, ee) {
     readstream, // the backup file
     new Liner(), // line by line
     new MappingStream(restore.backupLineToDocsArray), // convert line to a docs array
-    new SplittingStream(), // break down the arrays to elements
-    new BatchingStream(options.bufferSize), // make new arrays of the correct buffer size
+    new BatchingStream(options.bufferSize, true), // make new arrays of the correct buffer size
     new MappingStream(restore.docsToRestoreBatch), // make a restore batch
     new MappingStream(restore.pendingToRestored, options.parallelism), // do the restore at the desired level of concurrency
     output // emit restored events
