@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,39 +21,111 @@ const debug = require('debug');
  * Output: stream of arrays of batchSize elements each
  */
 class BatchingStream extends Transform {
-  constructor(batchSize, highWaterMarkScale = 1) {
-    super({ objectMode: true, readableHighWaterMark: highWaterMarkScale, writableHighWaterMark: highWaterMarkScale * batchSize });
-    this.log = debug(('couchbackup:transform:batch'));
-    this.log(`Batching to size ${batchSize} with scale ${highWaterMarkScale}`);
+  // Logging config
+  log = debug(('couchbackup:transform:batch'));
+  // The buffer of elements to batch
+  elementsToBatch = [];
+  // The current batch ID
+  batchId = 0;
+
+  constructor(batchSize) {
+    // This Transform stream is always objectMode and doesn't use the stream
+    // buffers. It does use an internal buffer of elements for batching, which
+    // holds up to 1 batch in memory.
+    // The Writable side of this Transform is written to by the element supplier.
+    // The Readable side of this Transform is read by the batch consumer.
+    super({ objectMode: true, readableHighWaterMark: 0, writableHighWaterMark: 0 });
+    this.log(`Batching to size ${batchSize}`);
     this.batchSize = batchSize;
-    this.batch = [];
-    this.batchId = 0;
   }
 
-  writeBatch(callback) {
-    if (this.batch.length > 0) {
-      this.log(`Writing batch ${this.batchId} with ${this.batch.length} elements.`);
-      this.push(this.batch);
-      this.batch = [];
+  /**
+   * Push any available batches to be read by the downstream consumer.
+   *
+   * @returns true if downstream is ready to accept more batches, false otherwise
+   */
+  writeBatch() {
+    // Check if there are any elements available to push downstream
+    if (this.elementsToBatch.length > 0) {
+      this.log(`Writing batch ${this.batchId} with ${this.elementsToBatch.length} elements.`);
+      // Increment the batch ID
       this.batchId++;
+      // Splice batchSize elements from the available elements and push as a batch
+      // returning the back-pressure state
+      return this.push(this.elementsToBatch.splice(0, this.batchSize));
     }
-    callback();
+    // If there were no batches to write then return true (no back-pressure)
+    return true;
   }
 
+  /**
+   * Implementation of _read overriding the Transform default.
+   *
+   * In the case we dalyed a callback for back-pressure from downstream
+   * once the downstream is reading again it will call this function.
+   * At that time we can callback the pendingCallback to restart
+   * our element supplier.
+   *
+   * The read itself delegates to the Transform super-class.
+   *
+   * @param {number} size ignored for objectMode
+   */
+  _read(size) {
+    if (this.pendingCallback) {
+      this.pendingCallback();
+      this.pendingCallback = null;
+    }
+    super._read(size);
+  }
+
+  /**
+   * Implementation of _transform that accepts elements and
+   * adds them to an array, until reaching the set batchSize.
+   * At that time the batch is written and the element supplier
+   * receives back-pressure (delayed callback) if we are getting
+   * back-pressure from our internal "push" buffer (that in turn
+   * reflects downstream back-pressure from the stream consumer).
+   *
+   * If the element is before reaching batch size or there is no
+   * back pressure, the element supplier receives the callback
+   * immediately.
+   *
+   * @param {*} element the element to add to a batch
+   * @param {string} encoding ignored (objects are passed as-is)
+   * @param {function} callback
+   */
   _transform(element, encoding, callback) {
-    if (this.batch.push(element) === this.batchSize) {
-      this.writeBatch(callback);
+    if (this.elementsToBatch.push(element) === this.batchSize) {
+      // Element was the last in a batch, write the batch.
+      if (this.writeBatch()) {
+        // Callback immediately if there was no back-pressure.
+        callback();
+      } else {
+        // Downstream cannot accept more batches, delay the
+        // callback to back-pressure our element supplier until
+        // after the next downstream read.
+        this.log(`Back pressure after batch ${this.batchId}`);
+        this.pendingCallback = callback;
+      }
     } else {
+      // Element did not complete a batch, callback immediately.
       callback();
     }
   }
 
+  /**
+   * Implementation of _flush to ensure that any partial batches
+   * remaining when the supplying stream ends are pushed downstream.
+   *
+   * @param {function} callback
+   */
   _flush(callback) {
     this.log('Flushing batch transform.');
     // When flushing we always call to write a batch
     // to ensure any remaining elements that hadn't reached batchSize
     // are written out.
-    this.writeBatch(callback);
+    this.writeBatch();
+    callback();
   }
 }
 
