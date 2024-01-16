@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,47 +13,154 @@
 // limitations under the License.
 'use strict';
 
-const { Duplex, PassThrough, Transform, Writable } = require('node:stream');
+const { Duplex, PassThrough, Writable } = require('node:stream');
 const debug = require('debug');
 
 /**
  * Input: stream of elements
  * Output: stream of arrays of batchSize elements each
  */
-class BatchingStream extends Transform {
-  constructor(batchSize, highWaterMarkScale = 1) {
-    super({ objectMode: true, readableHighWaterMark: highWaterMarkScale, writableHighWaterMark: highWaterMarkScale * batchSize });
-    this.log = debug(('couchbackup:transform:batch'));
-    this.log(`Batching to size ${batchSize} with scale ${highWaterMarkScale}`);
+class BatchingStream extends Duplex {
+  // The buffer of elements to batch
+  elementsToBatch = [];
+  // The current batch ID
+  batchId = 0;
+  // Flag whether the Readable side is currently draining
+  isReadableDraining = true;
+  // Flag whether the writable side is complete
+  isWritableComplete = false;
+
+  /**
+   * Make a new BatchingStream with the given output batch
+   * size and whether it is accepting arrays for rebatching
+   * or single elements and buffering the set number of batches.
+   *
+   * @param {number} batchSize output batch (array) size
+   * @param {boolean} rebatch true to accept arrays and resize them (defaults to false to accept single items)
+   * @param {number} batchHighWaterMark the number of batches to buffer before applying upstream back-pressure
+   */
+  constructor(batchSize, rebatch = false, batchHighWaterMark = 1) {
+    // This Duplex stream is always objectMode and doesn't use the stream
+    // buffers. It does use an internal buffer of elements for batching, which
+    // holds up to 1 batch in memory.
+    // The Writable side of this Duplex is written to by the element supplier.
+    // The Readable side of this Duplex is read by the batch consumer.
+    super({ objectMode: true, readableHighWaterMark: 0, writableHighWaterMark: 0 });
+    // Logging config
+    this.log = debug((`couchbackup:transform:${rebatch ? 're' : ''}batch`));
+    this.log(`Batching to size ${batchSize}`);
     this.batchSize = batchSize;
-    this.batch = [];
-    this.batchId = 0;
+    this.rebatch = rebatch;
+    this.elementHighWaterMark = batchHighWaterMark * this.batchSize;
   }
 
-  writeBatch(callback) {
-    if (this.batch.length > 0) {
-      this.log(`Writing batch ${this.batchId} with ${this.batch.length} elements.`);
-      this.push(this.batch);
-      this.batch = [];
+  /**
+   * Check the available elementsToBatch and if the downstream consumer is
+   * accepting make and push as many batches as possible.
+   *
+   * This will not push if the Readable is not draining (downstream back-pressure).
+   * Batches will be pushed if:
+   * 1. The Readable is draining and there are at least batch size elements
+   * 2. The Readable is draining and there will be no new elements (the Writable is complete)
+   *    and there are any elements available.
+   * Condition 2 allows for a smaller sized partial final batch.
+   */
+  tryPushingBatches() {
+    this.log('Try to push batches.',
+     `Available elements:${this.elementsToBatch.length}`,
+     `Readable draining:${this.isReadableDraining}`,
+     `Writable complete:${this.isWritableComplete}`);
+    while (this.isReadableDraining &&
+      (this.elementsToBatch.length >= this.batchSize ||
+        (this.isWritableComplete && this.elementsToBatch.length > 0))) {
+      // Splice up to batchSize elements from the available elements
+      const batch = this.elementsToBatch.splice(0, this.batchSize);
+      this.log(`Writing batch ${this.batchId} with ${batch.length} elements.`);
+      // Increment the batch ID ready for the next batch
       this.batchId++;
+      // push the batch downstream
+      if (!this.push(batch)) {
+        // There was back-pressure from downstream.
+        // Unset the draining flag and break the loop.
+        this.isReadableDraining = false;
+        break;
+      }
     }
-    callback();
+    if (this.elementsToBatch.length < this.batchSize) {
+      // We've drained the buffer, release upstream.
+      if (this.pendingCallback) {
+        this.log('Unblocking after downstream reads.');
+        this.pendingCallback();
+        this.pendingCallback = null;
+      }
+    }
+    if (this.elementsToBatch.length === 0 && this.isWritableComplete) {
+      this.log('No further elements, signalling EOF.');
+      this.push(null);
+    }
   }
 
-  _transform(element, encoding, callback) {
-    if (this.batch.push(element) === this.batchSize) {
-      this.writeBatch(callback);
+  /**
+   * Implementation of _read.
+   * The Duplex.read is called when downstream can accept more data.
+   * That in turn calls this _read implementation.
+   *
+   * @param {number} size ignored for objectMode
+   */
+  _read(size) {
+    // Downstream asked for data set the draining flag.
+    this.isReadableDraining = true;
+    // Push any available batches.
+    this.tryPushingBatches();
+  }
+
+  /**
+   * Implementation of _write that accepts elements and
+   * adds them to an array of elementsToBatch.
+   * If the size of elementsToBatch exceeds the configured
+   * high water mark then the element supplier receives back-pressure
+   * via a delayed callback.
+   *
+   * @param {*} element the element to add to a batch
+   * @param {string} encoding ignored (objects are passed as-is)
+   * @param {function} callback called back when elementsToBatch is not too full
+   */
+  _write(element, encoding, callback) {
+    if (!this.rebatch) {
+      // If we're not rebatching we're dealing with a single element
+      // but the push is cleaner if we can spread, so wrap in an array.
+      element = [element];
+    }
+    if (this.elementsToBatch.push(...element) >= this.elementHighWaterMark) {
+      // Delay callback as we have more than 1 batch buffered
+      // Downstream cannot accept more batches, delay the
+      // callback to back-pressure our element supplier until
+      // after the next downstream read.
+      this.log(`Back pressure after batch ${this.batchId}`);
+      this.pendingCallback = callback;
+      // If there are enough elements we must try to push batches
+      // to satisfy the Readable contract which will not call read
+      // again until after a push in the event that no data was available.
+      this.tryPushingBatches();
     } else {
+      // Callback immediately if there are fewer elements
       callback();
     }
   }
 
-  _flush(callback) {
+  /**
+   * Implementation of _final to ensure that any partial batches
+   * remaining when the supplying stream ends are pushed downstream.
+   *
+   * @param {function} callback
+   */
+  _final(callback) {
     this.log('Flushing batch transform.');
-    // When flushing we always call to write a batch
-    // to ensure any remaining elements that hadn't reached batchSize
-    // are written out.
-    this.writeBatch(callback);
+    // Set the writable complete flag
+    this.isWritableComplete = true;
+    // Try to push batches
+    this.tryPushingBatches();
+    callback();
   }
 }
 
@@ -198,24 +305,6 @@ class SideEffect extends DuplexPassThrough {
   }
 }
 
-/**
- * Input: stream of arrays
- * Output: stream of elements
- */
-class SplittingStream extends Duplex {
-  constructor(concurrency = 1, outHighWaterMarkScale = 500, inHighWaterMarkScale = 1) {
-    const inputStream = new DuplexPassThrough({ objectMode: true, readableHighWaterMark: concurrency * outHighWaterMarkScale, writableHighWaterMark: concurrency * inHighWaterMarkScale });
-    return Duplex.from({
-      objectMode: true,
-      readable: inputStream.flatMap(
-        (input) => {
-          return input;
-        }, { concurrency }),
-      writable: inputStream
-    });
-  }
-}
-
 class WritableWithPassThrough extends SideEffect {
   /**
    * A Writable that passes through the original chunk.
@@ -259,6 +348,5 @@ module.exports = {
   FilterStream,
   MappingStream,
   SideEffect,
-  SplittingStream,
   WritableWithPassThrough
 };
