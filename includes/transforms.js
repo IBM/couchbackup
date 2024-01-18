@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict';
 
-const { Duplex, PassThrough, Writable } = require('node:stream');
+const { Duplex, PassThrough, Writable, getDefaultHighWaterMark, setDefaultHighWaterMark } = require('node:stream');
 const debug = require('debug');
 
 /**
@@ -255,14 +255,41 @@ class DuplexPassThrough extends PassThrough {
   }
 }
 
+class DuplexMapper extends Duplex {
+  constructor(fn, style, concurrency = 1) {
+    const operatorOpts = { concurrency, highWaterMark: concurrency };
+    const inputStream = new DuplexPassThrough();
+    let outputStream;
+    switch (style) {
+      case 'map':
+        outputStream = inputStream.map(fn, operatorOpts);
+        break;
+      case 'filter':
+        outputStream = inputStream.filter(fn, operatorOpts);
+        break;
+      default:
+        throw new Error('Invalid style.');
+    }
+    // Workaround the fact that Duplex.from doesn't allow customizing the HWM
+    // Set a new objectMode default value while we create the stream, then reset it.
+    const originalHWM = getDefaultHighWaterMark(true);
+    // Use concurrency as the highWaterMark to allow one item on deck for each "thread"
+    setDefaultHighWaterMark(true, concurrency);
+    try {
+      return Duplex.from({ readable: outputStream, writable: inputStream });
+    } finally {
+      setDefaultHighWaterMark(true, originalHWM);
+    }
+  }
+}
+
 /**
  * Input: stream of x
  * Output: stream of x with elements not passing the filter removed
  */
-class FilterStream extends Duplex {
+class FilterStream extends DuplexMapper {
   constructor(filterFunction) {
-    const inputStream = new DuplexPassThrough();
-    return Duplex.from({ readable: inputStream.filter(filterFunction, { concurrency: 1, highWaterMark: 0 }), writable: inputStream });
+    super(filterFunction, 'filter');
   }
 }
 
@@ -270,10 +297,9 @@ class FilterStream extends Duplex {
  * Input: stream of x
  * Output: stream of mappingFunction(x)
  */
-class MappingStream extends Duplex {
-  constructor(mappingFunction, concurrency = 1, highWaterMark = 0) {
-    const inputStream = new DuplexPassThrough();
-    return Duplex.from({ readable: inputStream.map(mappingFunction, { concurrency, highWaterMark: 0 }), writable: inputStream });
+class MappingStream extends DuplexMapper {
+  constructor(mappingFunction, concurrency = 1) {
+    super(mappingFunction, 'map', concurrency);
   }
 }
 
