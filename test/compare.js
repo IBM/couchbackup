@@ -19,8 +19,9 @@ const difference = require('lodash/difference');
 const forOwn = require('lodash/forOwn');
 const isEmpty = require('lodash/isEmpty');
 const union = require('lodash/union');
+const client = require('./hooks.js').sharedClient;
 
-const compare = async function(database1, database2, client) {
+const compare = async function(database1, database2) {
   // check docs same in both dbs
   const allDocs1 = await getAllDocs(client, database1);
   const allDocs2 = await getAllDocs(client, database2);

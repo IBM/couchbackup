@@ -77,82 +77,91 @@ const errorHelper = async function(err) {
   return Promise.reject(err);
 };
 
-module.exports = {
-  newClient: function(rawUrl, opts) {
-    const url = new URL(rawUrl);
-    // Split the URL to separate service from database
-    // Use origin as the "base" to remove auth elements
-    const actUrl = new URL(url.pathname.substring(0, url.pathname.lastIndexOf('/')), url.origin);
-    const dbName = url.pathname.substring(url.pathname.lastIndexOf('/') + 1);
-    let authenticator;
-    // Default to cookieauth unless an IAM key is provided
-    if (opts.iamApiKey) {
-      const iamAuthOpts = { apikey: opts.iamApiKey };
-      if (opts.iamTokenUrl) {
-        iamAuthOpts.url = opts.iamTokenUrl;
-      }
-      authenticator = new IamAuthenticator(iamAuthOpts);
-    } else if (url.username) {
-      authenticator = new CouchdbSessionAuthenticator({
-        username: decodeURIComponent(url.username),
-        password: decodeURIComponent(url.password)
-      });
-    } else {
-      authenticator = new NoAuthAuthenticator();
+function newSimpleClient(rawUrl, opts) {
+  const url = new URL(rawUrl);
+  // Split the URL to separate service from database
+  // Use origin as the "base" to remove auth elements
+  const actUrl = new URL(url.pathname.substring(0, url.pathname.lastIndexOf('/')), url.origin);
+  const dbName = url.pathname.substring(url.pathname.lastIndexOf('/') + 1);
+  let authenticator;
+  // Default to cookieauth unless an IAM key is provided
+  if (opts.iamApiKey) {
+    const iamAuthOpts = { apikey: opts.iamApiKey };
+    if (opts.iamTokenUrl) {
+      iamAuthOpts.url = opts.iamTokenUrl;
     }
-    const serviceOpts = {
-      authenticator,
-      timeout: opts.requestTimeout,
-      // Axios performance options
-      maxContentLength: -1
-    };
-
-    const service = new CloudantV1(serviceOpts);
-    // Configure retries
-    const maxRetries = 2; // for 3 total attempts
-    service.getHttpClient().defaults.raxConfig = {
-      // retries for status codes
-      retry: maxRetries,
-      // retries for non-response e.g. ETIMEDOUT
-      noResponseRetries: maxRetries,
-      backoffType: 'exponential',
-      httpMethodsToRetry: ['GET', 'HEAD', 'POST'],
-      statusCodesToRetry: [
-        [429, 429],
-        [500, 599]
-      ],
-      shouldRetry: err => {
-        const cfg = retryPlugin.getConfig(err);
-        // cap at max retries regardless of response/non-response type
-        if (cfg.currentRetryAttempt >= maxRetries) {
-          return false;
-        } else {
-          return retryPlugin.shouldRetryRequest(err);
-        }
-      },
-      instance: service.getHttpClient()
-    };
-    retryPlugin.attach(service.getHttpClient());
-
-    service.setServiceUrl(actUrl.toString());
-    if (authenticator instanceof CouchdbSessionAuthenticator) {
-      // Awkward workaround for known Couch issue with compression on _session requests
-      // It is not feasible to disable compression on all requests with the amount of
-      // data this lib needs to move, so override the property in the tokenManager instance.
-      authenticator.tokenManager.requestWrapperInstance.compressRequestData = false;
-    }
-    if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
-      authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
-    }
-    // Add error interceptors to put URLs in error messages
-    service.getHttpClient().interceptors.response.use(null, errorHelper);
-
-    // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
-    service.getHttpClient().interceptors.request.use(function(requestConfig) {
-      requestConfig.headers['User-Agent'] = userAgent;
-      return requestConfig;
-    }, null);
-
-    return { service, dbName, url: actUrl.toString() };
+    authenticator = new IamAuthenticator(iamAuthOpts);
+  } else if (url.username) {
+    authenticator = new CouchdbSessionAuthenticator({
+      username: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password)
+    });
+  } else {
+    authenticator = new NoAuthAuthenticator();
   }
+  const serviceOpts = {
+    authenticator,
+    timeout: opts.requestTimeout,
+    // Axios performance options
+    maxContentLength: -1
+  };
+
+  const service = new CloudantV1(serviceOpts);
+  service.setServiceUrl(actUrl.toString());
+  if (authenticator instanceof CouchdbSessionAuthenticator) {
+    // Awkward workaround for known Couch issue with compression on _session requests
+    // It is not feasible to disable compression on all requests with the amount of
+    // data this lib needs to move, so override the property in the tokenManager instance.
+    authenticator.tokenManager.requestWrapperInstance.compressRequestData = false;
+  }
+  return { service, dbName, actUrl };
+}
+
+function newClient(rawUrl, opts) {
+  const { service, dbName, actUrl } = newSimpleClient(rawUrl, opts);
+  const authenticator = service.getAuthenticator();
+  // Configure retries
+  const maxRetries = 2; // for 3 total attempts
+  service.getHttpClient().defaults.raxConfig = {
+    // retries for status codes
+    retry: maxRetries,
+    // retries for non-response e.g. ETIMEDOUT
+    noResponseRetries: maxRetries,
+    backoffType: 'exponential',
+    httpMethodsToRetry: ['GET', 'HEAD', 'POST'],
+    statusCodesToRetry: [
+      [429, 429],
+      [500, 599]
+    ],
+    shouldRetry: err => {
+      const cfg = retryPlugin.getConfig(err);
+      // cap at max retries regardless of response/non-response type
+      if (cfg.currentRetryAttempt >= maxRetries) {
+        return false;
+      } else {
+        return retryPlugin.shouldRetryRequest(err);
+      }
+    },
+    instance: service.getHttpClient()
+  };
+  retryPlugin.attach(service.getHttpClient());
+
+  if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
+    authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
+  }
+  // Add error interceptors to put URLs in error messages
+  service.getHttpClient().interceptors.response.use(null, errorHelper);
+
+  // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
+  service.getHttpClient().interceptors.request.use(function(requestConfig) {
+    requestConfig.headers['User-Agent'] = userAgent;
+    return requestConfig;
+  }, null);
+
+  return { service, dbName, url: actUrl.toString() };
+}
+
+module.exports = {
+  newSimpleClient,
+  newClient
 };
