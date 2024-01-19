@@ -15,18 +15,18 @@
 /* global beforeEach afterEach */
 'use strict';
 
-const { CloudantV1 } = require('@ibm-cloud/cloudant');
-const url = new URL((process.env.COUCH_BACKEND_URL) ? process.env.COUCH_BACKEND_URL : 'https://no-couch-backend-url-set.test');
-const { BasicAuthenticator, NoAuthAuthenticator } = require('ibm-cloud-sdk-core');
-const authenticator = (url.username) ? new BasicAuthenticator({ username: url.username, password: decodeURIComponent(url.password) }) : new NoAuthAuthenticator();
-const serviceOpts = {
-  authenticator
-};
-const cloudant = new CloudantV1(serviceOpts);
-// Remove auth from URL before using for service
-cloudant.setServiceUrl(new URL(url.pathname, url.origin).toString());
 const uuid = require('uuid').v4;
 const fs = require('fs');
+const { newSimpleClient } = require('../includes/request.js');
+
+const sharedClient = makeSharedClient();
+function makeSharedClient() {
+  const url = (process.env.COUCH_BACKEND_URL) ? process.env.COUCH_BACKEND_URL : 'https://no-couch-backend-url-set.test';
+  const opts = {};
+  opts.iamApiKey = process.env.COUCHBACKUP_TEST_IAM_API_KEY || null;
+  opts.iamTokenUrl = process.env.CLOUDANT_IAM_TOKEN_URL || null;
+  return newSimpleClient(url, opts).service;
+}
 
 // Mocha hooks that will be at the root context so run for all tests
 
@@ -38,8 +38,7 @@ beforeEach('Create test database', async function() {
     const unique = uuid();
     this.fileName = `${unique}`;
     this.dbName = 'couchbackup_test_' + unique;
-
-    return cloudant.putDatabase({ db: this.dbName });
+    return sharedClient.putDatabase({ db: this.dbName });
   }
 });
 
@@ -50,7 +49,7 @@ afterEach('Delete test database', async function() {
     this.timeout(10 * 1000);
     deleteIfExists(this.fileName);
     deleteIfExists(`${this.fileName}.log`);
-    return cloudant.deleteDatabase({ db: this.dbName });
+    return sharedClient.deleteDatabase({ db: this.dbName });
   }
 });
 
@@ -63,3 +62,7 @@ function deleteIfExists(fileName) {
     }
   });
 }
+
+module.exports = {
+  sharedClient
+};
