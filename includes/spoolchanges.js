@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,9 +13,10 @@
 // limitations under the License.
 'use strict';
 
-const fs = require('fs');
-const error = require('./error.js');
-const { BatchingStream, MappingStream, WritableWithPassThrough } = require('./transforms.js');
+const { createWriteStream } = require('node:fs');
+const { pipeline } = require('node:stream/promises');
+const { BackupError } = require('./error.js');
+const { BatchingStream, DelegateWritable, MappingStream } = require('./transforms.js');
 const debug = require('debug')('couchbackup:spoolchanges');
 const { ChangesFollower } = require('@ibm-cloud/cloudant');
 
@@ -25,23 +26,25 @@ const { ChangesFollower } = require('@ibm-cloud/cloudant');
  *
  * @param {object} dbClient - object for connection to source database containing name, service and url
  * @param {string} log - path to log file to use
+ * @param {function} eeFn - event emitter function to call after each write
  * @param {number} bufferSize - the number of changes per batch/log line
  * @param {number} tolerance - changes follower error tolerance
  */
-module.exports = function(dbClient, log, bufferSize = 500, tolerance = 600000) {
+module.exports = function(dbClient, log, eeFn, bufferSize = 500, tolerance = 600000) {
   let lastSeq;
   let batch = 0;
   let totalBuffer = 0;
 
-  class LogWriter extends WritableWithPassThrough {
+  class LogWriter extends DelegateWritable {
     constructor(log) {
       super('logFileChangesWriter', // name for debug
-        fs.createWriteStream(log, { flags: 'a' }), // log file write stream (append mode)
+        createWriteStream(log, { flags: 'a' }), // log file write stream (append mode)
         () => {
           debug('finished streaming database changes');
           return ':changes_complete ' + lastSeq + '\n';
         }, // Function to write complete last chunk
-        mapBackupBatchToPendingLogLine // map the changes batch to a log line
+        mapBackupBatchToPendingLogLine, // map the changes batch to a log line
+        eeFn // postWrite function to emit the 'batch' event
       );
     }
   }
@@ -56,7 +59,7 @@ module.exports = function(dbClient, log, bufferSize = 500, tolerance = 600000) {
         // Extract the document ID from the change
         return { id: changeResultItem.id };
       } else {
-        throw new error.BackupError('SpoolChangesError', `Received invalid change: ${JSON.stringify(changeResultItem)}`);
+        throw new BackupError('SpoolChangesError', `Received invalid change: ${JSON.stringify(changeResultItem)}`);
       }
     });
   };
@@ -77,10 +80,10 @@ module.exports = function(dbClient, log, bufferSize = 500, tolerance = 600000) {
   };
 
   const changesFollower = new ChangesFollower(dbClient.service, changesParams, tolerance);
-  return [
+  return pipeline(
     changesFollower.startOneOff(), // stream of changes from the DB
     new BatchingStream(bufferSize), // group changes into bufferSize batches for mapping
     new MappingStream(mapChangesBatchToBackupBatch), // map a batch of ChangesResultItem to doc IDs
     new LogWriter(log)
-  ];
+  );
 };
