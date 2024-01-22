@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ const { BackupError } = require('./error.js');
 const logFileSummary = require('./logfilesummary.js');
 const logFileGetBatches = require('./logfilegetbatches.js');
 const spoolchanges = require('./spoolchanges.js');
-const { MappingStream, WritableWithPassThrough, DelegateWritable, SideEffect } = require('./transforms.js');
+const { MappingStream, WritableWithPassThrough, DelegateWritable } = require('./transforms.js');
 const allDocsGenerator = require('./allDocsGenerator.js');
 
 /**
@@ -63,27 +63,29 @@ module.exports = function(dbClient, options, targetStream, ee) {
         return [
           allDocsGenerator(dbClient, options)
         ];
-      } else if (options.resume) {
-      // Resuming a backup, get the log file summary
-      // (changes complete and remaining batch numbers to backup)
+      } else {
+        // Full backup, we'll return a stream over a completed changes log file
+        if (!options.resume) {
+          // Not resuming, start spooling changes to create a log file
+          await spoolchanges(dbClient, options.log, (backupBatch) => {
+            ee.emit('changes', backupBatch.batch);
+          }, options.bufferSize);
+        }
+        // At this point we should be changes complete because spooling has finished
+        // or because we resumed a backup that had already completed spooling (and
+        // potentially already downloaded some batches)
+        // Get the log file summary to validate changes complete and obtain the
+        // [remaining] batch numbers to backup
         const summary = await logFileSummary(options.log);
         if (!summary.changesComplete) {
-        // We can only resume if changes had finished spooling
+          // We must only backup if changes finished spooling
           throw new BackupError('IncompleteChangesInLogFile',
             'WARNING: Changes did not finish spooling, a backup can only be resumed if changes finished spooling. Start a new backup.');
         }
         return logFileGetBatches(options.log, summary.batches);
-      } else {
-      // Not resuming, start from spooling changes
-        return [
-          ...spoolchanges(dbClient, options.log, options.bufferSize),
-          new SideEffect((backupBatch) => {
-            ee.emit('changes', backupBatch.batch);
-          }) // Emit the user facing changes event for each batch of changes
-        ];
       }
     })
-  // Create a pipeline of the source streams and the backup mappings
+    // Create a pipeline of the source streams and the backup mappings
     .then((srcStreams) => {
       const backup = new Backup(dbClient);
       const postWrite = (backupBatch) => {
