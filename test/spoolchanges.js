@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@
 
 const assert = require('assert');
 const nock = require('nock');
-const fs = require('node:fs');
 const http = require('node:http');
-const { pipeline } = require('node:stream/promises');
 const { newClient } = require('../includes/request.js');
 const spoolchanges = require('../includes/spoolchanges.js');
-const { MappingStream } = require('../includes/transforms.js');
 const { convertError } = require('../includes/error.js');
 
 const host = 'localhost';
@@ -38,11 +35,9 @@ const seqSuffix = Buffer.alloc(124, 'abc123').toString('base64');
 
 function changes(bufferSize, tolerance) {
   // Make a pipeline of the spool changes source streams
-  return pipeline(...spoolchanges(dbClient, '/dev/null', bufferSize, tolerance),
-  // add a mapping to string and send to /dev/null as we don't care about the output
-    new MappingStream(JSON.stringify), fs.createWriteStream('/dev/null'))
+  return spoolchanges(dbClient, '/dev/null', () => {}, bufferSize, tolerance)
     // Historically spool changes itself could return an error, but
-    // now it returns streams to be made a pipeline elsewhere.
+    // now it returns a pipeline promise.
     // Error conversion takes place in the top level functions
     // so to facilitate unit testing we just do the same conversion here.
     .catch((e) => { throw convertError(e); });
