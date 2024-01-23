@@ -145,13 +145,13 @@ describe('Check spool changes', function() {
       it('should keep collecting changes', async function() {
       // This test validates that spooling will correctly
       // continue across multiple requests
-      // (4 batches of 100000 to be precise).
+      // (4 batches of 10000 to be precise).
       // This test might take up to 10 seconds
         this.timeout(10 * 1000);
 
         // Use full changes for this test
-        batchSize = 100000;
-        totalChanges = 400000;
+        batchSize = 10000;
+        totalChanges = 40000;
         fullResponse = true;
         setupTestSize();
         return changes(500).then(() => {
@@ -164,11 +164,13 @@ describe('Check spool changes', function() {
       // make anything bad happen.
       // This test might take up to 25 seconds
         this.timeout(25 * 1000);
-        // Use sparse changes for this test and a batch size of 1
+        // Use sparse changes for this test and a response batch size of 1
+        // This means that each mock changes request will return only 1 change.
         batchSize = 1;
         totalChanges = 2500;
         fullResponse = false;
         setupTestSize();
+        // We collect the changes in the standard batches of 500.
         return changes(500).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
@@ -179,14 +181,14 @@ describe('Check spool changes', function() {
       it('#slow should keep collecting changes (25M)', async function() {
       // This test might take up to 5 minutes
         this.timeout(5 * 60 * 1000);
-        // Note changes spooling uses a constant batch size, we are setting
-        // a test value here and setting the bufferSize to match when changes
-        // is called
-        batchSize = 100000;
+        // Note changes spooling uses a constant batch size of 10k.
+        // We set the same batch size for generated responses here.
+        batchSize = 10000;
         totalChanges = 25000000;
         fullResponse = false;
         setupTestSize();
-        // Use sparse changes for this test
+        // Use sparse changes for this test and collect in batches
+        // matching the response size of 10k.
         return changes(batchSize).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
@@ -195,14 +197,15 @@ describe('Check spool changes', function() {
       it('#slower should keep collecting changes (500M)', async function() {
       // This test might take up to 90 minutes
         this.timeout(90 * 60 * 1000);
-        // Note changes spooling uses a constant batch size, we are setting
-        // a test value here and setting the bufferSize to match when changes
-        // is called
-        batchSize = 1000000;
+        // Note changes spooling uses a constant batch size of 10k.
+        // We set a matching batch size here.
+        batchSize = 10000;
         totalChanges = 500000000;
         // Use full changes for this test to exercise load
         fullResponse = true;
         setupTestSize();
+        // We collect the changes in batches
+        // matching the response size of 10k.
         return changes(batchSize).then(() => {
           assert.equal(remainingMockCalls, 0, 'There should be the correct number of mock calls.');
         });
