@@ -144,8 +144,9 @@ def runTest(version, filter=null, testSuite='test') {
               // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
               sh """
                 set +x
-                export COUCH_BACKEND_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
-                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://localhost:3000' : ((testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_BACKEND_URL}')}"
+                export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
+                export COUCH_BACKEND_URL="${(testSuite == 'test-iam') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
+                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://localhost:3000' : '${COUCH_BACKEND_URL}'}"
                 set -x
                 ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
               """
