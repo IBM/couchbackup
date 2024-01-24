@@ -1,31 +1,15 @@
 {
   "name": "couchbackup-examples",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Examples of using CouchBackup as a library",
   "dependencies": {
-    "aws-sdk": "^2.39.0",
-    "tmp": "^0.0.31",
-    "verror": "^1.10.0",
-    "yargs": "^7.0.2"
+    "@cloudant/couchbackup": "^2.9.16",
+    "@aws-sdk/client-s3": "^3.499.0",
+    "@aws-sdk/credential-providers": "^3.499.0",
+    "@aws-sdk/lib-storage": "^3.499.0",
+    "verror": "^1.10.1",
+    "yargs": "^17.7.2"
   },
-  "devDependencies": {
-    "eslint": "^6.5.1",
-    "eslint-plugin-standard": "^3.0.1",
-    "eslint-plugin-import": "^2.2.0",
-    "eslint-plugin-node": "^4.2.2",
-    "eslint-plugin-promise": "^3.5.0",
-    "eslint-plugin-react": "^7.0.0",
-    "eslint-config-standard": "^10.2.1",
-    "eslint-config-semistandard": "^11.0.0",
-    "jsdoc": "^3.4.3",
-    "mocha": "^3.2.0",
-    "cloudant": "^1.7.1",
-    "uuid": "^3.0.1"
-  },
-  "scripts": {
-    "test": "eslint --ignore-path .gitignore . && mocha"
-  },
-  "author": "",
   "license": "Apache-2.0"
 }
 
