@@ -1,4 +1,4 @@
-// Copyright © 2017, 2018 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,14 +20,16 @@
 
 'use strict';
 
-const stream = require('stream');
-const fs = require('fs');
-const url = require('url');
+const { createReadStream, createWriteStream, mkdtempSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
+const url = require('node:url');
 
-const AWS = require('aws-sdk');
-const couchbackup = require('@cloudant/couchbackup');
+const { backup } = require('@cloudant/couchbackup');
+const { fromIni } = require('@aws-sdk/credential-providers');
+const { Upload } = require('@aws-sdk/lib-storage');
+const { HeadBucketCommand, S3Client } = require('@aws-sdk/client-s3');
 const debug = require('debug')('s3-backup');
-const tmp = require('tmp');
 const VError = require('verror').VError;
 
 /*
@@ -45,7 +47,7 @@ function main() {
       awsprofile: { nargs: 1, describe: 'The profile section to use in the ~/.aws/credentials file', default: 'default' }
     })
     .help('h').alias('h', 'help')
-    .epilog('Copyright (C) IBM 2017')
+    .epilog('Copyright (C) IBM 2017, 2024')
     .argv;
 
   const sourceUrl = argv.source;
@@ -53,8 +55,10 @@ function main() {
   const backupName = new url.URL(sourceUrl).pathname.split('/').filter(function(x) { return x; }).join('-');
   const backupKeyPrefix = `${argv.prefix}-${backupName}`;
 
-  const backupKey = `${backupKeyPrefix}-${new Date().toISOString()}`;
-  const backupTmpFile = tmp.fileSync();
+  const backupDate = Date.now();
+  const isoDate = new Date(backupDate).toISOString();
+  const backupKey = `${backupKeyPrefix}-${isoDate}`;
+  const backupTmpFile = join(mkdtempSync(join(tmpdir(), 'couchbackup-s3-backup-')), `${backupDate}`);
 
   const s3Endpoint = argv.s3url;
   const awsProfile = argv.awsprofile;
@@ -62,25 +66,23 @@ function main() {
   // Creds are from ~/.aws/credentials, environment etc. (see S3 docs).
   const awsOpts = {
     signatureVersion: 'v4',
-    credentials: new AWS.SharedIniFileCredentials({ profile: awsProfile })
+    credentials: fromIni({ profile: awsProfile })
   };
   if (typeof s3Endpoint !== 'undefined') {
-    awsOpts.endpoint = new AWS.Endpoint(s3Endpoint);
+    awsOpts.endpoint = s3Endpoint;
   }
-  const s3 = new AWS.S3(awsOpts);
+  const s3 = new S3Client(awsOpts);
 
   debug(`Creating a new backup of ${s(sourceUrl)} at ${backupBucket}/${backupKey}...`);
   bucketAccessible(s3, backupBucket)
     .then(() => {
-      return createBackupFile(sourceUrl, backupTmpFile.name);
+      return createBackupFile(sourceUrl, backupTmpFile);
     })
     .then(() => {
-      return uploadNewBackup(s3, backupTmpFile.name, backupBucket, backupKey);
+      return uploadNewBackup(s3, backupTmpFile, backupBucket, backupKey);
     })
     .then(() => {
       debug('Backup successful!');
-      backupTmpFile.removeCallback();
-      debug('done.');
     })
     .catch((reason) => {
       debug(`Error: ${reason}`);
@@ -96,18 +98,9 @@ function main() {
  * @returns Promise
  */
 function bucketAccessible(s3, bucketName) {
-  return new Promise(function(resolve, reject) {
-    const params = {
-      Bucket: bucketName
-    };
-    s3.headBucket(params, function(err, data) {
-      if (err) {
-        reject(new VError(err, 'S3 bucket not accessible'));
-      } else {
-        resolve();
-      }
-    });
-  });
+  return s3.send(new HeadBucketCommand({
+    Bucket: bucketName
+  })).catch(e => { throw new VError(e, 'S3 bucket not accessible'); });
 }
 
 /**
@@ -119,18 +112,27 @@ function bucketAccessible(s3, bucketName) {
  */
 function createBackupFile(sourceUrl, backupTmpFilePath) {
   return new Promise((resolve, reject) => {
-    couchbackup.backup(
+    backup(
       sourceUrl,
-      fs.createWriteStream(backupTmpFilePath),
-      (err) => {
+      createWriteStream(backupTmpFilePath),
+      (err, done) => {
         if (err) {
-          return reject(new VError(err, 'CouchBackup process failed'));
+          reject(err);
+        } else {
+          resolve(done);
         }
-        debug('couchbackup to file done; uploading to S3');
-        resolve('creating backup file complete');
       }
-    );
-  });
+    )
+      .on('changes', batch => debug('Couchbackup changes batch: ', batch))
+      .on('written', progress => debug('Fetched batch:', progress.batch, 'Total document revisions written:', progress.total, 'Time:', progress.time));
+  })
+    .then((done) => {
+      debug(`couchbackup to file done; backed up ${done.total}`);
+      debug('Ready to upload to S3');
+    })
+    .catch((err) => {
+      throw new VError(err, 'CouchBackup process failed');
+    });
 }
 
 /**
@@ -143,38 +145,37 @@ function createBackupFile(sourceUrl, backupTmpFilePath) {
  * @returns Promise
  */
 function uploadNewBackup(s3, backupTmpFilePath, bucket, key) {
-  return new Promise((resolve, reject) => {
-    debug(`Uploading from ${backupTmpFilePath} to ${bucket}/${key}`);
-
-    function uploadFromStream(s3, bucket, key) {
-      const pass = new stream.PassThrough();
-
-      const params = {
+  debug(`Uploading from ${backupTmpFilePath} to ${bucket}/${key}`);
+  const inputStream = createReadStream(backupTmpFilePath);
+  try {
+    const upload = new Upload({
+      client: s3,
+      params: {
         Bucket: bucket,
         Key: key,
-        Body: pass
-      };
-      s3.upload(params, function(err, data) {
-        debug('S3 upload done');
-        if (err) {
-          debug(err);
-          reject(new VError(err, 'Upload failed'));
-          return;
-        }
+        Body: inputStream
+      },
+      queueSize: 5, // allow 5 parts at a time
+      partSize: 1024 * 1024 * 64 // 64 MB part size
+    });
+    upload.on('httpUploadProgress', (progress) => {
+      debug(`S3 upload progress: ${JSON.stringify(progress)}`);
+    });
+    // Return a promise for the completed or aborted upload
+    return upload.done().finally(() => {
+      debug('S3 upload done');
+    })
+      .then(() => {
         debug('Upload succeeded');
-        debug(data);
-        resolve();
-      }).httpUploadProgress = (progress) => {
-        debug(`S3 upload progress: ${progress}`);
-      };
-
-      return pass;
-    }
-
-    const inputStream = fs.createReadStream(backupTmpFilePath);
-    const s3Stream = uploadFromStream(s3, bucket, key);
-    inputStream.pipe(s3Stream);
-  });
+      })
+      .catch(err => {
+        debug(err);
+        throw new VError(err, 'Upload failed');
+      });
+  } catch (err) {
+    debug(err);
+    return Promise.reject(new VError(err, 'Upload could not start'));
+  }
 }
 
 /**
