@@ -56,10 +56,8 @@ class Liner extends Duplex {
       terminal: false, // expect to read from files
       crlfDelay: Infinity // couchbackup files should only use "/n" EOL, but allow for all "/r/n" to be single EOL
     }).on('line', (line) => {
-      // For each line received increment the line number
       // Wrap the line in the object format and store it an array waiting to be pushed
       // when downstream is ready to receive.
-      this.lineNumber++;
       const bufferedLines = this.lines.push(this.wrapLine(line));
       this.log(`Liner processed line ${this.lineNumber}. Buffered lines available: ${bufferedLines}.`);
       this.pushAvailable();
@@ -79,7 +77,8 @@ class Liner extends Duplex {
    * @returns {object} {"lineNumber: #, line"}
    */
   wrapLine(line) {
-    return { lineNumber: this.lineNumber, line };
+    // For each line wrapped, increment the line number
+    return { lineNumber: ++this.lineNumber, line };
   }
 
   /**
