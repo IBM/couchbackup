@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@
 
 const assert = require('node:assert');
 const { once } = require('node:events');
-const fs = require('node:fs');
+const { createReadStream, createWriteStream, readSync, watch } = require('node:fs');
+const { open } = require('node:fs/promises');
 const { basename, dirname } = require('node:path');
 const { PassThrough } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
@@ -99,7 +100,7 @@ async function testBackup(params, databaseName, outputStream) {
       // Once the log file appears set up the tail.
       // Use an AbortController to shutdown the directory watch as soon as we've triggered.
       const ac = new AbortController();
-      fs.watch(dirname(params.opts.log), { persistent: false, signal: ac.signal },
+      watch(dirname(params.opts.log), { persistent: false, signal: ac.signal },
         (eventType, filename) => {
           if (eventType === 'rename' && basename(params.opts.log) === filename) {
             // Use tail to watch the log file for a batch to be completed then abort the backup
@@ -312,7 +313,7 @@ async function testBackupAndRestoreViaFile(params, srcDb, backupFile, targetDb) 
 
 async function testBackupToFile(params, srcDb, backupFile) {
   // Open the file for appending if this is a resume
-  const output = fs.createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
+  const output = createWriteStream(backupFile, { flags: (params.opts && params.opts.resume) ? 'a' : 'w' });
   return once(output, 'open')
     .then(() => {
       return testBackup(params, srcDb, output);
@@ -320,7 +321,7 @@ async function testBackupToFile(params, srcDb, backupFile) {
 }
 
 async function testRestoreFromFile(params, backupFile, targetDb) {
-  const input = fs.createReadStream(backupFile);
+  const input = createReadStream(backupFile);
   return once(input, 'open')
     .then(() => {
       return testRestore(params, input, targetDb);
@@ -380,12 +381,45 @@ function sortByIdThenRev(o1, o2) {
   return 0;
 }
 
-function readSortAndDeepEqual(actualContentPath, expectedContentPath) {
-  const backupContent = JSON.parse(fs.readFileSync(actualContentPath, 'utf8'));
-  const expectedContent = JSON.parse(fs.readFileSync(expectedContentPath, 'utf8'));
-  // Array order of the docs is important for equality, but not for backup
-  backupContent.sort(sortByIdThenRev);
-  expectedContent.sort(sortByIdThenRev);
+async function backupFileCompare(actualContentPath, expectedContentPath) {
+  let actualFile;
+  let expectedFile;
+  try {
+    actualFile = await open(actualContentPath, 'r');
+    expectedFile = await open(expectedContentPath, 'r');
+    // We only do this comparison with small files, so putting everything in memory is OK
+    const actualLines = [];
+    for await (const actualLine of actualFile.readLines({ encoding: 'utf-8' })) {
+      actualLines.push(actualLine);
+    }
+    for await (const expectedLine of expectedFile.readLines({ encoding: 'utf-8' })) {
+      const actualLine = actualLines.shift();
+      // Check we have an actual line to compare
+      assert.ok(actualLine, 'The actual backup had fewer lines than expected.');
+      readSortAndDeepEqual(actualLine, expectedLine);
+    }
+    // Check we compared all the actual lines
+    assert.ok(actualLines.length === 0, 'The actual backup had more lines than expected.');
+  } finally {
+    await actualFile?.close();
+    await expectedFile?.close();
+  }
+}
+
+function readSortAndDeepEqual(actutalJsonToParse, expectedJsonToParse) {
+  const backupContent = JSON.parse(actutalJsonToParse);
+  const expectedContent = JSON.parse(expectedJsonToParse);
+  if (Array.isArray(backupContent) && Array.isArray(expectedContent)) {
+    // Array order of the docs is important for equality, but not for backup
+    backupContent.sort(sortByIdThenRev);
+    expectedContent.sort(sortByIdThenRev);
+  } else {
+    // File metadata
+    if (backupContent.version && expectedContent.version) {
+      delete backupContent.version;
+      delete expectedContent.version;
+    }
+  }
   // Assert that the backup matches the expected
   assert.deepStrictEqual(backupContent, expectedContent);
 }
@@ -398,28 +432,36 @@ function setTimeout(context, timeout) {
   context.timeout(timeout * 1000);
 }
 
-function assertGzipFile(path) {
+async function assertGzipFile(path) {
   // 1f 8b is the gzip magic number
   const expectedBytes = Buffer.from([0x1f, 0x8b]);
   const buffer = Buffer.alloc(2);
-  const fd = fs.openSync(path, 'r');
-  // Read the first two bytes
-  fs.readSync(fd, buffer, 0, 2, 0);
-  fs.closeSync(fd);
-  // Assert the magic number corresponds to gz extension
-  assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
+  let fileHandle;
+  try {
+    fileHandle = await open(path, 'r');
+    // Read the first two bytes
+    readSync(fileHandle.fd, buffer, 0, 2, 0);
+    // Assert the magic number corresponds to gz extension
+    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be gz compressed.');
+  } finally {
+    await fileHandle?.close();
+  }
 }
 
-function assertEncryptedFile(path) {
+async function assertEncryptedFile(path) {
   // Openssl encrypted files start with Salted
   const expectedBytes = Buffer.from('Salted');
   const buffer = Buffer.alloc(6);
-  const fd = fs.openSync(path, 'r');
-  // Read the first six bytes
-  fs.readSync(fd, buffer, 0, 6, 0);
-  fs.closeSync(fd);
-  // Assert first 6 characters of the file are "Salted"
-  assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
+  let fileHandle;
+  try {
+    fileHandle = await open(path, 'r');
+    // Read the first six bytes
+    readSync(fileHandle.fd, buffer, 0, 6, 0);
+    // Assert first 6 characters of the file are "Salted"
+    assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
+  } finally {
+    await fileHandle?.close();
+  }
 }
 
 function assertWrittenFewerThan(total, number) {
@@ -441,7 +483,7 @@ module.exports = {
   p: params,
   setTimeout,
   dbCompare,
-  readSortAndDeepEqual,
+  backupFileCompare,
   assertGzipFile,
   assertEncryptedFile,
   testBackup,

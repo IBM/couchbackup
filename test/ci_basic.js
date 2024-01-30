@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ const u = require('./citestutils.js');
         .then(() => {
           return u.testBackup(params, 'animaldb', output);
         }).then(() => {
-          return u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected.json');
+          return u.backupFileCompare(actualBackup, './test/fixtures/animaldb_expected.json');
         });
     });
 
@@ -58,7 +58,7 @@ const u = require('./citestutils.js');
         .then(() => {
           return u.testBackup(p, 'animaldb', output);
         }).then(() => {
-          return u.readSortAndDeepEqual(actualBackup, './test/fixtures/animaldb_expected_shallow.json');
+          return u.backupFileCompare(actualBackup, './test/fixtures/animaldb_expected_shallow.json');
         });
     });
 
