@@ -236,13 +236,8 @@ async function testRestore(params, inputStream, databaseName) {
       })
       .catch((err) => {
         testLogger(`Handling API restore error event ${JSON.stringify(err)}`);
-        if (params.expectedRestoreErrorRecoverable) {
-          testLogger(`Expecting restore error ${params.expectedRestoreErrorRecoverable.name}`);
-          assert.strictEqual(err.name, params.expectedRestoreErrorRecoverable.name, 'The restore should receive the expected recoverable error.');
-        } else {
-          testLogger(`API restore will reject by throwing error event ${JSON.stringify(err)}`);
-          return Promise.reject(err);
-        }
+        testLogger(`API restore will reject by throwing error event ${JSON.stringify(err)}`);
+        return Promise.reject(err);
       });
     restorePromise = Promise.all([restoreCallbackPromise, restoreFinshedPromise]);
   } else {
