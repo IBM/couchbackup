@@ -171,19 +171,19 @@ async function testBackup(params, databaseName, outputStream) {
     pipelineStreams.push(outputStream);
 
     // Create the promisified pipeline and add it to the array of promises we'll wait for
-    promises.unshift(pipeline(pipelineStreams));
+    promises.push(pipeline(pipelineStreams));
   }
 
-  // Wait for the promises and then assert
-  return Promise.all(promises)
-    .then(() => testLogger('All backup promises resolved.'))
-    .then(() => {
-      if (params.expectedBackupError) {
-        return Promise.reject(new Error('Backup passed when it should have failed.'));
-      }
-    })
-    .catch((err) => {
-      if (params.expectedBackupError || params.abort) {
+  if (params.expectedBackupError || params.abort) {
+    // Expected errors assert the backupPromise [rejection]
+    return backupPromise
+      .then(() => {
+        if (params.expectedBackupError) {
+          return Promise.reject(new Error('Backup passed when it should have failed.'));
+        }
+      })
+      .catch((err) => {
+        testLogger(`Backup promise rejected with ${err}.`);
         if (params.useApi) {
           assert.strictEqual(err.name, params.expectedBackupError.name, 'The backup should receive the expected error.');
         } else {
@@ -197,10 +197,16 @@ async function testBackup(params, databaseName, outputStream) {
             assert.strictEqual(err.code, params.expectedBackupError.code, `The backup exited with unexpected code ${err.code} and signal ${err.signal}.`);
           }
         }
-      } else {
-        return Promise.reject(err);
-      }
-    });
+      });
+  } else {
+    // Success case expect everything to be clean
+    return Promise.all(promises)
+      .then(() => {
+        testLogger('All backup promises resolved.');
+        return backupPromise;
+      })
+      .then(summary => testLogger(`Backup promise resolved with ${summary}.`));
+  }
 }
 
 async function testRestore(params, inputStream, databaseName) {
@@ -276,27 +282,31 @@ async function testRestore(params, inputStream, databaseName) {
   // Create the promisified pipeline and add it to the array of promises we'll wait for
   promises.unshift(pipeline(pipelineStreams));
 
-  // Wait for the all the promises to settle and then assert based on the process promise
-  return Promise.allSettled(promises)
-    .then(() => { return restorePromise; })
-    .then((summary) => {
-      testLogger(`Restore promise resolved with ${summary}.`);
-      if (params.expectedRestoreError) {
-        return Promise.reject(new Error('Restore passed when it should have failed.'));
-      }
-    })
-    .catch((err) => {
-      testLogger(`Restore promise rejected with ${err}.`);
-      if (params.expectedRestoreError) {
+  if (params.expectedRestoreError) {
+    // Expected errors, assert the restorePromise [rejection]
+    return restorePromise
+      .then(() => {
+        if (params.expectedBackupError) {
+          return Promise.reject(new Error('Restore passed when it should have failed.'));
+        }
+      })
+      .catch((err) => {
+        testLogger(`Restore promise rejected with ${err}.`);
         if (params.useApi) {
           assert.strictEqual(err.name, params.expectedRestoreError.name, 'The restore should receive the expected error.');
         } else {
           assert.strictEqual(err.code, params.expectedRestoreError.code, `The restore exited with unexpected code ${err.code} and signal ${err.signal}.`);
         }
-      } else {
-        return Promise.reject(err);
-      }
-    });
+      });
+  } else {
+    // Success case expect everything to be clean
+    return Promise.all(promises)
+      .then(() => {
+        testLogger('All restore promises resolved.');
+        return restorePromise;
+      })
+      .then(summary => testLogger(`Restore promise resolved with ${summary}.`));
+  }
 }
 
 // Serial backup and restore via a file on disk
