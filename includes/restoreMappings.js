@@ -17,8 +17,17 @@ const { BackupError } = require('./error.js');
 const debug = require('debug');
 
 const mappingDebug = debug('couchbackup:mappings');
+const marker = '@cloudant/couchbackup:resume';
+const RESUME_COMMENT = `${JSON.stringify({ marker })}`; // Special marker for resumes
 
 class Restore {
+  // For compatibility with old versions ignore all broken JSON by default.
+  // (Old versions did not have a distinguishable resume marker).
+  // If we are restoring a backup file from a newer version we'll read the metadata
+  // and change the flag.
+  suppressAllBrokenJSONErrors = true;
+  backupMode;
+
   constructor(dbClient) {
     this.dbClient = dbClient;
     this.batchCounter = 0;
@@ -31,28 +40,46 @@ class Restore {
    * @returns {array} array of documents parsed from the line or an empty array for invalid lines
    */
   backupLineToDocsArray = (backupLine) => {
-    if (backupLine && backupLine.line !== '') {
+    if (backupLine && backupLine.line !== '' && backupLine.line !== RESUME_COMMENT) {
       // see if it parses as JSON
-      let arr;
+      let lineAsJson;
       try {
-        arr = JSON.parse(backupLine.line);
+        lineAsJson = JSON.parse(backupLine.line);
       } catch (err) {
-        // If the line can't be parsed as JSON it is most likely an incomplete write.
-        // If the backup was resumed we can ignore the error because the line will be repeated.
-        const parseError = new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - cannot parse as JSON`);
-        // If the backup wasn't resumed then it is invalid and we should error, but we have no way to detect this atm.
-        mappingDebug(`${parseError}`);
-        // Return an empty array if there was an ignorable line
-        return [];
+        mappingDebug(`Invalid JSON on line ${backupLine.lineNumber} of backup file.`);
+        if (this.suppressAllBrokenJSONErrors) {
+          // The backup file comes from an older version of couchbackup that predates RESUME_COMMENT.
+          // For compatibility ignore the broken JSON line assuming it was part of a resume.
+          mappingDebug(`Ignoring invalid JSON on line ${backupLine.lineNumber} of backup file as it was written by couchbackup version < 2.10.0 and could be a valid resume point.`);
+          return [];
+        } else if (this.backupMode === 'full' && backupLine.line.slice(-RESUME_COMMENT.length) === RESUME_COMMENT) {
+          mappingDebug(`Ignoring invalid JSON on line ${backupLine.lineNumber} of full mode backup file as it was resumed.`);
+          return [];
+        } else {
+          // If the backup wasn't resumed and we aren't ignoring errors then it is invalid and we should error
+          throw new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - cannot parse as JSON`);
+        }
       }
       // if it's an array
-      if (arr && Array.isArray(arr)) {
-        return arr;
+      if (lineAsJson && Array.isArray(lineAsJson)) {
+        return lineAsJson;
+      } else if (backupLine.lineNumber === 1 && lineAsJson.name && lineAsJson.version && lineAsJson.mode) {
+        // First line is metadata.
+        mappingDebug(`Parsed backup file metadata ${lineAsJson.name} ${lineAsJson.version} ${lineAsJson.mode}.`);
+        // This identifies a version of 2.10.0 or newer that wrote the backup file.
+        // Set the mode that was used for the backup file.
+        this.backupMode = lineAsJson.mode;
+        // For newer versions we don't need to ignore all broken JSON, only ones that
+        // were associated wiht a resume, so unset the ignore flag.
+        this.suppressAllBrokenJSONErrors = false;
+        // Later we may add other version/feature specific toggles here.
+      } else if (lineAsJson.marker && lineAsJson.marker === marker) {
+        mappingDebug(`Resume marker on line  ${backupLine.lineNumber} of backup file.`);
       } else {
-        throw new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - not an array`);
+        throw new BackupError('BackupFileJsonError', `Error on line ${backupLine.lineNumber} of backup file - not an array or expected metadata`);
       }
     }
-    // Return an empty array if there was a blank line
+    // Return an empty array if there was a blank line (including a line of only the resume marker)
     return [];
   };
 
@@ -109,5 +136,6 @@ class Restore {
 }
 
 module.exports = {
-  Restore
+  Restore,
+  RESUME_COMMENT
 };

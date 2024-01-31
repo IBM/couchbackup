@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,15 +34,37 @@ const u = require('./citestutils.js');
       });
     });
 
-    it('should restore corrupted animaldb to a database correctly', async function() {
+    it('should restore resumed corrupted animaldb to a database correctly', async function() {
+      // Allow up to 60 s to restore and compare (again it should be faster)!
+      u.setTimeout(this, 60);
+      const input = fs.createReadStream('./test/fixtures/animaldb_corrupted_resume.json');
+      const dbName = this.dbName;
+      return once(input, 'open')
+        .then(() => {
+          return u.testRestore(params, input, dbName);
+        }).then(() => {
+          return u.dbCompare('animaldb', dbName);
+        });
+    });
+
+    it('should throw error for restore of corrupted animaldb to a database', async function() {
       // Allow up to 60 s to restore and compare (again it should be faster)!
       u.setTimeout(this, 60);
       const input = fs.createReadStream('./test/fixtures/animaldb_corrupted.json');
       const dbName = this.dbName;
-      const p = u.p(params, { expectedRestoreErrorRecoverable: { name: 'BackupFileJsonError' } });
+      const p = u.p(params, { expectedRestoreError: { name: 'BackupFileJsonError', code: 1 } });
+      return once(input, 'open')
+        .then(() => u.testRestore(p, input, dbName));
+    });
+
+    it('should restore older version of corrupted animaldb to a database correctly', async function() {
+      // Allow up to 60 s to restore and compare (again it should be faster)!
+      u.setTimeout(this, 60);
+      const input = fs.createReadStream('./test/fixtures/animaldb_corrupted_old.json');
+      const dbName = this.dbName;
       return once(input, 'open')
         .then(() => {
-          return u.testRestore(p, input, dbName);
+          return u.testRestore(params, input, dbName);
         }).then(() => {
           return u.dbCompare('animaldb', dbName);
         });
