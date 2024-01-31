@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,8 +31,22 @@ const u = require('./citestutils.js');
       return once(output, 'open')
         .then(() => {
           return u.testBackup(p, 'animaldb', output);
-        }).then(() => {
+        })
+        .then(() => {
           return u.assertGzipFile(compressedBackup);
+        });
+    });
+
+    it('should restore animaldb from a compressed file', async function() {
+      // Allow up to 60 s for backup of animaldb
+      u.setTimeout(this, 60);
+      const input = fs.createReadStream('./test/fixtures/animaldb_expected.json.gz');
+      return once(input, 'open')
+        .then(() => {
+          return u.testRestore(p, input, this.dbName);
+        })
+        .then(() => {
+          return u.dbCompare('animaldb', this.dbName);
         });
     });
 
