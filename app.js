@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,15 +19,17 @@
  * @see module:couchbackup
  */
 
+const events = require('node:events');
+const fs = require('node:fs');
+const URL = require('node:url').URL;
 const backup = require('./includes/backup.js');
 const defaults = require('./includes/config.js').apiDefaults;
 const { convertError, BackupError, OptionError } = require('./includes/error.js');
 const { newClient } = require('./includes/request.js');
 const restoreInternal = require('./includes/restore.js');
 const debug = require('debug')('couchbackup:app');
-const events = require('events');
-const fs = require('fs');
-const URL = require('url').URL;
+const pkg = require('./package.json');
+const { RESUME_COMMENT } = require('./includes/restoreMappings.js');
 
 /**
  * Test for a positive, safe integer.
@@ -310,16 +312,31 @@ module.exports = {
         return newClient(srcUrl, opts);
       })
       // Validate the DB exists, before proceeding to backup
-      .then((backupDbClient) => validateBackupDb(backupDbClient))
-      .then((backupDbClient) => {
-        // If resuming write a newline as it's possible one would be missing from
-        // an interruption of the previous backup. If the backup was clean this
-        // will cause an empty line that will be gracefully handled by the restore.
-        if (opts.mode === 'full' && opts.resume) { // resume is valid in full mode only
-          targetStream.write('\n');
+      .then(backupDbClient => validateBackupDb(backupDbClient))
+      .then(backupDbClient => {
+        // Write either a file header or a resume marker.
+        let metadataToWrite;
+        if (opts.mode === 'full' && opts.resume) {
+          // resume is valid in full mode only
+          // Write the resume marker and a newline as it's possible one would be missing from
+          // an interruption of the previous backup. If the backup was clean this
+          // will cause an empty line that will be gracefully handled by the restore.
+          debug('Will write resume marker.');
+          metadataToWrite = `${RESUME_COMMENT}\n`;
+        } else {
+          // Write a file header including the name, version and mode
+          debug('Will write backup file header.');
+          metadataToWrite = `${JSON.stringify({ name: pkg.name, version: pkg.version, mode: opts.mode })}\n`;
         }
-        return backup(backupDbClient, opts, targetStream, ee);
+        return new Promise((resolve, reject) => {
+          targetStream.write(metadataToWrite, 'utf-8', (err) => {
+            if (err) { reject(err); } else { resolve(backupDbClient); }
+          });
+        });
       })
+      .then((backupDbClient) =>
+        backup(backupDbClient, opts, targetStream, ee)
+      )
       .then((total) => {
         debug(`Finished backup with total doc count of ${total}`);
         ee.emit('finished', total);
