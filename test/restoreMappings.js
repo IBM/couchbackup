@@ -20,7 +20,7 @@ const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { Liner } = require('../includes/liner.js');
 const { newClient } = require('../includes/request.js');
-const { Restore } = require('../includes/restoreMappings.js');
+const { Restore, RESUME_COMMENT } = require('../includes/restoreMappings.js');
 const { MappingStream } = require('../includes/transforms.js');
 const { convertError } = require('../includes/error.js');
 
@@ -46,11 +46,19 @@ describe('#unit restore mappings', function() {
   }
 
   describe('backupLineToDocsArray', function() {
-    // Use a liner to make the line objects with line numbers
-    const liner = new Liner();
+    let liner;
+    let restore;
 
-    // The class under test
-    const restore = new Restore(null);
+    const metadata = JSON.stringify({ name: 'couchbackup', version: '2.10.0', mode: 'full' });
+
+    // Use a fresh liner and restore before each test
+    beforeEach('setup', function() {
+      // Use a liner to make the line objects with line numbers
+      liner = new Liner();
+
+      // The class under test
+      restore = new Restore(null);
+    });
 
     function makeTestLine(testArray) {
       return liner.wrapLine(JSON.stringify(testArray));
@@ -69,7 +77,7 @@ describe('#unit restore mappings', function() {
       assert.deepStrictEqual(output, testDocs);
     });
 
-    it('should not error for a corrupted line', async function() {
+    it('should ignore for a corrupted line (compatibility mode)', async function() {
       // truncate the line for invalid JSON
       const line = liner.wrapLine(JSON.stringify(testDocs[0]).slice(0, -15));
       const result = restore.backupLineToDocsArray(line);
@@ -77,8 +85,59 @@ describe('#unit restore mappings', function() {
       assert.deepStrictEqual(result, []);
     });
 
+    it('should handle a metadata line', async function() {
+      // add a metadata line
+      const metaResult = restore.backupLineToDocsArray(liner.wrapLine(metadata));
+      // For a metadata line we expect an empty array
+      assert.deepStrictEqual(metaResult, []);
+      // Assert the metadata that should be set on the restore
+      assert.strictEqual(restore.backupMode, 'full');
+      assert.strictEqual(restore.suppressAllBrokenJSONErrors, false);
+    });
+
+    it('should error for a metadata line that is not the first line', async function() {
+      // First line is a backup line
+      restore.backupLineToDocsArray(liner.wrapLine(JSON.stringify(testDocs[0])));
+      // next line is a metadata line
+      assert.throws(() => {
+        restore.backupLineToDocsArray(liner.wrapLine(metadata));
+      }, /BackupFileJsonError: Error on line 2 of backup file - not an array or expected metadata/);
+    });
+
+    it('should error for a corrupted line', async function() {
+      // add a metadata line
+      const metaResult = restore.backupLineToDocsArray(liner.wrapLine(metadata));
+      // For a metadata line we expect an empty array
+      assert.deepStrictEqual(metaResult, []);
+      // truncate the line for invalid JSON
+      const line = liner.wrapLine(JSON.stringify(testDocs[0]).slice(0, -15));
+      // Since we passed metadata the corrupt line should error
+      assert.throws(() => {
+        restore.backupLineToDocsArray(line);
+      }, /BackupFileJsonError: Error on line 2 of backup file - cannot parse as JSON/);
+    });
+
     it('should handle a blank line', async function() {
-      const result = restore.backupLineToDocsArray({ lineNumber: 1234, line: '' });
+      const result = restore.backupLineToDocsArray(liner.wrapLine(''));
+      // For a blank line we expect an empty array
+      assert.deepStrictEqual(result, []);
+    });
+
+    it('should handle a line with no newline and a resume comment', async function() {
+      // This is actually a broken line becase there is no \n between the backup data and the restore marker
+      const result = restore.backupLineToDocsArray(liner.wrapLine(`${JSON.stringify(testDocs[0])}${RESUME_COMMENT}`));
+      // For an ignored line we expect an empty array
+      assert.deepStrictEqual(result, []);
+    });
+
+    it('should handle a corrupted line with resume comment', async function() {
+      const result = restore.backupLineToDocsArray(liner.wrapLine(`${JSON.stringify(testDocs[0]).slice(0, -15)}${RESUME_COMMENT}`));
+      // For a blank line we expect an empty array
+      assert.deepStrictEqual(result, []);
+    });
+
+    it('should handle line containing only resume comment', async function() {
+      const result = restore.backupLineToDocsArray(liner.wrapLine(RESUME_COMMENT));
       // For a blank line we expect an empty array
       assert.deepStrictEqual(result, []);
     });
@@ -87,7 +146,7 @@ describe('#unit restore mappings', function() {
       const line = liner.wrapLine(JSON.stringify({ foo: 'bar' }));
       // restore.backupLineToDocsArray(line);
       assert.throws(() => { restore.backupLineToDocsArray(line); },
-        { name: 'BackupFileJsonError', message: 'Error on line 0 of backup file - not an array' });
+        { name: 'BackupFileJsonError', message: 'Error on line 1 of backup file - not an array or expected metadata' });
     });
   });
 
