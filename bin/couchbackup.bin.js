@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -71,8 +71,6 @@ try {
     backupBatchDebug('Total batches received:', batch + 1);
   }).on('written', function(obj) {
     backupBatchDebug('Written batch ID:', obj.batch, 'Total document revisions written:', obj.total, 'Time:', obj.time);
-  }).on('error', function(e) {
-    backupDebug('ERROR', e);
   }).on('finished', function(obj) {
     backupDebug('Finished - Total document revisions written:', obj.total);
   });
