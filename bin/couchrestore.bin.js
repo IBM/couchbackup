@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,8 +50,6 @@ try {
     error.terminationCallback
   ).on('restored', function(obj) {
     restoreBatchDebug('Restored batch ID:', obj.batch, 'Total document revisions restored:', obj.total, 'Time:', obj.time);
-  }).on('error', function(e) {
-    restoreDebug('ERROR', e);
   }).on('finished', function(obj) {
     restoreDebug('finished', obj);
   });
