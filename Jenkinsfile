@@ -237,6 +237,11 @@ pipeline {
         }
       }
     }
+    stage('Log check') {
+      steps {
+        findText regexp: '.*EPIPE|DEP0137.*', alsoCheckConsoleOutput: true, unstableIfFound: true
+      }
+    }
     stage('SonarQube analysis') {
       when {
         beforeAgent true
