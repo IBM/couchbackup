@@ -1,3 +1,25 @@
+# 2.10.0 (unreleased)
+- [NEW] Included `time` in `restored` API events and CLI output.
+- [NEW] Added metadata to backup files.
+- [FIXED] Double output of errors to stderr when using CLI.
+- [FIXED] Error for broken JSON in backup files.
+- [FIXED] Wrong error code used for incomplete changes item.
+- [FIXED] Error if the log file already exists when starting a new backup.
+- [REMOVED] Dependency on `async` module.
+- [REMOVED] Dependency on `tmp` module.
+- [REMOVED] Unused request handling code.
+- [IMPROVED] Increased tolerance to server and network errors when spooling changes (via cloudant-node-sdk changes follower).
+- [IMPROVED] Avoided double parsing of JSON batches when resuming a backup.
+- [IMPROVED] Resumed backups identification of incomplete backup lines during restore.
+- [IMPROVED] Added line numbers to errors from reading backup or log files.
+- [IMPROVED] Replace custom liner with Node built-in readline.
+- [IMPROVED] Added warning that `--buffer-size` has no effect with `--resume`.
+- [IMPROVED] Documentation about compatibility.
+- [IMPROVED] Resolved linter warnings.
+- [IMPROVED] Internal enhancements with promises and pipelines replacing callbacks and event emitters.
+- [IMPROVED] Added some new test cases and improved test stability.
+- [NOTE] Versions older than 2.10.0 cannot restore backups created with 2.10.0. See [compatibility note](README.md#compatibility-note-1).
+
 # 2.9.16 (2024-01-10)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.8.2`.
 
