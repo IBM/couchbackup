@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ describe('Write error tests', function() {
     // try to do backup and check err was set in callback
     return assert.rejects(u.testBackup(params, 'animaldb', backupStream), { name: 'TypeError', message: 'dest.write is not a function' })
       .finally(async() => {
+        // Destroy the read stream we didn't use
+        backupStream.destroy();
         // cleanup temp dir
         await rm(dirname, { recursive: true });
       });
