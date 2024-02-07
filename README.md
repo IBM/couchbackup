@@ -118,6 +118,10 @@ You may also specify the name of the output file, rather than directing the back
 couchbackup --db animaldb --log animaldb.log --resume true --output animaldb.txt
 ```
 
+### Compatibility note
+
+When using `--resume` use the same version of couchbackup that started the backup.
+
 ## Restore
 
 Now that we have our backup text file, we can restore it to a new, empty, existing database using the `couchrestore`:
@@ -131,6 +135,12 @@ or specifying the database name on the command-line:
 ```sh
 cat animaldb.txt | couchrestore --db animaldb2
 ```
+
+### Compatibility note
+
+**Do not use an older version of couchbackup to restore a backup created with a newer version.**
+
+Newer versions of couchbackup can restore backups created by older versions within the same major version.
 
 ## Compressed backups
 
