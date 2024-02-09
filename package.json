@@ -46,7 +46,7 @@
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
     "http-proxy": "1.18.1",
-    "mocha": "10.2.0",
+    "mocha": "10.3.0",
     "nock": "13.5.1",
     "tail": "2.2.6",
     "uuid": "9.0.1",
