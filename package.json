@@ -3,7 +3,10 @@
   "version": "2.9.17-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
   "homepage": "https://github.com/IBM/couchbackup",
-  "repository": "https://github.com/IBM/couchbackup.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IBM/couchbackup.git"
+  },
   "keywords": [
     "CouchDB",
     "Cloudant",
