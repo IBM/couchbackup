@@ -170,6 +170,13 @@ pipeline {
   }
   stages {
     stage('Build') {
+      when {
+        beforeAgent true
+        // Skip when building tags as we just want to publish then
+        not {
+          buildingTag()
+        }
+      }
       steps {
         withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
@@ -182,6 +189,13 @@ pipeline {
       }
     }
     stage('QA') {
+      when {
+        beforeAgent true
+        // Skip when building tags as we just want to publish then
+        not {
+          buildingTag()
+        }
+      }
       parallel {
         // Stages that run on LTS version from full agent default container
         stage('Lint') {
@@ -244,6 +258,9 @@ pipeline {
           not {
             expression { env.BRANCH_NAME.startsWith('dependabot/') }
           }
+          not {
+            buildingTag()
+          }
         }
       }
       steps {
@@ -259,30 +276,59 @@ pipeline {
     stage('Publish') {
       when {
         beforeAgent true
-        branch 'main'
+        anyOf {
+          buildingTag()
+          branch 'main'
+        }
       }
-      steps {
-        container('node18') {
-          script {
-            def v = com.ibm.cloudant.integrations.VersionHelper.readVersion(this, 'package.json')
-            String version = v.version
-            boolean isReleaseVersion = v.isReleaseVersion
-
+      stages {
+        stage('Tag and GH release') {
+          when {
+            beforeAgent true
+            branch 'main'
+          }
+          steps {
+            // Run the gitTagAndPublish which tags/publishes to github for release builds
+            // and does a dry run for snapshot builds
+            script {
+              gitTagAndPublish {
+                  versionFile='package.json'
+                  releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
+              }
+            }
+          }
+        }
+        stage('NPM snapshot publish') {
+          when {
+            beforeAgent true
+            branch 'main'
+          }
+          steps {
+            // Make a snapshot version with the build ID added
+            sh "npm version --no-git-tag-version \$(npm version --json | jq -r '.[\"@cloudant/couchbackup\"]').${env.BUILD_ID}"
             // Upload using the NPM creds
             withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
                             usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
-              // Actions:
-              // 1. add the build ID to any snapshot version for uniqueness
-              // 2. publish the build to NPM adding a snapshot tag if pre-release
-              sh "${isReleaseVersion ? '' : ('npm version --no-git-tag-version ' + version + '.' + env.BUILD_ID)}"
+              // publish the snapshot build to NPM
               withNpmEnv(registryPublic) {
-                sh "npm publish ${isReleaseVersion ? '' : '--tag snapshot'}"
+                sh 'npm publish --tag snapshot'
               }
             }
-            // Run the gitTagAndPublish which tags/publishes to github for release builds
-            gitTagAndPublish {
-                versionFile='package.json'
-                releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
+          }
+        }
+        stage('NPM publish') {
+          when {
+            beforeAgent true
+            buildingTag()
+          }
+          steps {
+            // Upload using the NPM creds
+            withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
+                            usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
+              // publish the tag build to NPM
+              withNpmEnv(registryPublic) {
+                sh 'npm publish'
+              }
             }
           }
         }
