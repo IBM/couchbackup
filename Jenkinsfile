@@ -305,7 +305,7 @@ pipeline {
           }
           steps {
             // Make a snapshot version with the build ID added
-            sh "npm version --no-git-tag-version \$(npm version --json | jq -r '.[\"@cloudant/couchbackup\"]').${env.BUILD_ID}"
+            sh "npm version --no-git-tag-version \$(npm version --json | jq -r '.[\"@cloudant/couchbackup\"]')-${env.BUILD_ID}"
             // Upload using the NPM creds
             withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
                             usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
