@@ -1,3 +1,10 @@
+# 2.9.17 (2024-02-14)
+- [IMPROVED] Examples and related documentation.
+- [IMPROVED] Reduced package size.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.8.3`.
+- [UPGRADED] `commander` dependency to version `12.0.0`
+- [UPGRADED] Examples to use latest dependencies.
+
 # 2.9.16 (2024-01-10)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.8.2`.
 
