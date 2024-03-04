@@ -63,50 +63,6 @@ def withNpmEnv(registry, closure) {
   }
 }
 
-def nodeYaml(version) {
-    return """\
-      |    - name: node${version}
-      |      image: ${globals.ARTIFACTORY_DOCKER_REPO_VIRTUAL}/node:${version}
-      |      command: ['sh', '-c', 'sleep 99d']
-      |      imagePullPolicy: Always
-      |      resources:
-      |        requests:
-      |          memory: "2Gi"
-      |          cpu: "650m"
-      |        limits:
-      |          memory: "4Gi"
-      |          cpu: "4"
-      |      securityContext:
-      |        runAsUser: 1000""".stripIndent()
-}
-
-def agentYaml() {
-  return """\
-    |apiVersion: v1
-    |kind: Pod
-    |metadata:
-    |  name: couchbackup
-    |spec:
-    |  imagePullSecrets:
-    |    - name: artifactory
-    |  containers:
-    |    - name: jnlp
-    |      image: ${globals.ARTIFACTORY_DOCKER_REPO_VIRTUAL}/sdks-full-agent
-    |      imagePullPolicy: Always
-    |      resources:
-    |        requests:
-    |          memory: "2Gi"
-    |          cpu: "1"
-    |        limits:
-    |          memory: "4Gi"
-    |          cpu: "4"
-    ${nodeYaml(18)}
-    ${nodeYaml(21)}
-    |restartPolicy: Never""".stripMargin('|')
-}
-
-
-
 def runTest(version, filter=null, testSuite='test') {
   if (filter == null) {
     if (env.TEST_FILTER == null) {
@@ -163,7 +119,7 @@ def runTest(version, filter=null, testSuite='test') {
 pipeline {
   agent {
     kubernetes {
-      yaml "${agentYaml()}"
+      yaml kubePodTemplate(name: 'couchbackup.yaml')
     }
   }
   options {
