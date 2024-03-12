@@ -243,11 +243,11 @@ async function validateBackupDb(dbClient) {
 async function validateRestoreDb(dbClient) {
   try {
     const response = await dbClient.service.getDatabaseInformation({ db: dbClient.dbName });
-    const { doc_count: docCount, doc_del_count: deletedDocCount } = response.result;
+    const { docCount, docDelCount } = response.result;
     // The system databases can have a validation ddoc(s) injected in them on creation.
     // This sets the doc count off, so we just complitely exclude the system databases from this check.
     // The assumption here is that users restoring system databases know what they are doing.
-    if (!dbClient.dbName.startsWith('_') && (docCount !== 0 || deletedDocCount !== 0)) {
+    if (!dbClient.dbName.startsWith('_') && (docCount !== 0 || docDelCount !== 0)) {
       throw new BackupError('DatabaseNotEmpty', `Target database ${dbClient.url}${dbClient.dbName} is not empty. A target database must be a new and empty database.`);
     }
     // good to use
