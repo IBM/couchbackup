@@ -14,15 +14,15 @@
                                                          |_|
 ```
 
-CouchBackup is a command-line utility that allows a Cloudant or CouchDB database to be backed up to a text file.
+CouchBackup is a command-line utility that backs up a Cloudant or CouchDB database to a text file.
 It comes with a companion command-line utility that can restore the backed up data.
 
 ## Limitations
 
-Couchbackup has some restrictions in the data it's able to backup:
+CouchBackup has some restrictions in the data it's able to backup:
 
-* **couchbackup does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
-* **couchbackup does not support backing up or restoring databases containing documents with attachments. It is recommended to store attachments directly in an object store. DO NOT USE THIS TOOL FOR DATABASES CONTAINING ATTACHMENTS.** [Note](#note-on-attachments)
+* **`couchbackup` does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
+* **`couchbackup` does not support backing up or restoring databases containing documents with attachments. The recommendation is to store attachments directly in an object store. DO NOT USE THIS TOOL FOR DATABASES CONTAINING ATTACHMENTS.** [Note](#note-on-attachments)
 
 ## Installation
 
@@ -38,11 +38,11 @@ npm install -g @cloudant/couchbackup
 
 ### Snapshots
 
-The latest builds of main are published to npm with the `snapshot` tag. Use the `snapshot` tag if you want to experiment with an unreleased fix or new function, but please note that snapshot versions are **unsupported**.
+The latest builds of the `main` branch are available on npm with the `snapshot` tag. Use the `snapshot` tag if you want to experiment with an unreleased fix or new function, but please note that snapshot versions are **not supported**.
 
 ## Usage
 
-Either environment variables or command-line options can be used to specify the URL of the CouchDB or Cloudant instance, and the database to work with.
+Use either environment variables or command-line options to specify the URL of the CouchDB or Cloudant instance, and the database to work with.
 
 ### The URL
 
@@ -57,19 +57,19 @@ or
 export COUCH_URL=https://myusername:mypassword@myhost.cloudant.com
 ```
 
-Alternatively we can use the `--url` command-line parameter.
+Or use the `--url` command-line parameter.
 
 When passing credentials in the user information subcomponent of the URL
 they must be [percent encoded](https://tools.ietf.org/html/rfc3986#section-3.2.1).
 Specifically, within either the username or password, the characters `: / ? # [ ] @ %`
-_MUST_ be precent-encoded, other characters _MAY_ be percent encoded.
+_MUST_ be precent-encoded, other characters _MAY_ be percent-encoded.
 
 For example, for the username `user123` and password `colon:at@321`:
 ```
 https://user123:colon%3aat%40321@localhost:5984
 ```
 
-Note that additional care must be taken to escape shell reserved characters when
+Note take extra care to escape shell reserved characters when
 setting the environment variable or command-line parameter.
 
 ### The Database name
@@ -80,7 +80,7 @@ To define the name of the database to backup or restore, set the `COUCH_DATABASE
 export COUCH_DATABASE=animaldb
 ```
 
-Alternatively we can use the `--db` command-line parameter
+Or use the `--db` command-line parameter
 
 ## Backup
 
@@ -98,19 +98,19 @@ couchbackup --db animaldb > animaldb.txt
 
 ## Logging & resuming backups
 
-You may also create a log file which records the progress of the backup with the `--log` parameter e.g.
+You may also create a log file which records the progress of the backup with the `--log` parameter, for example:
 
 ```sh
 couchbackup --db animaldb --log animaldb.log > animaldb.txt
 ```
 
-This log file can be used to resume backups from where you left off with `--resume true`:
+Use this log file to resume backups with `--resume true`:
 
 ```sh
 couchbackup --db animaldb --log animaldb.log --resume true >> animaldb.txt
 ```
 
-The `--resume true` option works for a backup that has finished spooling changes, but has not yet completed downloading all the necessary batches of documents. It does _not_ provide an incremental backup solution.
+The `--resume true` option works for a backup that has finished spooling changes, but has not yet completed downloading all the necessary batches of documents. It _is not an incremental backup_ solution.
 
 You may also specify the name of the output file, rather than directing the backup data to *stdout*:
 
@@ -120,11 +120,11 @@ couchbackup --db animaldb --log animaldb.log --resume true --output animaldb.txt
 
 ### Compatibility note
 
-When using `--resume` use the same version of couchbackup that started the backup.
+When using `--resume` use the same version of `couchbackup` that started the backup.
 
 ## Restore
 
-Now that we have our backup text file, we can restore it to a new, empty, existing database using the `couchrestore`:
+Now restore the backup text file to a new, empty, existing database using the `couchrestore`:
 
 ```sh
 cat animaldb.txt | couchrestore
@@ -138,13 +138,13 @@ cat animaldb.txt | couchrestore --db animaldb2
 
 ### Compatibility note
 
-**Do not use an older version of couchbackup to restore a backup created with a newer version.**
+**Do not use an older version of `couchbackup` to restore a backup created with a newer version.**
 
-Newer versions of couchbackup can restore backups created by older versions within the same major version.
+Newer versions of `couchbackup` can restore backups created by older versions within the same major version.
 
 ## Compressed backups
 
-If we want to compress the backup data before storing to disk, we can pipe the contents through `gzip`:
+To compress the backup data before storing to disk pipe the contents through `gzip`:
 
 ```sh
 couchbackup --db animaldb | gzip > animaldb.txt.gz
@@ -169,64 +169,69 @@ couchbackup --db animaldb | openssl aes-128-cbc -pass pass:12345 > encrypted_ani
 openssl aes-128-cbc -d -in encrypted_animal.db -pass pass:12345 | couchrestore --db animaldb2
 ```
 
-Note that the content is unencrypted while it is being processed by the
-backup tool before it is piped to the encryption utility.
+Note that the content is not encrypted in the
+backup tool before piping to the encryption utility.
 
 ## What's in a backup file?
 
-A backup file is a text file where each line contains a JSON encoded array of up to `buffer-size` objects e.g.
+A backup file is a text file where each line is either a JSON object of backup metadata
+or a JSON array of backed up document revision objects, for example:
 
-```js
-    [{"a":1},{"a":2}...]
-    [{"a":501},{"a":502}...]
+```json
+{"name":"@cloudant/couchbackup","version":"2.9.10","mode":"full"}
+[{"_id": "1","a":1},{"_id": "2","a":2},...]
+[{"_id": "501","a":501},{"_id": "502","a":502}]
 ```
+
+The number of document revisions in a backup array varies. It typically has
+`buffer_size` elements, but may be more if there are also leaf revisions returned
+from the server or fewer if it is the last batch.
 
 ## What's in a log file?
 
-A log file contains a line:
+A log file has a line:
 
-- for every batch of document ids that need to be fetched e.g. `:t batch56 [{"id":"a"},{"id":"b"}]`
-- for every batch that has been fetched and stored e.g. `:d batch56`
-- to indicate that the changes feed was fully consumed e.g. `:changes_complete`
+- for every batch of document ids that `couchbackup` needs to fetch, for example: `:t batch56 [{"id":"a"},{"id":"b"}]`
+- for every batch that `couchbackup` has fetched and stored, for example: `:d batch56`
+- to indicate that the changes feed was fully consumed, for example: `:changes_complete`
 
-## What is shallow mode?
+## What's shallow mode?
 
-When you run `couchbackup` with `--mode shallow` a simpler backup is performed, only backing up the winning revisions
-of the database. No revision tokens are saved and any conflicting revisions are ignored. This is a faster, but less
-complete backup. Shallow backups cannot be resumed because they do not produce a log file.
+When you run `couchbackup` with `--mode shallow` `couchbackup` performs a simpler backup.
+It only backs up the winning revisions and ignores any conflicting revisions.
+This is a faster, but less complete backup.
 
-NOTE: Parallellism will not be in effect if `--mode shallow` is defined.
+_Note:_ The `--log`,  `--resume`, and `--parallelism` are invalid for `--mode shallow` backups.
 
 ## Why use CouchBackup?
 
 The easiest way to backup a CouchDB database is to copy the ".couch" file. This is fine on a single-node instance, but when running multi-node
-Cloudant or using CouchDB 2.0 or greater, the ".couch" file only contains a single shard of data. This utility allows simple backups of CouchDB
+Cloudant or using CouchDB 2.0 or greater, the ".couch" file only has a single shard of data. This utility allows simple backups of CouchDB
 or Cloudant database using the HTTP API.
 
-This tool can be used to script the backup of your databases. Move the backup and log files to cheap Object Storage so that you have multiple copies of your precious data.
+This tool can script the backup of your databases. Move the backup and log files to cheap Object Storage so that you have copies of your precious data.
 
 ## Options reference
 
 ### Environment variables
 
-* `COUCH_URL` - the URL of the CouchDB/Cloudant server e.g. `http://127.0.0.1:5984`
-* `COUCH_DATABASE` - the name of the database to act upon e.g. `mydb` (default `test`)
-* `COUCH_PARALLELISM` - the number of HTTP requests to perform in parallel when restoring a backup e.g. `10` (Default `5`)
-* `COUCH_BUFFER_SIZE` - the number of documents fetched and restored at once e.g. `100` (default `500`). When using CouchBackup with [Cloudant on Transaction Engine](https://www.ibm.com/cloud/blog/announcements/ibm-cloudant-on-transaction-engine) `COUCH_BUFFER_SIZE` must be less than `2000` to avoid bad request errors.
-* `COUCH_REQUEST_TIMEOUT` - the number of milliseconds to wait for a respose to a HTTP request before retrying the request e.g. `10000` (Default `120000`)
+* `COUCH_URL` - the URL of the CouchDB/Cloudant server, for example: `http://127.0.0.1:5984`
+* `COUCH_DATABASE` - the name of the database to act upon, for example: `mydb` (default `test`)
+* `COUCH_PARALLELISM` - the number of HTTP requests to perform in parallel when restoring a backup, for example: `10` (Default `5`)
+* `COUCH_BUFFER_SIZE` - the number of documents fetched and restored at once, for example: `100` (default `500`).
+* `COUCH_REQUEST_TIMEOUT` - the number of milliseconds to wait for a response to a HTTP request before retrying the request, for example: `10000` (Default `120000`)
 * `COUCH_LOG` - the file to store logging information during backup
-* `COUCH_RESUME` - if `true`, resumes a previous backup from its last known position
+* `COUCH_RESUME` - if `true`, resumes an earlier backup from its last known position (requires a log file)
 * `COUCH_OUTPUT` - the file name to store the backup data (defaults to stdout)
-* `COUCH_MODE` - if `shallow`, only a superficial backup is done, ignoring conflicts and revision tokens. Defaults to `full` - a full backup.
+* `COUCH_MODE` - if `shallow`, does only a superficial backup ignoring conflicts. Defaults to `full` - a full backup.
 * `COUCH_QUIET` - if `true`, suppresses the individual batch messages to the console during CLI backup and restore
 * `CLOUDANT_IAM_API_KEY` - optional [IAM API key](https://console.bluemix.net/docs/services/Cloudant/guides/iam.html#ibm-cloud-identity-and-access-management)
  to use to access the Cloudant database instead of user information credentials in the URL. The endpoint used to retrieve the token defaults to
  `https://iam.cloud.ibm.com/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
-* `DEBUG` - if set to `couchbackup`, all debug messages will be sent to `stderr` during a backup or restore process
+* `DEBUG` - if set to `couchbackup`, all debug messages print on `stderr` during a backup or restore process
 
-_Note:_ These environment variables can only be used with the CLI. When
-[using programmatically](#using-programmatically) the `opts` dictionary must be
-used.
+_Note:_ Environment variables are only used with the CLI. When
+[using programmatically](#using-programmatically) use the `opts` dictionary.
 
 ### Command-line parameters
 
@@ -244,7 +249,7 @@ used.
 
 ## Using programmatically
 
-You can use `couchbackup` programatically. First install
+You can use `couchbackup` programmatically. First install
 `couchbackup` into your project with `npm install --save @cloudant/couchbackup`.
 Then you can import the library into your code:
 
@@ -282,11 +287,11 @@ target locations are not required.
 * `resume`: see `COUCH_RESUME`.
 * `mode`: see `COUCH_MODE`.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
-* `iamTokenUrl`: may be used with `iamApiKey` to override the default URL for
+* `iamTokenUrl`: optionally used with `iamApiKey` to override the default URL for
  retrieving IAM tokens.
 
-The callback has the standard `err, data` parameters and is called when
-the backup completes or fails.
+When the backup completes or fails the callback functions gets called with
+the standard `err, data` parameters.
 
 The `backup` function returns an event emitter. You can subscribe to:
 
@@ -345,25 +350,20 @@ target locations are not required.
 * `bufferSize`: see `COUCH_BUFFER_SIZE`.
 * `requestTimeout`: see `COUCH_REQUEST_TIMEOUT`.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
-* `iamTokenUrl`: may be used with `iamApiKey` to override the default URL for
+* `iamTokenUrl`: optionally used with `iamApiKey` to override the default URL for
  retrieving IAM tokens.
 
-The callback has the standard `err, data` parameters and is called when
-the restore completes or fails.
+When the restore completes or fails the callback functions gets called with
+the standard `err, data` parameters.
 
 The `restore` function returns an event emitter. You can subscribe to:
 
 * `restored` - when a batch of documents is restored.
 * `finished` - emitted once when all documents are restored.
 
-The backup file (or `srcStream`) contains lists comprising of document
-revisions, where each list is separated by a newline. The list length is
-dictated by the `bufferSize` parameter used during the backup.
-
-It's possible a list could be corrupt due to failures in the backup process. A
-`BackupFileJsonError` is emitted for each corrupt list found. _These can only be
-ignored if the backup that generated the stream did complete successfully_. This
-ensures that corrupt lists also have a valid counterpart within the stream.
+The `srcStream` for the restore is a [backup file](#whats-in-a-backup-file).
+In the case of an incomplete backup the file could be corrupt and in that
+case the restore emits a `BackupFileJsonError`.
 
 Restore data from a stream:
 
@@ -399,19 +399,20 @@ couchbackup.restore(
 
 ## Error Handling
 
-The `couchbackup` and `couchrestore` processes are designed to be relatively robust over an unreliable network. Work is batched and any failed requests are retried indefinitely. However, certain aspects of the execution will not tolerate failure:
-- Spooling changes from the database changes feed. A failure in the changes request during the backup process will result in process termination.
-- Validating the existence of a target database during the database restore process.
+The `couchbackup` and `couchrestore` processes are able to tolerate many errors even over an unreliable network.
+Failed requests retry at least twice after a back-off delay.
+However, certain errors can't tolerate failures:
+- invalid configuration
+- failed validation checks (for example: auth, database existence, `_bulk_get` endpoint avaialbility)
 
 ### API
 
-When using the library programmatically an `Error` will be passed in one of two ways:
-* For fatal errors the callback will be called with `null, error` arguments
-* For non-fatal errors an `error` event will be emitted
+When using the library programmatically in the case of a fatal error
+the callback function gets called with `null, error` arguments.
 
 ### CLI Exit Codes
 
-On fatal errors, `couchbackup` and `couchrestore` will exit with non-zero exit codes. This section
+On fatal errors, `couchbackup` and `couchrestore` exit with non-zero exit codes. This section
 details them.
 
 ### common to both `couchbackup` and `couchrestore`
@@ -420,14 +421,15 @@ details them.
 * `2`: invalid CLI option.
 * `10`: backup source or restore target database does not exist.
 * `11`: unauthorized credentials for the database.
-* `12`: incorrect permissions for the database.
+* `12`: invalid permissions for the database.
 * `40`: database returned a fatal HTTP error.
 
 ### `couchbackup`
 
-* `20`: resume was specified without a log file.
+* `20`: `--resume` without a log file.
 * `21`: the resume log file does not exist.
 * `22`: incomplete changes in log file.
+* `23`: the log file already exists, but `--resume` was not used.
 * `30`: error spooling changes from the database.
 * `50`: source database does not support `/_bulk_get` endpoint.
 
@@ -437,13 +439,13 @@ details them.
 
 ## Note on attachments
 
-TLDR; If you backup a database that contains attachments you will not be able to restore it.
+TLDR; If you backup a database that has attachments `couchbackup` cannot restore it.
 
-As documented above couchbackup does not support backing up or restoring databases containing documents with attachments.
-Attempting to backup a database that includes documents with attachments will appear to succeed. However, the attachment
-content will not have been downloaded and the backup file will contain attachment metadata. Consequently any attempt to
-restore the backup will result in errors because the attachment metadata will reference attachments that are not present
+As documented above `couchbackup` does not support backing up or restoring databases containing documents with attachments.
+Backing up a database that includes documents with attachments appears to complete successfully. However, the attachment
+content is not downloaded and the backup file contains attachment metadata. So attempts to
+restore the backup result in errors because the attachment metadata references attachments that are not present
 in the restored database.
 
-It is recommended to store attachments directly in an object store with a link in the JSON document instead of using the
+The recommendation is to store attachments directly in an object store with a link in the JSON document instead of using the
 native attachment API.

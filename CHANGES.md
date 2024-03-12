@@ -1,3 +1,6 @@
+# Unreleased
+- [IMPROVED] Updated documentation.
+
 # 2.10.0 (2024-02-28)
 - [NEW] Included `time` in `restored` API events and CLI output.
 - [NEW] Added metadata to backup files.
