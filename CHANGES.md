@@ -1,5 +1,6 @@
 # Unreleased
 - [IMPROVED] Updated documentation.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.9.0`.
 
 # 2.10.0 (2024-02-28)
 - [NEW] Included `time` in `restored` API events and CLI output.

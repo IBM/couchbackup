@@ -34,10 +34,10 @@ const client = require('./hooks.js').sharedClient;
  */
 const compare = async function(database1, database2) {
   const dbInfoResponses = await Promise.all([client.getDatabaseInformation({ db: database1 }), client.getDatabaseInformation({ db: database2 })]);
-  const db1DocCount = dbInfoResponses[0].result.doc_count;
-  const db1DocDelCount = dbInfoResponses[0].result.doc_del_count;
-  const db2DocCount = dbInfoResponses[1].result.doc_count;
-  const db2DocDelCount = dbInfoResponses[1].result.doc_del_count;
+  const db1DocCount = dbInfoResponses[0].result.docCount;
+  const db1DocDelCount = dbInfoResponses[0].result.docDelCount;
+  const db2DocCount = dbInfoResponses[1].result.docCount;
+  const db2DocDelCount = dbInfoResponses[1].result.docDelCount;
   // Assert the doc counts match
   assert.strictEqual(db2DocCount, db1DocCount);
   assert.strictEqual(db2DocDelCount, db1DocDelCount);

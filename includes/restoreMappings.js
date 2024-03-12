@@ -111,19 +111,19 @@ class Restore {
       return { batch, documents: 0 };
     }
     mappingDebug(`Restoring batch ${batch} with ${restoreBatch.docs.length} docs.`);
-    // if we are restoring known revisions, we need to supply new_edits=false
+    // if we are restoring known revisions, we need to supply newEdits=false
     if (restoreBatch.docs[0] && restoreBatch.docs[0]._rev) {
-      restoreBatch.new_edits = false;
-      mappingDebug('Using new_edits false mode.');
+      restoreBatch.newEdits = false;
+      mappingDebug('Using newEdits false mode.');
     }
     try {
       const response = await this.dbClient.service.postBulkDocs({
         db: this.dbClient.dbName,
         bulkDocs: restoreBatch
       });
-      if (!response.result || (restoreBatch.new_edits === false && response.result.length > 0)) {
+      if (!response.result || (restoreBatch.newEdits === false && response.result.length > 0)) {
         mappingDebug(`Some errors restoring batch ${batch}.`);
-        throw new Error(`Error writing batch ${batch} with new_edits:${restoreBatch.new_edits !== false}` +
+        throw new Error(`Error writing batch ${batch} with newEdits:${restoreBatch.newEdits !== false}` +
           ` and ${response.result ? response.result.length : 'unavailable'} items`);
       }
       mappingDebug(`Successfully restored batch ${batch}.`);

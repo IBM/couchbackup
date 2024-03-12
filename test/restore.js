@@ -121,7 +121,7 @@ describe('#unit Check database restore', function() {
       });
   });
 
-  it('should get a batch error for non-empty array response with new_edits false', async function() {
+  it('should get a batch error for non-empty array response with newEdits false', async function() {
     nock(dbUrl)
       .post('/_bulk_docs')
       .reply(200, [{ id: 'foo', error: 'foo', reason: 'bar' }]);
@@ -130,7 +130,7 @@ describe('#unit Check database restore', function() {
       getRestorePipeline(),
       (err) => {
         assert.strictEqual(err.name, 'Error');
-        assert.strictEqual(err.message, 'Error writing batch 0 with new_edits:false and 1 items');
+        assert.strictEqual(err.message, 'Error writing batch 0 with newEdits:false and 1 items');
         assert.ok(nock.isDone());
         return true;
       }
