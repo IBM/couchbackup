@@ -196,11 +196,11 @@ pipeline {
             }
           }
         }
-        stage('Node 21x') {
+        stage('Node 22x') {
           steps {
-            container('node21') {
+            container('node22') {
               script{
-                runTest('21')
+                runTest('22')
               }
             }
           }
