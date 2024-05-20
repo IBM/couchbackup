@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ibm-cloud/cloudant": "0.9.1",
-    "commander": "12.0.0",
+    "commander": "12.1.0",
     "debug": "4.3.4"
   },
   "peerDependencies": {
