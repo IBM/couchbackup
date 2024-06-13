@@ -20,8 +20,10 @@ const { BackupError } = require('./error.js');
 const logFileSummary = require('./logfilesummary.js');
 const logFileGetBatches = require('./logfilegetbatches.js');
 const spoolchanges = require('./spoolchanges.js');
-const { MappingStream, WritableWithPassThrough, DelegateWritable } = require('./transforms.js');
+const { MappingStream, WritableWithPassThrough,
+  DelegateWritable, SideEffect } = require('./transforms.js');
 const allDocsGenerator = require('./allDocsGenerator.js');
+const { attachmentBackupHandler } = require('./attachments.js');
 
 /**
  * Validate /_bulk_get support for a specified database.
@@ -110,6 +112,7 @@ module.exports = function(dbClient, options, targetStream, ee) {
         // full mode needs to fetch spooled changes and writes a backup file then finally a log file
         destinationStreams.push(...[
           new MappingStream(backup.pendingToFetched, options.parallelism), // fetch the batches at the configured concurrency
+          new MappingStream(attachmentBackupHandler.bind(dbClient)),
           new WritableWithPassThrough(
             'backup', // name for logging
             targetStream, // backup file

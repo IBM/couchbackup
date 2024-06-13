@@ -16,9 +16,10 @@
 const debug = require('debug')('couchbackup:restore');
 const { Liner } = require('../includes/liner.js');
 const { Restore } = require('../includes/restoreMappings.js');
-const { BatchingStream, MappingStream } = require('./transforms.js');
+const { BatchingStream, MappingStream, SideEffect } = require('./transforms.js');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
+ 
 
 /**
  * Function for performing a restore.
