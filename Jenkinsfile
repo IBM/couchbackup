@@ -164,6 +164,9 @@ pipeline {
           }
         }
         stage('Node LTS') {
+          when {
+            environment name: 'RUN_TOXY_TESTS', value: 'true'
+          }
           steps {
             script{
               runTest('20')
@@ -171,6 +174,9 @@ pipeline {
           }
         }
         stage('IAM Node LTS') {
+          when {
+            environment name: 'RUN_TOXY_TESTS', value: 'true'
+          }
           steps {
             script{
               runTest('20', '-i -g \'#unit|#slowe\'', 'test-iam')
@@ -178,17 +184,16 @@ pipeline {
           }
         }
         stage('Network Node LTS') {
-          when {
-            beforeAgent true
-            environment name: 'RUN_TOXY_TESTS', value: 'false'
-          }
           steps {
             script{
-              runTest('20', '', 'test-network/conditions')
+              runTest('20', '-i -g \'#unit|#slowe\'', 'test-network/conditions')
             }
           }
         }
         stage('Node 18x') {
+          when {
+            environment name: 'RUN_TOXY_TESTS', value: 'true'
+          }
           steps {
             container('node18') {
               script{
@@ -198,6 +203,9 @@ pipeline {
           }
         }
         stage('Node 22x') {
+          when {
+            environment name: 'RUN_TOXY_TESTS', value: 'true'
+          }
           steps {
             container('node22') {
               script{
