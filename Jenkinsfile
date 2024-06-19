@@ -180,7 +180,7 @@ pipeline {
         stage('Network Node LTS') {
           when {
             beforeAgent true
-            environment name: 'RUN_TOXY_TESTS', value: 'true'
+            environment name: 'RUN_TOXY_TESTS', value: 'false'
           }
           steps {
             script{
