@@ -186,7 +186,7 @@ pipeline {
         stage('Network Node LTS') {
           steps {
             script{
-              runTest('20', '-i -g \'#unit|#slowe\'', 'test-network/conditions')
+              runTest('20', '-i -g \'#slow\'', 'test-network/conditions')
             }
           }
         }
