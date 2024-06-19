@@ -12,35 +12,127 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* eslint space-before-function-paren: ["error", { "anonymous": "ignore" }] */
 /* global after before describe */
 'use strict';
+
+const assert = require('assert');
+const axios = require('axios');
+const net = require('node:net');
+
+const httpProxy = require('http-proxy');
 
 // Import the common hooks
 require('../test/hooks.js');
 
 const poisons = [
-  'normal',
-  'bandwidth-limit',
-  'latency',
-  'slow-read',
-  'rate-limit'
+  {
+    name: 'normal'
+  },
+  {
+    name: 'bandwidth-limit-upstream',
+    type: 'bandwidth',
+    stream: 'upstream', // client -> server
+    attributes: { rate: 512 } // 0.5 MB/s
+  },
+  {
+    name: 'bandwidth-limit-downstream',
+    type: 'bandwidth',
+    stream: 'downstream', // client <- server
+    attributes: { rate: 512 }
+  },
+  {
+    name: 'latency',
+    type: 'latency',
+    attributes: { latency: 875, jitter: 625 }, // max: 1500, mix: 250
+    toxicity: 0.6 // probability: 60%
+  },
+  {
+    name: 'slow-read',
+    type: 'slicer',
+    attributes: { average_size: 256, delay: 100 },
+    toxicity: 0.1 // probability: 10%
+  }
 ];
 
-poisons.forEach(function(poison) {
-  describe('unreliable network tests (using poison ' + poison + ')', function() {
-    before('start server', function() {
+const proxyURL = process.env.PROXY_URL + '/proxies/couchdb';
 
-      // **************************
-      // Currently these tests do nothing
-      // pending resolution of https://github.com/IBM/couchbackup/issues/360
-      // to add a new toxic server
-      // **************************
+const waitForSocket = (port) => {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const connect = () => socket.connect({ port });
+    let reConnect = false;
+
+    socket.on('connect', async () => {
+      if (reConnect !== false) {
+        clearInterval(reConnect);
+        reConnect = false;
+      }
+      socket.end();
+      resolve(socket);
     });
 
-    after('stop server', function() {
+    socket.on('error', () => {
+      if (reConnect === false) {
+        reConnect = setInterval(connect, 1000);
+      }
     });
 
-    delete require.cache[require.resolve('../test/ci_e2e.js')];
-    require('../test/ci_e2e.js');
+    connect();
+  });
+};
+
+describe('unreliable network tests', function () {
+  let proxy;
+  before('add proxy', async function () {
+    // wait up to 10 sec for both proxies to allocate ports.
+    this.timeout(10000);
+
+    proxy = httpProxy.createProxyServer({
+      target: process.env.COUCH_BACKEND_URL,
+      changeOrigin: true
+    }).listen(8080);
+
+    await waitForSocket(8080);
+
+    const toxiProxy = {
+      name: 'couchdb',
+      listen: '127.0.0.1:8888',
+      upstream: '127.0.0.1:8080',
+      enabled: true
+    };
+    const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
+    assert.equal(resp.status, 201, 'Should create proxy "couchdb".');
+    await waitForSocket(8888);
+  });
+
+  after('remove proxy', async function () {
+    const resp = await axios.delete(proxyURL);
+    assert.equal(resp.status, 204, 'Should remove proxy "couchdb".');
+    // shutdown http proxy
+    return new Promise((resolve) => {
+      proxy.close(() => {
+        resolve();
+      });
+    });
+  });
+
+  poisons.forEach(function (poison) {
+    describe(`tests using poison '${poison.name}'`, function () {
+      before(`add toxic ${poison.name}`, async function () {
+        if (poison.name === 'normal') return;
+        const resp = await axios.post(proxyURL + '/toxics', poison);
+        assert.equal(resp.status, 200, `Should create toxic ${poison.name}`);
+      });
+
+      after(`remove toxic ${poison.name}`, async function () {
+        if (poison.name === 'normal') return;
+        const resp = await axios.delete(proxyURL + '/toxics/' + poison.name);
+        assert.equal(resp.status, 204, `Should remove toxic ${poison.name}`);
+      });
+
+      delete require.cache[require.resolve('../test/ci_e2e.js')];
+      require('../test/ci_e2e.js');
+    });
   });
 });
