@@ -22,7 +22,8 @@ const net = require('node:net');
 const url = require('url');
 
 // Import the common hooks
-require('../test/hooks.js');
+const hooks = require('../test/hooks.js');
+const client = hooks.sharedClient;
 
 const poisons = [
   {
@@ -81,6 +82,7 @@ describe('unreliable network tests', function () {
           reConnect = false;
         }
         socket.end();
+        client.setServiceUrl(process.env.COUCH_URL);
         resolve(socket);
       });
 
