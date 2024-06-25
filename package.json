@@ -28,9 +28,9 @@
     "debug": "4.3.5"
   },
   "peerDependencies": {
+    "axios": "^1.6.0",
     "ibm-cloud-sdk-core": "^4.1.4",
-    "retry-axios": "^2.6.0",
-    "axios": "^1.6.0"
+    "retry-axios": "^2.6.0"
   },
   "main": "app.js",
   "bin": {
@@ -46,7 +46,7 @@
     "eslint-plugin-n": "15.7.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.2.0",
-    "http-proxy": "1.18.1",
+    "http-proxy": "^1.18.1",
     "mocha": "10.4.0",
     "nock": "13.5.4",
     "tail": "2.2.6",

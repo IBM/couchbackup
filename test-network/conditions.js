@@ -21,6 +21,8 @@ const axios = require('axios');
 const net = require('node:net');
 const url = require('url');
 
+const httpProxy = require('http-proxy');
+
 // Import the common hooks
 const hooks = require('../test/hooks.js');
 const client = hooks.sharedClient;
@@ -57,48 +59,61 @@ const poisons = [
 
 const proxyURL = process.env.PROXY_URL + '/proxies/couchdb';
 
+const waitForSocket = (port) => {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const connect = () => socket.connect({ port: port });
+    let reConnect = false;
+
+    socket.on('connect', async () => {
+      if (reConnect !== false) {
+        clearInterval(reConnect);
+        reConnect = false;
+      }
+      socket.end();
+      console.log(`connected to ${port}`);
+      resolve(socket);
+    });
+
+    socket.on('error', () => {
+      if (reConnect === false) {
+        reConnect = setInterval(connect, 1000);
+      }
+    });
+
+    connect();
+  });
+}
+
 describe('unreliable network tests', function () {
+  let proxy = undefined;
   before('add proxy', async function () {
-    const backendUrl = new url.URL(process.env.COUCH_BACKEND_URL);
-    const proxy = {
+    // wait up to 10 sec for both proxies to allocate ports.
+    this.timeout(10000);
+
+    proxy = httpProxy.createProxyServer({
+      target: process.env.COUCH_BACKEND_URL,
+      changeOrigin: true,
+    }).listen(8080);
+
+    await waitForSocket(8080);
+
+    const toxiProxy = {
       name: 'couchdb',
-      listen: '[::]:8888',
-      upstream: `${backendUrl.hostname}:${backendUrl.port}`,
+      listen: '127.0.0.1:8888',
+      upstream: 'host.docker.internal:8080',
       enabled: true
     };
-    const resp = await axios.post(process.env.PROXY_URL + '/proxies', proxy);
+    const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
     assert.equal(resp.status, 201, 'Should create proxy "couchdb".');
-
-    // wait up to 5 sec for proxy port to be allocated, retrying every second.
-    this.timeout(5000);
-    await new Promise((resolve) => {
-      const socket = new net.Socket();
-      const connect = () => socket.connect({ port: 8888 });
-      let reConnect = false;
-
-      socket.on('connect', () => {
-        if (reConnect !== false) {
-          clearInterval(reConnect);
-          reConnect = false;
-        }
-        socket.end();
-        client.setServiceUrl(process.env.COUCH_URL);
-        resolve(socket);
-      });
-
-      socket.on('error', () => {
-        if (reConnect === false) {
-          reConnect = setInterval(connect, 1000);
-        }
-      });
-
-      connect();
-    });
+    await waitForSocket(8888);
   });
 
   after('remove proxy', async function () {
     const resp = await axios.delete(proxyURL);
     assert.equal(resp.status, 204, 'Should remove toxic "couchdb".');
+    // shutdown http proxy
+    proxy.close();
   });
 
   poisons.forEach(function (poison) {
