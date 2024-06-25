@@ -19,13 +19,11 @@
 const assert = require('assert');
 const axios = require('axios');
 const net = require('node:net');
-const url = require('url');
 
 const httpProxy = require('http-proxy');
 
 // Import the common hooks
-const hooks = require('../test/hooks.js');
-const client = hooks.sharedClient;
+require('../test/hooks.js');
 
 const poisons = [
   {
@@ -62,7 +60,7 @@ const proxyURL = process.env.PROXY_URL + '/proxies/couchdb';
 const waitForSocket = (port) => {
   return new Promise((resolve) => {
     const socket = new net.Socket();
-    const connect = () => socket.connect({ port: port });
+    const connect = () => socket.connect({ port });
     let reConnect = false;
 
     socket.on('connect', async () => {
@@ -83,17 +81,17 @@ const waitForSocket = (port) => {
 
     connect();
   });
-}
+};
 
 describe('unreliable network tests', function () {
-  let proxy = undefined;
+  let proxy;
   before('add proxy', async function () {
     // wait up to 10 sec for both proxies to allocate ports.
     this.timeout(10000);
 
     proxy = httpProxy.createProxyServer({
       target: process.env.COUCH_BACKEND_URL,
-      changeOrigin: true,
+      changeOrigin: true
     }).listen(8080);
 
     await waitForSocket(8080);
