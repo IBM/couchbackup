@@ -118,11 +118,12 @@ describe('unreliable network tests', function () {
   poisons.forEach(function (poison) {
     describe(`tests using poison '${poison.name}'`, function () {
       before('add toxic', async function () {
+        console.log(`COUCH_URL: ${process.env.COUCH_URL}`);
+        console.log(`COUCHBACKUP_TEST_IAM_API_KEY: ${process.env.COUCHBACKUP_TEST_IAM_API_KEY.length}`);
+
         if (poison.name === 'normal') return;
         const resp = await axios.post(proxyURL + '/toxics', poison);
         assert.equal(resp.status, 200, `Should create toxic ${poison.name}`);
-        console.log(`COUCH_URL: ${process.env.COUCH_URL}`);
-        console.log(`COUCHBACKUP_TEST_IAM_API_KEY: ${process.env.COUCHBACKUP_TEST_IAM_API_KEY.length}`);
       });
 
       after('remove toxic', async function () {
