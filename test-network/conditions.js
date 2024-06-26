@@ -102,7 +102,7 @@ describe('unreliable network tests', function () {
       upstream: `${process.env.NODE_NAME}:8080`,
       enabled: true
     };
-    console.log(toxiProxy)
+    console.log(toxiProxy);
     const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
     assert.equal(resp.status, 201, 'Should create proxy "couchdb".');
     await waitForSocket(8888);
@@ -121,6 +121,8 @@ describe('unreliable network tests', function () {
         if (poison.name === 'normal') return;
         const resp = await axios.post(proxyURL + '/toxics', poison);
         assert.equal(resp.status, 200, `Should create toxic ${poison.name}`);
+        console.log(`COUCH_URL: ${process.env.COUCH_URL}`);
+        console.log(`COUCHBACKUP_TEST_IAM_API_KEY: ${process.env.COUCHBACKUP_TEST_IAM_API_KEY.length}`);
       });
 
       after('remove toxic', async function () {

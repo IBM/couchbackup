@@ -104,6 +104,7 @@ def runTest(version, filter=null, testSuite='test') {
                 export COUCH_BACKEND_URL="${(testSuite == 'test-network/conditions') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
                 export COUCH_URL="${(testSuite == 'test-network/conditions') ? '${COUCH_BACKEND_URL}' : '${COUCH_BACKEND_URL}'}"
                 export PROXY_URL='http://127.0.0.1:8474'
+                export DEBUG=ibm-cloud-sdk-core:verbose
                 set -x
                 ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
               """
