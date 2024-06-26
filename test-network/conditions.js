@@ -98,8 +98,8 @@ describe('unreliable network tests', function () {
 
     const toxiProxy = {
       name: 'couchdb',
-      listen: '127.0.0.1:8888',
-      upstream: 'host.docker.internal:8080',
+      listen: 'toxiproxy:8888',
+      upstream: 'node22:8080',
       enabled: true
     };
     const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
