@@ -102,8 +102,8 @@ def runTest(version, filter=null, testSuite='test') {
               sh """
                 set +x
                 export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
-                export COUCH_BACKEND_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8080' : '${COUCH_LEGACY_URL}'}"
-                export COUCH_URL="${(testSuite == 'test-network/conditions') ? '${COUCH_BACKEND_URL}' : '${COUCH_BACKEND_URL}'}"
+                export COUCH_BACKEND_URL="${(testSuite == 'test-network/conditions') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
+                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8080' : '${COUCH_BACKEND_URL}'}"
                 export PROXY_URL='http://127.0.0.1:8474'
                 export DEBUG=ibm-cloud-sdk-core:verbose
                 set -x
