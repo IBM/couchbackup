@@ -102,7 +102,7 @@ def runTest(version, filter=null, testSuite='test') {
                 set +x
                 export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
                 export COUCH_BACKEND_URL="${(testSuite == 'test-network/conditions') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
-                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8080' : '${COUCH_BACKEND_URL}'}"
+                export COUCH_URL="${(testSuite == 'test-network/conditions') ? "http://${NODE_NAME}:8080" : '${COUCH_BACKEND_URL}'}"
                 export PROXY_URL='http://127.0.0.1:8474'
                 set -x
                 ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
