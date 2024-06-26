@@ -102,6 +102,7 @@ describe('unreliable network tests', function () {
       upstream: `${process.env.NODE_NAME}:8080`,
       enabled: true
     };
+    console.log(toxiProxy)
     const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
     assert.equal(resp.status, 201, 'Should create proxy "couchdb".');
     await waitForSocket(8888);
