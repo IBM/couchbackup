@@ -28,9 +28,9 @@
     "debug": "4.3.6"
   },
   "peerDependencies": {
-    "ibm-cloud-sdk-core": "^4.1.4",
+    "ibm-cloud-sdk-core": "^5.0.1",
     "retry-axios": "^2.6.0",
-    "axios": "^1.6.0"
+    "axios": "^1.7.4"
   },
   "main": "app.js",
   "bin": {
