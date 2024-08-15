@@ -23,7 +23,7 @@
     "node": "^18 || ^20"
   },
   "dependencies": {
-    "@ibm-cloud/cloudant": "0.10.0",
+    "@ibm-cloud/cloudant": "0.10.1",
     "commander": "12.1.0",
     "debug": "4.3.6"
   },
