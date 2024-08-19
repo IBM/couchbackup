@@ -1,3 +1,11 @@
+# 2.10.2 (2024-08-19)
+
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.10.1`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `5.0.1` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `axios` peerDependency to minimum version `1.7.4` to match version provided from `ibm-cloud-sdk-core`.
+- [UPGRADED] `commander` dependency to version `12.1.0`
+- [UPGRADED] `debug` dependency to version `4.3.6`.
+
 # 2.10.1 (2024-05-14)
 - [IMPROVED] Updated documentation.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.9.1`.
