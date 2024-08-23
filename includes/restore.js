@@ -30,7 +30,7 @@ const { pipeline } = require('node:stream/promises');
  * @returns a promise that resolves when the restore is complete or rejects if it errors
  */
 module.exports = function(dbClient, options, readstream, ee) {
-  const restore = new Restore(dbClient);
+  const restore = new Restore(dbClient, options);
   const start = new Date().getTime(); // restore start time
   let total = 0; // the total restored
 

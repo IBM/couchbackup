@@ -87,7 +87,7 @@ module.exports = function(dbClient, options, targetStream, ee) {
     })
     // Create a pipeline of the source streams and the backup mappings
     .then((srcStreams) => {
-      const backup = new Backup(dbClient);
+      const backup = new Backup(dbClient, options);
       const postWrite = (backupBatch) => {
         total += backupBatch.docs.length;
         const totalRunningTimeSec = (new Date().getTime() - start) / 1000;

@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ describe('#unit restore mappings', function() {
       liner = new Liner();
 
       // The class under test
-      restore = new Restore(null);
+      restore = new Restore(null, {});
     });
 
     function makeTestLine(testArray) {
@@ -152,12 +152,12 @@ describe('#unit restore mappings', function() {
 
   describe('docsToRestoreBatch', function() {
     it('should map a docs array to a restore batch', async function() {
-      const batch = new Restore(null).docsToRestoreBatch(testDocs[0]);
+      const batch = new Restore(null, {}).docsToRestoreBatch(testDocs[0]);
       assert.deepStrictEqual(batch, testBatches[0]);
     });
 
     it('should map multiple arrays to multiple batches', async function() {
-      const restore = new Restore(null);
+      const restore = new Restore(null, {});
       for (const i of [0, 1, 2]) {
         const batch = restore.docsToRestoreBatch(testDocs[i]);
         assert.deepStrictEqual(batch, testBatches[i]);
@@ -166,7 +166,7 @@ describe('#unit restore mappings', function() {
 
     it('should map multiple batches via MappingStream', async function() {
       const output = [];
-      await pipeline(testDocs, new MappingStream(new Restore(null).docsToRestoreBatch), outputAsWritable(output));
+      await pipeline(testDocs, new MappingStream(new Restore(null, {}).docsToRestoreBatch), outputAsWritable(output));
       assert.deepStrictEqual(output, testBatches);
     });
   });
@@ -200,7 +200,7 @@ describe('#unit restore mappings', function() {
     it('should restore a docs array', async function() {
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = { ...testBatches[0] };
-      return new Restore(dbClient).pendingToRestored(source).then((result) => {
+      return new Restore(dbClient, {}).pendingToRestored(source).then((result) => {
         assert.deepStrictEqual(result, { batch: 0, documents: 3 });
         assert.ok(nock.isDone(), 'The mocks should all be called.');
       });
@@ -213,7 +213,7 @@ describe('#unit restore mappings', function() {
       mockResponse(2);
       const expectedOutput = [{ batch: 0, documents: 3 }, { batch: 1, documents: 3 }, { batch: 2, documents: 3 }];
       const output = [];
-      await pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable(output));
+      await pipeline(source, new MappingStream(new Restore(dbClient, {}).pendingToRestored), outputAsWritable(output));
       assert.deepStrictEqual(output, expectedOutput);
       assert.ok(nock.isDone(), 'The mocks should all be called.');
     });
@@ -233,7 +233,7 @@ describe('#unit restore mappings', function() {
       // pendingToRestored modifies objects in place, so take a copy otherwise we might impact other tests
       const source = testBatches.map((batch) => { return { ...batch }; });
       return assert.rejects(
-        pipeline(source, new MappingStream(new Restore(dbClient).pendingToRestored), outputAsWritable([]))
+        pipeline(source, new MappingStream(new Restore(dbClient, {}).pendingToRestored), outputAsWritable([]))
           .catch((e) => { throw convertError(e); }), // perform an error conversion as would happen at the top level
         { name: 'HTTPFatalError' }
       ).then(() => { assert.ok(nock.isDone(), 'The mocks should all be called.'); });
