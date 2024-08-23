@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,14 +44,14 @@ describe('#unit backup mappings', function() {
 
   describe('backupBatchToBackupFileLine', function() {
     it('should correctly map to a backup line', function() {
-      const fileLine = new Backup(null).backupBatchToBackupFileLine(backupBatchDone);
+      const fileLine = new Backup(null, {}).backupBatchToBackupFileLine(backupBatchDone);
       assertFileLine(fileLine, `${JSON.stringify(backupBatchDone.docs)}\n`);
     });
   });
 
   describe('backupBatchToLogFileLine', function() {
     it('should correctly map to a log file line', function() {
-      const fileLine = new Backup(null).backupBatchToLogFileLine(backupBatchDone);
+      const fileLine = new Backup(null, {}).backupBatchToLogFileLine(backupBatchDone);
       assertFileLine(fileLine, ':d batch0\n');
     });
   });
@@ -136,7 +136,7 @@ describe('#unit backup mappings', function() {
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
     const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
-    const fetcher = new Backup(dbClient).pendingToFetched;
+    const fetcher = new Backup(dbClient, {}).pendingToFetched;
 
     beforeEach('setup nock', function() {
       nock(url)
@@ -193,7 +193,7 @@ describe('#unit backup mappings', function() {
           };
         });
 
-      const backup = new Backup(dbClient);
+      const backup = new Backup(dbClient, {});
       const output = [];
       return pipeline(
         fs.createReadStream('./test/fixtures/test2.log'), // read the log
