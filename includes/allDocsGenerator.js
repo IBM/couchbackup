@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ module.exports = async function * (dbClient, options = {}) {
   let lastPage = false;
   let startKey = null;
   const opts = { db: dbClient.dbName, limit: options.bufferSize, includeDocs: true };
+  if (options.attachments === true) {
+    opts.attachments = true;
+  }
   do {
     if (startKey) opts.startKey = startKey;
     yield dbClient.service.postAllDocs(opts).then(response => {

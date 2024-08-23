@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ describe('#unit Perform backup using shallow backup', function() {
         assert.strictEqual(summary.total, 11);
         // Assert the correct number of written events
         assert.strictEqual(counter, 4);
-        // Assert correct batche increments
+        // Assert correct batch increments
         assert.deepStrictEqual(totals, [3, 6, 9, 11]);
         // Assert nocks complete
         assert.ok(couch.isDone());
@@ -107,7 +107,7 @@ describe('#unit Perform backup using shallow backup', function() {
         assert.strictEqual(summary.total, 11);
         // Assert the correct number of written events
         assert.strictEqual(counter, 4);
-        // Assert correct batche increments
+        // Assert correct batch increments
         assert.deepStrictEqual(totals, [3, 6, 9, 11]);
         // Assert nocks complete
         assert.ok(couch.isDone());
@@ -134,9 +134,36 @@ describe('#unit Perform backup using shallow backup', function() {
       .then(() => {
         // Assert the correct number of written events
         assert.strictEqual(counter, 2);
-        // Assert correct batche increments
+        // Assert correct batch increments
         assert.deepStrictEqual(totals, [3, 6]);
         assert.ok(couch.isDone);
+      });
+  });
+
+  it('should perform a shallow backup with attachments option', async function() {
+    const couch = nock(dbUrl)
+      // batch 1
+      .post('/_all_docs', { limit: 3, include_docs: true, attachments: true })
+      .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_1.json', 'utf8')))
+      // batch 2
+      .post('/_all_docs', { limit: 3, start_key: badgerKey, include_docs: true, attachments: true })
+      .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_2.json', 'utf8')))
+      // batch 3
+      .post('/_all_docs', { limit: 3, start_key: kookaburraKey, include_docs: true, attachments: true })
+      .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_3.json', 'utf8')))
+      // batch 4
+      .post('/_all_docs', { limit: 3, start_key: snipeKey, include_docs: true, attachments: true })
+      .reply(200, JSON.parse(fs.readFileSync('./test/fixtures/animaldb_all_docs_4.json', 'utf8')));
+    return shallowBackup({ bufferSize: 3, parallelism: 1, attachments: true })
+      .then((summary) => {
+        // Assert the promise total
+        assert.strictEqual(summary.total, 11);
+        // Assert the correct number of written events
+        assert.strictEqual(counter, 4);
+        // Assert correct batch increments
+        assert.deepStrictEqual(totals, [3, 6, 9, 11]);
+        // Assert nocks complete
+        assert.ok(couch.isDone());
       });
   });
 });

@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,9 @@ const codes = {
   LogFileExists: 23,
   SpoolChangesError: 30,
   HTTPFatalError: 40,
-  BulkGetError: 50
+  BulkGetError: 50,
+  AttachmentsNotEnabledError: 60,
+  AttachmentsMetadataAbsent: 61
 };
 
 class BackupError extends Error {

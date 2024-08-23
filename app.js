@@ -327,7 +327,7 @@ module.exports = {
         } else {
           // Write a file header including the name, version and mode
           debug('Will write backup file header.');
-          metadataToWrite = `${JSON.stringify({ name: pkg.name, version: pkg.version, mode: opts.mode })}\n`;
+          metadataToWrite = `${JSON.stringify({ name: pkg.name, version: pkg.version, mode: opts.mode, attachments: opts.attachments })}\n`;
         }
         return new Promise((resolve, reject) => {
           targetStream.write(metadataToWrite, 'utf-8', (err) => {

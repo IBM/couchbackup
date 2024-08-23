@@ -66,7 +66,7 @@ class Restore {
         return lineAsJson;
       } else if (backupLine.lineNumber === 1 && lineAsJson.name && lineAsJson.version && lineAsJson.mode) {
         // First line is metadata.
-        mappingDebug(`Parsed backup file metadata ${lineAsJson.name} ${lineAsJson.version} ${lineAsJson.mode}.`);
+        mappingDebug(`Parsed backup file metadata ${lineAsJson.name} ${lineAsJson.version} ${lineAsJson.mode} ${lineAsJson.attachments}.`);
         // This identifies a version of 2.10.0 or newer that wrote the backup file.
         // Set the mode that was used for the backup file.
         this.backupMode = lineAsJson.mode;
@@ -74,6 +74,16 @@ class Restore {
         // were associated wiht a resume, so unset the ignore flag.
         this.suppressAllBrokenJSONErrors = false;
         // Later we may add other version/feature specific toggles here.
+        if (lineAsJson.attachments === true) {
+          if (!this.options.attachments) {
+            // Error out if trying to restore attachments without the option
+            throw new BackupError('AttachmentsNotEnabledError', 'To restore a backup file with attachments, enable the attachments option.');
+          }
+        } else {
+          if (this.options.attachments) {
+            throw new BackupError('AttachmentsMetadataAbsent', 'Cannot restore with attachments because the backup file was not created with the attachments option.');
+          }
+        }
       } else if (lineAsJson.marker && lineAsJson.marker === marker) {
         mappingDebug(`Resume marker on line  ${backupLine.lineNumber} of backup file.`);
       } else {
