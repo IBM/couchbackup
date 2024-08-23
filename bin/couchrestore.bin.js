@@ -32,7 +32,8 @@ try {
     parallelism: program.parallelism,
     requestTimeout: program.requestTimeout,
     iamApiKey: program.iamApiKey,
-    iamTokenUrl: program.iamTokenUrl
+    iamTokenUrl: program.iamTokenUrl,
+    attachments: program.attachments
   };
 
   // log configuration to console

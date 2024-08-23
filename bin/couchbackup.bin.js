@@ -37,7 +37,8 @@ try {
     requestTimeout: program.requestTimeout,
     resume: program.resume,
     iamApiKey: program.iamApiKey,
-    iamTokenUrl: program.iamTokenUrl
+    iamTokenUrl: program.iamTokenUrl,
+    attachments: program.attachments
   };
 
   // log configuration to console

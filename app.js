@@ -98,7 +98,8 @@ async function validateOptions(opts) {
     { key: 'requestTimeout', type: 'number' },
     { key: 'mode', type: 'enum', values: ['full', 'shallow'] },
     { key: 'resume', type: 'boolean' },
-    { key: 'quiet', type: 'boolean' }
+    { key: 'quiet', type: 'boolean' },
+    { key: 'attachments', type: 'boolean' }
   ];
 
   for (const rule of rules) {
@@ -190,6 +191,14 @@ async function validateLogOnResume(opts) {
   return true;
 }
 
+async function attachmentWarnings(opts) {
+  if (opts && opts.attachments) {
+    console.warn('WARNING: The "attachments" option is provided as-is and is not supported. ' +
+      'This option is for Apache CouchDB only and is experimental. ' +
+      'Do not use this option with IBM Cloudant.');
+  }
+}
+
 /**
  * Validate arguments.
  *
@@ -202,7 +211,8 @@ async function validateArgs(url, opts, isBackup = true) {
   const isIAM = opts && typeof opts.iamApiKey === 'string';
   const validations = [
     validateURL(url, isIAM),
-    validateOptions(opts)
+    validateOptions(opts),
+    attachmentWarnings(opts)
   ];
   if (isBackup) {
     validations.push(

@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ describe('#unit Default parameters', function() {
     process.env.COUCH_MODE = 'shallow';
     process.env.CLOUDANT_IAM_API_KEY = 'ABC123-ZYX987_cba789-xyz321';
     process.env.COUCH_QUIET = 'true';
+    process.env.COUCH_ATTACHMENTS = 'true';
   });
 
   after('Reset process data', function() {
@@ -126,6 +127,13 @@ describe('#unit Default parameters', function() {
       const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
+    });
+
+    it('respects the COUCH_ATTACHMENTS env variable if the --attachments backup command-line parameter is missing', function() {
+      process.argv = ['node', 'test'];
+      const program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.attachments, 'boolean');
+      assert.strictEqual(program.attachments, true);
     });
 
     it('respects the backup --url command-line parameter', function() {
@@ -219,6 +227,13 @@ describe('#unit Default parameters', function() {
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
     });
+
+    it('respects the backup --attachments command-line parameter', function() {
+      process.argv = ['node', 'test', '--attachments'];
+      const program = parser.parseBackupArgs();
+      assert.strictEqual(typeof program.attachments, 'boolean');
+      assert.strictEqual(program.attachments, true);
+    });
   });
 
   describe('Restore command-line', function() {
@@ -264,11 +279,18 @@ describe('#unit Default parameters', function() {
       assert.strictEqual(program.iamApiKey, process.env.CLOUDANT_IAM_API_KEY);
     });
 
-    it('respects the COUCH_QUIET env variable if the --quiet restorer command-line parameter is missing', function() {
+    it('respects the COUCH_QUIET env variable if the --quiet restore command-line parameter is missing', function() {
       process.argv = ['node', 'test'];
       const program = parser.parseBackupArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
+    });
+
+    it('respects the COUCH_ATTACHMENTS env variable if the --attachments restore command-line parameter is missing', function() {
+      process.argv = ['node', 'test'];
+      const program = parser.parseRestoreArgs();
+      assert.strictEqual(typeof program.attachments, 'boolean');
+      assert.strictEqual(program.attachments, true);
     });
 
     it('respects the restore --url command-line parameter', function() {
@@ -324,6 +346,13 @@ describe('#unit Default parameters', function() {
       const program = parser.parseRestoreArgs();
       assert.strictEqual(typeof program.quiet, 'boolean');
       assert.strictEqual(program.quiet, true);
+    });
+
+    it('respects the restore --attachments command-line parameter', function() {
+      process.argv = ['node', 'test', '--attachments'];
+      const program = parser.parseRestoreArgs();
+      assert.strictEqual(typeof program.attachments, 'boolean');
+      assert.strictEqual(program.attachments, true);
     });
   });
 });

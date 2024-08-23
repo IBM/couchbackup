@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -126,5 +126,13 @@ describe('#unit Configuration', function() {
     applyEnvVars(config);
     assert.strictEqual(typeof config.quiet, 'boolean');
     assert.strictEqual(config.quiet, true);
+  });
+
+  it('respects the COUCH_ATTACHMENTS env variable', function() {
+    process.env.COUCH_ATTACHMENTS = 'true';
+    const config = {};
+    applyEnvVars(config);
+    assert.strictEqual(typeof config.attachments, 'boolean');
+    assert.strictEqual(config.attachments, true);
   });
 });

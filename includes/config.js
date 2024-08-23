@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ const { join, normalize } = require('node:path');
 */
 function apiDefaults() {
   return {
+    attachments: false,
     parallelism: 5,
     bufferSize: 500,
     requestTimeout: 120000,
@@ -109,6 +110,11 @@ function applyEnvironmentVariables(opts) {
   // if we have a specified IAM token endpoint
   if (typeof process.env.CLOUDANT_IAM_TOKEN_URL !== 'undefined') {
     opts.iamTokenUrl = process.env.CLOUDANT_IAM_TOKEN_URL;
+  }
+
+  // if we are instructed to be quiet
+  if (typeof process.env.COUCH_ATTACHMENTS !== 'undefined' && process.env.COUCH_ATTACHMENTS === 'true') {
+    opts.attachments = true;
   }
 }
 
