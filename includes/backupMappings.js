@@ -208,11 +208,15 @@ class Backup {
   pendingToFetched = async(backupBatch) => {
     mappingDebug(`Fetching batch ${backupBatch.batch}.`);
     try {
-      const response = await this.dbClient.service.postBulkGet({
+      const bulkGetOpts = {
         db: this.dbClient.dbName,
         revs: true,
         docs: backupBatch.docs
-      });
+      };
+      if (this.options.attachments) {
+        bulkGetOpts.attachments = true;
+      }
+      const response = await this.dbClient.service.postBulkGet(bulkGetOpts);
 
       mappingDebug(`Good server response for batch ${backupBatch.batch}.`);
       // create an output array with the docs returned

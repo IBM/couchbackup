@@ -136,31 +136,34 @@ describe('#unit backup mappings', function() {
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
     const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
-    const fetcher = new Backup(dbClient, {}).pendingToFetched;
 
-    beforeEach('setup nock', function() {
-      nock(url)
-        .post(`/${dbName}/_bulk_get`)
-        .query(true)
-        .times(1)
-        .reply(200, (uri, requestBody) => {
-          // mock a _bulk_get response
-          return {
-            results: [
-              { docs: backupBatchDone.docs.map((doc) => { return { ok: doc }; }) }
-            ]
-          };
+    [{ }, { attachments: true }].forEach((opts) => {
+      beforeEach('setup nock', function() {
+        nock(url)
+          .post(`/${dbName}/_bulk_get`)
+          .query({ ...{ revs: true }, ...opts })
+          .times(1)
+          .reply(200, (uri, requestBody) => {
+            // mock a _bulk_get response
+            return {
+              results: [
+                { docs: backupBatchDone.docs.map((doc) => { return { ok: doc }; }) }
+              ]
+            };
+          });
+      });
+
+      afterEach('setup nock', function() {
+        nock.cleanAll();
+      });
+
+      it('should correctly map a batch from todo to done' +
+        `${opts.attachments ? ' with attachments' : ''}`, async function() {
+        const fetcher = new Backup(dbClient, opts).pendingToFetched;
+        return fetcher(backupBatchTodo).then((fetchedBatch) => {
+          assertBackupBatchObject(fetchedBatch, 'd', 0, backupBatchDone.docs);
+          assert.ok(nock.isDone, 'The mocks should be done');
         });
-    });
-
-    afterEach('setup nock', function() {
-      nock.cleanAll();
-    });
-
-    it('should correctly map a batch from todo to done', async function() {
-      return fetcher(backupBatchTodo).then((fetchedBatch) => {
-        assertBackupBatchObject(fetchedBatch, 'd', 0, backupBatchDone.docs);
-        assert.ok(nock.isDone, 'The mocks should be done');
       });
     });
   });

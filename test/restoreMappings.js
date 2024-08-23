@@ -144,9 +144,53 @@ describe('#unit restore mappings', function() {
 
     it('should error for a non-array', async function() {
       const line = liner.wrapLine(JSON.stringify({ foo: 'bar' }));
-      // restore.backupLineToDocsArray(line);
       assert.throws(() => { restore.backupLineToDocsArray(line); },
         { name: 'BackupFileJsonError', message: 'Error on line 1 of backup file - not an array or expected metadata' });
+    });
+  });
+
+  describe('backupLineToDocsArray with attachments', function() {
+    const atf = [{ attachments: true }, { attachments: false }];
+    // Test the option being true/false
+    atf.forEach(attachmentOpt => {
+      // Test the file metadata being absent, true, false
+      [{}, ...atf].forEach(attMetadata => {
+        // Cases
+        // attachments: option | metadata | result
+        // true | undefined | AttachmentsMetadataAbsent
+        // true | true | pass
+        // true | false | AttachmentsMetadataAbsent
+        // false | undefined | pass
+        // false | true | AttachmentsNotEnabledError
+        // false | false | pass
+        let expectedError = null;
+        if (attachmentOpt.attachments && !attMetadata.attachments) {
+          // option true, metadata false | undefined: should error
+          // Cannot restore attachments from a backup file without attachments
+          expectedError = {
+            name: 'AttachmentsMetadataAbsent',
+            message: 'Cannot restore with attachments because the backup file was not created with the attachments option.'
+          };
+        } else if (!attachmentOpt.attachments && attMetadata.attachments) {
+          // option false, metadata true: should error
+          // Attachments in backup file, but option not specified
+          expectedError = {
+            name: 'AttachmentsNotEnabledError',
+            message: 'To restore a backup file with attachments, enable the attachments option.'
+          };
+        }
+        it(`should ${expectedError === null ? 'pass' : 'error'} when restoring attachments with attachments: ${attachmentOpt.attachments}` +
+          ` and file with ${attMetadata.attachments} attachment metadata`, function() {
+          const metadata = JSON.stringify({ name: 'couchbackup', version: '2.11.0', mode: 'full', ...attMetadata });
+          const line = new Liner().wrapLine(metadata);
+          const restore = new Restore(null, attachmentOpt);
+          if (expectedError === null) {
+            restore.backupLineToDocsArray(line);
+          } else {
+            assert.throws(() => { restore.backupLineToDocsArray(line); }, expectedError);
+          }
+        });
+      });
     });
   });
 

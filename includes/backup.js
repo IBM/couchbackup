@@ -15,6 +15,7 @@
 
 const { createWriteStream } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
+const { Attachments } = require('./attachmentMappings.js');
 const { Backup } = require('./backupMappings.js');
 const { BackupError } = require('./error.js');
 const logFileSummary = require('./logfilesummary.js');
@@ -94,6 +95,7 @@ module.exports = function(dbClient, options, targetStream, ee) {
         ee.emit('written', { total, time: totalRunningTimeSec, batch: backupBatch.batch });
       };
 
+      const mappingStreams = [];
       const destinationStreams = [];
       if (options.mode === 'shallow') {
         // shallow mode writes only to backup file
@@ -108,8 +110,10 @@ module.exports = function(dbClient, options, targetStream, ee) {
         );
       } else {
         // full mode needs to fetch spooled changes and writes a backup file then finally a log file
+        mappingStreams.push(...[
+          new MappingStream(backup.pendingToFetched, options.parallelism) // fetch the batches at the configured concurrency
+        ]);
         destinationStreams.push(...[
-          new MappingStream(backup.pendingToFetched, options.parallelism), // fetch the batches at the configured concurrency
           new WritableWithPassThrough(
             'backup', // name for logging
             targetStream, // backup file
@@ -126,8 +130,15 @@ module.exports = function(dbClient, options, targetStream, ee) {
         ]);
       }
 
+      if (options.attachments) {
+        mappingStreams.push(
+          new MappingStream(new Attachments().encode, options.parallelism)
+        );
+      }
+
       return pipeline(
         ...srcStreams, // the source streams from the previous block (all docs async generator for shallow or for full either spool changes or resumed log)
+        ...mappingStreams, // map from source to destination content
         ...destinationStreams // the appropriate destination streams for the mode
       );
     })

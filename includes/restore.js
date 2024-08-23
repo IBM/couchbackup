@@ -14,8 +14,9 @@
 'use strict';
 
 const debug = require('debug')('couchbackup:restore');
-const { Liner } = require('../includes/liner.js');
-const { Restore } = require('../includes/restoreMappings.js');
+const { Attachments } = require('./attachmentMappings.js');
+const { Liner } = require('./liner.js');
+const { Restore } = require('./restoreMappings.js');
 const { BatchingStream, MappingStream } = require('./transforms.js');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
@@ -48,14 +49,29 @@ module.exports = function(dbClient, options, readstream, ee) {
     }
   });
 
-  return pipeline(
+  const batchPreparationStreams = [
     readstream, // the backup file
     new Liner(), // line by line
     new MappingStream(restore.backupLineToDocsArray), // convert line to a docs array
     new BatchingStream(options.bufferSize, true), // make new arrays of the correct buffer size
-    new MappingStream(restore.docsToRestoreBatch), // make a restore batch
+    new MappingStream(restore.docsToRestoreBatch) // make a restore batch
+  ];
+  const mappingStreams = [];
+  const restoreStreams = [
     new MappingStream(restore.pendingToRestored, options.parallelism), // do the restore at the desired level of concurrency
     output // emit restored events
+  ];
+
+  if (options.attachments) {
+    mappingStreams.push(
+      new MappingStream(new Attachments().decode, options.parallelism)
+    );
+  }
+
+  return pipeline(
+    ...batchPreparationStreams,
+    ...mappingStreams,
+    ...restoreStreams
   ).then(() => {
     return { total };
   });
