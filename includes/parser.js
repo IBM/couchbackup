@@ -33,6 +33,8 @@ function parseBackupArgs() {
     .version(pkg.version)
     .description('Backup a CouchDB/Cloudant database to a backup text file.')
     .usage('[options...]')
+    .option('-a, --attachments',
+      cliutils.getUsage('*EXPERIMENTAL/UNSUPPORTED*: enable backup of attachments', defaults.attachments))
     .option('-b, --buffer-size <n>',
       cliutils.getUsage('number of documents fetched at once', defaults.bufferSize),
       Number)
@@ -97,6 +99,8 @@ function parseRestoreArgs() {
     .version(pkg.version)
     .description('Restore a CouchDB/Cloudant database from a backup text file.')
     .usage('[options...]')
+    .option('-a, --attachments',
+      cliutils.getUsage('*EXPERIMENTAL/UNSUPPORTED*: enable restore of attachments', defaults.attachments))
     .option('-b, --buffer-size <n>',
       cliutils.getUsage('number of documents restored at once', defaults.bufferSize),
       Number)

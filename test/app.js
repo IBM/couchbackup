@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,6 +177,12 @@ describe('#unit Validate arguments', function() {
   it('returns no error for valid quiet type', async function() {
     return validateArgs(goodUrl, { quiet: true }, assertNoValidationError());
   });
+  it('returns error for invalid attachments type', async function() {
+    return validateArgs(goodUrl, { attachments: 'true' }, assertErrorMessage('Invalid attachments option, must be type boolean'));
+  });
+  it('returns no error for valid attachments type', async function() {
+    return validateArgs(goodUrl, { attachments: true }, assertNoValidationError());
+  });
   it('warns for log arg in shallow mode', async function() {
     return validateStdErrWarning(goodUrl, { mode: 'shallow', log: 'test' },
       'the options "log" and "resume" are invalid when using shallow mode.');
@@ -192,5 +198,11 @@ describe('#unit Validate arguments', function() {
   it('warns for buffer size arg when resuming', async function() {
     return validateStdErrWarning(goodUrl, { log: './test/fixtures/test.log', resume: true, bufferSize: 100 },
       'the original backup "bufferSize" applies when resuming a backup.');
+  });
+  it('warns for experimental attachments arg', async function() {
+    return validateStdErrWarning(goodUrl, { attachments: true },
+      'WARNING: The "attachments" option is provided as-is and is not supported. ' +
+      'This option is for Apache CouchDB only and is experimental. ' +
+      'Do not use this option with IBM Cloudant.');
   });
 });

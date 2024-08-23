@@ -22,7 +22,7 @@ It comes with a companion command-line utility that can restore the backed up da
 CouchBackup has some restrictions in the data it's able to backup:
 
 * **`couchbackup` does not do CouchDB replication as such, it simply streams through a database's `_changes` feed, and uses `POST /db/_bulk_get` to fetch the documents, storing the documents it finds on disk.**
-* **`couchbackup` does not support backing up or restoring databases containing documents with attachments. The recommendation is to store attachments directly in an object store. DO NOT USE THIS TOOL FOR DATABASES CONTAINING ATTACHMENTS.** [Note](#note-on-attachments)
+* **`couchbackup` does not support backing up or restoring databases containing documents with attachments. The recommendation is to store attachments directly in an object store. The "attachments" option is provided as-is and is not supported. This option is for Apache CouchDB only and is experimental. DO NOT USE THIS OPTION WITH IBM Cloudant backups.** [Note](#note-on-attachments)
 
 ## Installation
 
@@ -228,6 +228,7 @@ This tool can script the backup of your databases. Move the backup and log files
 * `CLOUDANT_IAM_API_KEY` - optional [IAM API key](https://console.bluemix.net/docs/services/Cloudant/guides/iam.html#ibm-cloud-identity-and-access-management)
  to use to access the Cloudant database instead of user information credentials in the URL. The endpoint used to retrieve the token defaults to
  `https://iam.cloud.ibm.com/identity/token`, but can be overridden if necessary using the `CLOUDANT_IAM_TOKEN_URL` environment variable.
+* `COUCH_ATTACHMENTS` - _EXPERIMENTAL & UNSUPPORTED_ (see [Note](#note-on-attachments)) if `true` will include attachments as part of the backup or restore process.
 * `DEBUG` - if set to `couchbackup`, all debug messages print on `stderr` during a backup or restore process
 
 _Note:_ Environment variables are only used with the CLI. When
@@ -246,6 +247,7 @@ _Note:_ Environment variables are only used with the CLI. When
 * `--mode` - same as `COUCH_MODE`
 * `--iam-api-key` - same as `CLOUDANT_IAM_API_KEY`
 * `--quiet` - same as `COUCH_QUIET`
+* `--attachments` - _EXPERIMENTAL & UNSUPPORTED_ (see [Note](#note-on-attachments)) same as `COUCH_ATTACHMENTS`
 
 ## Using programmatically
 
@@ -289,6 +291,7 @@ target locations are not required.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
 * `iamTokenUrl`: optionally used with `iamApiKey` to override the default URL for
  retrieving IAM tokens.
+* `attachments`: _EXPERIMENTAL & UNSUPPORTED_ (see [Note](#note-on-attachments)), see `CLOUDANT_ATTACHMENTS`.
 
 When the backup completes or fails the callback functions gets called with
 the standard `err, data` parameters.
@@ -352,6 +355,7 @@ target locations are not required.
 * `iamApiKey`: see `CLOUDANT_IAM_API_KEY`.
 * `iamTokenUrl`: optionally used with `iamApiKey` to override the default URL for
  retrieving IAM tokens.
+* `attachments`: _EXPERIMENTAL & UNSUPPORTED_ (see [Note](#note-on-attachments)), see `CLOUDANT_ATTACHMENTS`.
 
 When the restore completes or fails the callback functions gets called with
 the standard `err, data` parameters.
@@ -436,16 +440,25 @@ details them.
 ### `couchrestore`
 
 * `13`: restore target database is not new and empty.
+* `60`: `attachments` option used for backup, but wasn't used for restore.
+* `61`: `attachments` option used for restore, but wasn't used for backup.
 
 ## Note on attachments
 
-TLDR; If you backup a database that has attachments `couchbackup` cannot restore it.
+TLDR; If you backup a database that has attachments without using the `attachments` option `couchbackup` can't restore it.
 
 As documented above `couchbackup` does not support backing up or restoring databases containing documents with attachments.
+
+The recommendation is to store attachments directly in an object store with a link in the JSON document instead of using the
+native attachment API.
+
+### With experimental `attachments` option
+
+The `attachments` option is provided as-is and is not supported. This option is for Apache CouchDB only and is experimental. Do not use this option with IBM Cloudant backups.
+
+### Without experimental `attachments` option
+
 Backing up a database that includes documents with attachments appears to complete successfully. However, the attachment
 content is not downloaded and the backup file contains attachment metadata. So attempts to
 restore the backup result in errors because the attachment metadata references attachments that are not present
 in the restored database.
-
-The recommendation is to store attachments directly in an object store with a link in the JSON document instead of using the
-native attachment API.
