@@ -97,7 +97,8 @@ async function validateOptions(opts) {
     { key: 'parallelism', type: 'number' },
     { key: 'requestTimeout', type: 'number' },
     { key: 'mode', type: 'enum', values: ['full', 'shallow'] },
-    { key: 'resume', type: 'boolean' }
+    { key: 'resume', type: 'boolean' },
+    { key: 'quiet', type: 'boolean' }
   ];
 
   for (const rule of rules) {

@@ -171,6 +171,12 @@ describe('#unit Validate arguments', function() {
       message: 'The log file ./test/fixtures/test.log exists. Use the resume option if you want to resume a backup from an existing log file.'
     });
   });
+  it('returns error for invalid quiet type', async function() {
+    return validateArgs(goodUrl, { quiet: 'true' }, assertErrorMessage('Invalid quiet option, must be type boolean'));
+  });
+  it('returns no error for valid quiet type', async function() {
+    return validateArgs(goodUrl, { quiet: true }, assertNoValidationError());
+  });
   it('warns for log arg in shallow mode', async function() {
     return validateStdErrWarning(goodUrl, { mode: 'shallow', log: 'test' },
       'the options "log" and "resume" are invalid when using shallow mode.');
