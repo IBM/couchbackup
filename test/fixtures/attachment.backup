@@ -1,0 +1,2 @@
+{"name":"@cloudant/couchbackup","version":"2.10.3-SNAPSHOT","mode":"full","attachments":true}
+[{"_attachments":{"att.txt":{"contentType":"text/plain","data":"TXkgYXR0YWNobWVudCBkYXRh","digest":"md5-mbpDbGREDlAqGyaN6zP1DA==","revpos":2}},"_id":"d1","_rev":"2-dfe86ede5cf44dd4c3d1436c32db4be2","_revisions":{"ids":["dfe86ede5cf44dd4c3d1436c32db4be2","967a00dff5e02add41819138abb3284d"],"start":2}}]

@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,6 +32,20 @@ const u = require('./citestutils.js');
       // while to get this done.
       u.setTimeout(this, 30 * 60);
       return u.testDirectBackupAndRestore(params, 'largedb1g', this.dbName);
+    });
+
+    it('should restore and backup attachment', async function() {
+      // Allow up to 60 s
+      u.setTimeout(this, 60);
+      const p = u.p(params, { opts: { attachments: true } });
+      const expectedBackupFile = './test/fixtures/attachment.backup';
+      const actualBackup = `./${this.fileName}`;
+      return u.testRestoreFromFile(p, expectedBackupFile, this.dbName)
+        .then(() => {
+          return u.testBackupToFile(p, this.dbName, actualBackup);
+        }).then(() => {
+          return u.backupFileCompare(actualBackup, expectedBackupFile);
+        });
     });
   });
 });
