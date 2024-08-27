@@ -1,4 +1,4 @@
-// Copyright © 2023 IBM Corp. All rights reserved.
+// Copyright © 2023, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -111,6 +111,10 @@ module.exports = {
         args.push('--iam-api-key');
         args.push(params.opts.iamApiKey);
       }
+      if (params.opts.attachments) {
+        args.push('--attachments');
+        args.push(params.opts.attachments);
+      }
     }
     return new TestProcess('./bin/couchbackup.bin.js', args, 'readable');
   },
@@ -132,6 +136,10 @@ module.exports = {
       if (params.opts.iamApiKey) {
         args.push('--iam-api-key');
         args.push(params.opts.iamApiKey);
+      }
+      if (params.opts.attachments) {
+        args.push('--attachments');
+        args.push(params.opts.attachments);
       }
     }
     return new TestProcess('./bin/couchrestore.bin.js', args, 'writable');
