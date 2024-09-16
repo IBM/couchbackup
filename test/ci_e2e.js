@@ -17,6 +17,10 @@
 
 delete require.cache[require.resolve('./citestutils.js')];
 const u = require('./citestutils.js');
+const client = require('./hooks.js').sharedClient;
+const { Writable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
+const assert = require('node:assert');
 
 [{ useApi: true }, { useApi: false }].forEach(function(params) {
   describe(u.scenario('End to end backup and restore', params), function() {
@@ -40,11 +44,29 @@ const u = require('./citestutils.js');
       const p = u.p(params, { opts: { attachments: true } });
       const expectedBackupFile = './test/fixtures/attachment.backup';
       const actualBackup = `./${this.fileName}`;
+      const actualRestoredAttachmentChunks = [];
       return u.testRestoreFromFile(p, expectedBackupFile, this.dbName)
         .then(() => {
           return u.testBackupToFile(p, this.dbName, actualBackup);
         }).then(() => {
           return u.backupFileCompare(actualBackup, expectedBackupFile);
+        }).then(() => {
+          return client.getAttachment({
+            db: this.dbName,
+            docId: 'd1',
+            attachmentName: 'att.txt'
+          });
+        }).then(response => {
+          return pipeline(
+            response.result, new Writable({
+              write(chunk, encoding, callback) {
+                actualRestoredAttachmentChunks.push(chunk);
+                callback();
+              }
+            }));
+        }).then(() => {
+          const actualRestoredAttachment = Buffer.concat(actualRestoredAttachmentChunks).toString('utf8');
+          assert.strictEqual(actualRestoredAttachment, 'My attachment data');
         });
     });
   });
