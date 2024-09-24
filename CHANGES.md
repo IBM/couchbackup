@@ -1,5 +1,8 @@
-# Unreleased
+# 2.11.0 (2024-09-24)
 - [NEW] *EXPERIMENTAL/UNSUPPORTED* Add `attachments` option to backup and restore attachments for Apache CouchDB.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.10.3`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `5.0.2` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `debug` dependency to version `4.3.7`.
 - [NOTE] The `attachments` option is not supported. Do not use for IBM Cloudant backups.
 
 # 2.10.2 (2024-08-19)
