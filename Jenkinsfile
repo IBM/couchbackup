@@ -167,14 +167,14 @@ pipeline {
         stage('Node LTS') {
           steps {
             script{
-              runTest('20')
+              runTest('22')
             }
           }
         }
         stage('IAM Node LTS') {
           steps {
             script{
-              runTest('20', '-i -g \'#unit|#slowe\'', 'test-iam')
+              runTest('22', '-i -g \'#unit|#slowe\'', 'test-iam')
             }
           }
         }
@@ -185,7 +185,7 @@ pipeline {
           }
           steps {
             script{
-              runTest('20', '', 'test-network/conditions')
+              runTest('22', '', 'test-network/conditions')
             }
           }
         }
@@ -198,11 +198,11 @@ pipeline {
             }
           }
         }
-        stage('Node 22x') {
+        stage('Node 20x') {
           steps {
-            container('node22') {
+            container('node20') {
               script{
-                runTest('22')
+                runTest('20')
               }
             }
           }
