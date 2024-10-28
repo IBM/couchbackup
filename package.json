@@ -50,7 +50,7 @@
     "mocha": "10.7.3",
     "nock": "13.5.5",
     "tail": "2.2.6",
-    "uuid": "10.0.0"
+    "uuid": "11.0.1"
   },
   "scripts": {
     "lint": "eslint --ignore-path .gitignore .",
