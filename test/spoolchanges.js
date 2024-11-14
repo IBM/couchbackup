@@ -77,7 +77,7 @@ describe('Check spool changes', function() {
       // in the underlying SDK call, follower will not retry
       return changes(500, 0).catch((err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `500 Internal Server Error: post ${url}/${dbName}/_changes - Error: foo, Reason: bar`);
+        assert.strictEqual(err.message, `500 post ${url}/${dbName}/_changes - Error: foo: bar`);
         assert.ok(nock.isDone());
       });
     }).timeout(longTestTimeout);
