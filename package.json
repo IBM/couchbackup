@@ -29,7 +29,6 @@
   },
   "peerDependencies": {
     "ibm-cloud-sdk-core": "^5.0.2",
-    "retry-axios": "^2.6.0",
     "axios": "^1.7.4"
   },
   "main": "app.js",
