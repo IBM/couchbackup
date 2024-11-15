@@ -24,7 +24,7 @@ const userAgent = 'couchbackup-cloudant/' + pkg.version + ' (Node.js ' +
 // An interceptor function to help augment error bodies with a little
 // extra information so we can continue to use consistent messaging
 // after the ugprade to @ibm-cloud/cloudant
-const errorHelper = async function(err) {
+function errorHelper(err) {
   debug('Entering error helper interceptor');
   let method;
   let requestUrl;
@@ -74,7 +74,18 @@ const errorHelper = async function(err) {
     }
   }
   return Promise.reject(err);
-};
+}
+
+// Interceptor function to add the User-Agent header.
+// An interceptor is used because setting UA in headers
+// option during client initialization means it gets overwritten
+// by the default value during a request.
+// This interceptor is further along the chain and able to
+// replace the default value.
+function userAgentHelper(requestConfig) {
+  requestConfig.headers['User-Agent'] = userAgent;
+  return requestConfig;
+}
 
 function newSimpleClient(rawUrl, opts) {
   const url = new URL(rawUrl);
@@ -120,17 +131,17 @@ function newClient(rawUrl, opts) {
   const { service, dbName, actUrl } = newSimpleClient(rawUrl, opts);
   const authenticator = service.getAuthenticator();
 
+  // Add interceptors
+  // Request interceptor to set the User-Agent header
+  // Response interceptor to put URLs in error messages
+  // Add for the token manager if present
   if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
+    authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.request.use(userAgentHelper, null);
     authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
   }
-  // Add error interceptors to put URLs in error messages
+  // and add for the client
+  service.getHttpClient().interceptors.request.use(userAgentHelper, null);
   service.getHttpClient().interceptors.response.use(null, errorHelper);
-
-  // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
-  service.getHttpClient().interceptors.request.use(function(requestConfig) {
-    requestConfig.headers['User-Agent'] = userAgent;
-    return requestConfig;
-  }, null);
 
   // Configure retries
   // Note: this MUST happen last after all other interceptors have been registered
