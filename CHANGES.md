@@ -1,3 +1,6 @@
+# 2.12.0 (unreleased)
+- [FIXED] Error messages from retried requests.
+
 # 2.11.0 (2024-09-24)
 - [NEW] *EXPERIMENTAL/UNSUPPORTED* Add `attachments` option to backup and restore attachments for Apache CouchDB.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.10.3`.

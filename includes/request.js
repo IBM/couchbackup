@@ -120,7 +120,21 @@ function newSimpleClient(rawUrl, opts) {
 function newClient(rawUrl, opts) {
   const { service, dbName, actUrl } = newSimpleClient(rawUrl, opts);
   const authenticator = service.getAuthenticator();
+
+  if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
+    authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
+  }
+  // Add error interceptors to put URLs in error messages
+  service.getHttpClient().interceptors.response.use(null, errorHelper);
+
+  // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
+  service.getHttpClient().interceptors.request.use(function(requestConfig) {
+    requestConfig.headers['User-Agent'] = userAgent;
+    return requestConfig;
+  }, null);
+
   // Configure retries
+  // Note: this MUST happen last after all other interceptors have been registered
   const maxRetries = 2; // for 3 total attempts
   service.getHttpClient().defaults.raxConfig = {
     // retries for status codes
@@ -145,18 +159,6 @@ function newClient(rawUrl, opts) {
     instance: service.getHttpClient()
   };
   retryPlugin.attach(service.getHttpClient());
-
-  if (authenticator.tokenManager && authenticator.tokenManager.requestWrapperInstance) {
-    authenticator.tokenManager.requestWrapperInstance.axiosInstance.interceptors.response.use(null, errorHelper);
-  }
-  // Add error interceptors to put URLs in error messages
-  service.getHttpClient().interceptors.response.use(null, errorHelper);
-
-  // Add request interceptor to add user-agent (adding it with custom request headers gets overwritten)
-  service.getHttpClient().interceptors.request.use(function(requestConfig) {
-    requestConfig.headers['User-Agent'] = userAgent;
-    return requestConfig;
-  }, null);
 
   return { service, dbName, url: actUrl.toString() };
 }
