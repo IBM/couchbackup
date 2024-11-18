@@ -103,7 +103,7 @@ describe('#unit Check database restore', function() {
       getRestorePipeline(),
       (err) => {
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `503 : post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
+        assert.strictEqual(err.message, `503 post ${dbUrl}/_bulk_docs - Error: Service Unavailable`);
         assert.ok(nock.isDone());
         return true;
       }

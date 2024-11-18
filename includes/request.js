@@ -1,4 +1,4 @@
-// Copyright © 2017, 2021 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,30 +37,24 @@ function errorHelper(err) {
     }
     debug('Applying response error message with status, url, and method');
     // Override the status text with an improved message
-    let errorMsg = `${err.response.status} ${err.response.statusText || ''}: ` +
-    `${method} ${requestUrl}`;
+    let errorMsg = `${err.response.status} ${method} ${requestUrl}`;
     if (err.response.data) {
       debug('Found response data');
       // Check if we have a JSON response and try to get the error/reason
       if (err.response.headers['content-type'] === 'application/json') {
         debug('Response data is JSON');
-        // Append the error/reason if available
-        if (err.response.data.error) {
-          debug('Augmenting error message with error property');
-          // Override the status text with our more complete message
-          errorMsg += ` - Error: ${err.response.data.error}`;
-          if (err.response.data.reason) {
-            debug('Augmenting error message with reason property');
-            errorMsg += `, Reason: ${err.response.data.reason}`;
-          }
+        // Append the 'errors' message if available
+        if (err.response.data.errors && err.response.data.errors.length > 0) {
+          const originalError = err.response.data.errors[0];
+          originalError.message = `${errorMsg} - Error: ${originalError.message}`;
         }
       } else {
         errorMsg += err.response.data;
+        // Set a new message for use by the node-sdk-core
+        // We use the errors array because it gets processed
+        // ahead of all other service errors.
+        err.response.data.errors = [{ message: errorMsg }];
       }
-      // Set a new message for use by the node-sdk-core
-      // We use the errors array because it gets processed
-      // ahead of all other service errors.
-      err.response.data.errors = [{ message: errorMsg }];
     }
   } else if (err.request) {
     debug('Error did not include a response');

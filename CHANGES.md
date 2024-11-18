@@ -1,5 +1,6 @@
 # 2.12.0 (unreleased)
 - [FIXED] Error messages from retried requests.
+- [IMPROVED] Updated error response messages.
 - [NOTE] Removed `retry-axios` from peerDependencies.
 
 # 2.11.0 (2024-09-24)

@@ -68,7 +68,7 @@ describe('#unit Check request response error callback', function() {
       (err) => {
         err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `500 Internal Server Error: get ${url}/bad - Error: foo, Reason: bar`);
+        assert.strictEqual(err.message, `500 get ${url}/bad - Error: foo: bar`);
         assert.ok(couch.isDone());
         return true;
       });
@@ -89,7 +89,7 @@ describe('#unit Check request response error callback', function() {
       (err) => {
         err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `503 Service Unavailable: post ${url}/_bulk_get - Error: service_unavailable, Reason: Service unavailable`);
+        assert.strictEqual(err.message, `503 post ${url}/_bulk_get - Error: service_unavailable: Service unavailable`);
         assert.ok(couch.isDone());
         return true;
       });
@@ -109,7 +109,7 @@ describe('#unit Check request response error callback', function() {
       (err) => {
         err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `429 Too Many Requests: get ${url}/bad - Error: foo, Reason: bar`);
+        assert.strictEqual(err.message, `429 get ${url}/bad - Error: foo: bar`);
         assert.ok(couch.isDone());
         return true;
       });
@@ -128,7 +128,7 @@ describe('#unit Check request response error callback', function() {
       (err) => {
         err = convertError(err);
         assert.strictEqual(err.name, 'HTTPFatalError');
-        assert.strictEqual(err.message, `404 Not Found: get ${url}/bad - Error: foo, Reason: bar`);
+        assert.strictEqual(err.message, `404 get ${url}/bad - Error: foo: bar`);
         assert.ok(couch.isDone());
         return true;
       });
