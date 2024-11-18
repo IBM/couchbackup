@@ -1,7 +1,9 @@
-# 2.12.0 (unreleased)
+# 2.11.1 (2024-11-19)
 - [FIXED] Error messages from retried requests.
 - [IMPROVED] Updated error response messages.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.11.0`.
 - [NOTE] Removed `retry-axios` from peerDependencies.
+- [NOTE] Updated Node.js version requirement statement for LTS 22.
 
 # 2.11.0 (2024-09-24)
 - [NEW] *EXPERIMENTAL/UNSUPPORTED* Add `attachments` option to backup and restore attachments for Apache CouchDB.
