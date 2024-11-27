@@ -44,7 +44,7 @@ try {
 
   restoreBatchDebug.enabled = !program.quiet;
 
-  return couchbackup.restore(
+  couchbackup.restore(
     process.stdin, // restore from stdin
     databaseUrl,
     opts,
