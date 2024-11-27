@@ -63,7 +63,7 @@ try {
 
   backupDebug('Fetching all database changes...');
 
-  return couchbackup.backup(
+  couchbackup.backup(
     databaseUrl,
     ws,
     opts,
