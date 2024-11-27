@@ -58,7 +58,7 @@ module.exports = function(dbClient, options, targetStream, ee) {
   // Full backups use _bulk_get, validate it is available, shallow skips that check
   return (options.mode === 'full' ? validateBulkGetSupport(dbClient) : Promise.resolve())
   // Check if the backup is new or resuming and configure the source
-    .then(async() => {
+    .then(async () => {
       if (options.mode === 'shallow') {
         // shallow backup, start from async _all_docs generator
         return [

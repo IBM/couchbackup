@@ -111,7 +111,7 @@ class Restore {
    * @param {object} restoreBatch a pending restore batch {batch: #, docs: [{_id: id, ...}, ...]}
    * @returns {object} a restored batch object { batch: #, documents: #}
    */
-  pendingToRestored = async(restoreBatch) => {
+  pendingToRestored = async (restoreBatch) => {
     // Save the batch number
     const batch = restoreBatch.batch;
     mappingDebug(`Preparing to restore ${batch}`);
