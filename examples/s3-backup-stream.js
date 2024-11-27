@@ -18,7 +18,6 @@
 // The script generates the backup object name by combining together the path
 // part of the database URL and the current time.
 
-'use strict';
 const { PassThrough } = require('node:stream');
 const url = require('node:url');
 

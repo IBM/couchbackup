@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it */
-'use strict';
 
 const u = require('./citestutils.js');
 

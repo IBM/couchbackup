@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it beforeEach */
-'use strict';
 
 const asyncGenerator = require('../includes/allDocsGenerator.js');
 const assert = require('assert');

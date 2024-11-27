@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global afterEach beforeEach describe it */
-'use strict';
 
 const assert = require('node:assert');
 const { Writable } = require('node:stream');

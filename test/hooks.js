@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global beforeEach afterEach */
-'use strict';
 
 const uuid = require('uuid').v4;
 const fs = require('fs');

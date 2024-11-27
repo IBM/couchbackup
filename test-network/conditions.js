@@ -14,7 +14,6 @@
 
 /* eslint space-before-function-paren: ["error", { "anonymous": "ignore" }] */
 /* global after before describe */
-'use strict';
 
 const assert = require('assert');
 const axios = require('axios');

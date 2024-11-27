@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it */
-'use strict';
 
 const fs = require('fs');
 const { once } = require('node:events');

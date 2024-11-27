@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it */
-'use strict';
 
 const assert = require('assert');
 const fs = require('fs');

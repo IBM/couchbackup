@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it */
-'use strict';
 
 delete require.cache[require.resolve('./citestutils.js')];
 const u = require('./citestutils.js');

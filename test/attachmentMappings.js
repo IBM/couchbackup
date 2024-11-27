@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it */
-'use strict';
 
 const assert = require('node:assert');
 const { Attachments } = require('../includes/attachmentMappings.js');

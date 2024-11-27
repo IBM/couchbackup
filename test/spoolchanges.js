@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global afterEach beforeEach describe it */
-'use strict';
 
 const assert = require('assert');
 const nock = require('nock');

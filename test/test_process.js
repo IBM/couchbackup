@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global */
-'use strict';
 
 const { fork, spawn } = require('node:child_process');
 const { once } = require('node:events');

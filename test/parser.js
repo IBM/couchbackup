@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe afterEach before after it */
-'use strict';
 
 const assert = require('assert');
 const parser = require('../includes/parser.js');
