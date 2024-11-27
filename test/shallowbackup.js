@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it beforeEach */
-'use strict';
 
 const assert = require('assert');
 const backup = require('../includes/backup.js');

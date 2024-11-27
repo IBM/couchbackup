@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global */
-'use strict';
 
 const assert = require('node:assert');
 const { once } = require('node:events');

@@ -18,8 +18,6 @@
 // The script generates the backup object name by combining together the path
 // part of the database URL and the current time.
 
-'use strict';
-
 const { createReadStream, createWriteStream, mkdtempSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');

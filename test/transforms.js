@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global beforeEach describe it */
-'use strict';
 
 const assert = require('node:assert');
 const tp = require('node:timers/promises');

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 /* global describe it before after */
-'use strict';
 
 const assert = require('assert');
 const applyEnvVars = require('../includes/config.js').applyEnvironmentVariables;
