@@ -82,9 +82,9 @@ const waitForSocket = (port) => {
   });
 };
 
-describe('unreliable network tests', function () {
+describe('unreliable network tests', function() {
   let proxy;
-  before('add proxy', async function () {
+  before('add proxy', async function() {
     // wait up to 10 sec for both proxies to allocate ports.
     this.timeout(10000);
 
@@ -106,7 +106,7 @@ describe('unreliable network tests', function () {
     await waitForSocket(8888);
   });
 
-  after('remove proxy', async function () {
+  after('remove proxy', async function() {
     const resp = await axios.delete(proxyURL);
     assert.equal(resp.status, 204, 'Should remove proxy "couchdb".');
     // shutdown http proxy
@@ -117,15 +117,15 @@ describe('unreliable network tests', function () {
     });
   });
 
-  poisons.forEach(function (poison) {
-    describe(`tests using poison '${poison.name}'`, function () {
-      before(`add toxic ${poison.name}`, async function () {
+  poisons.forEach(function(poison) {
+    describe(`tests using poison '${poison.name}'`, function() {
+      before(`add toxic ${poison.name}`, async function() {
         if (poison.name === 'normal') return;
         const resp = await axios.post(proxyURL + '/toxics', poison);
         assert.equal(resp.status, 200, `Should create toxic ${poison.name}`);
       });
 
-      after(`remove toxic ${poison.name}`, async function () {
+      after(`remove toxic ${poison.name}`, async function() {
         if (poison.name === 'normal') return;
         const resp = await axios.delete(proxyURL + '/toxics/' + poison.name);
         assert.equal(resp.status, 204, `Should remove toxic ${poison.name}`);

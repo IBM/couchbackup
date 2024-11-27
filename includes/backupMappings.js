@@ -205,7 +205,7 @@ class Backup {
    * @param {object} backupBatch  {command: t, batch: #, docs: [{id: id}, ...]}
    * @returns {object} a backup batch object {command: d, batch: #, docs: [{_id: id, ...}, ...]}
    */
-  pendingToFetched = async(backupBatch) => {
+  pendingToFetched = async (backupBatch) => {
     mappingDebug(`Fetching batch ${backupBatch.batch}.`);
     try {
       const bulkGetOpts = {

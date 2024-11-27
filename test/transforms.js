@@ -191,7 +191,7 @@ describe('#unit should do transforms', function() {
     });
 
     it('map function, async', async function() {
-      return testMapping(Readable.from(Array(2).keys()), async(x) => { return tp.setTimeout(50, { id: x }); }, [{ id: 0 }, { id: 1 }]);
+      return testMapping(Readable.from(Array(2).keys()), async (x) => { return tp.setTimeout(50, { id: x }); }, [{ id: 0 }, { id: 1 }]);
     });
 
     it('map function, concurrency', function() {
@@ -199,7 +199,7 @@ describe('#unit should do transforms', function() {
     });
 
     it('map function, async concurrency', async function() {
-      return testMapping(Readable.from(Array(4).keys()), async(x) => { return tp.setTimeout(Math.round(Math.random() * 50), x); }, [0, 1, 2, 3], 2);
+      return testMapping(Readable.from(Array(4).keys()), async (x) => { return tp.setTimeout(Math.round(Math.random() * 50), x); }, [0, 1, 2, 3], 2);
     });
   });
 
@@ -211,7 +211,7 @@ describe('#unit should do transforms', function() {
     // Eventing
     const ee = new events.EventEmitter();
     const eventType = 'changes';
-    const emitterAsyncFn = async(chunk) => { ee.emit(eventType, chunk); };
+    const emitterAsyncFn = async (chunk) => { ee.emit(eventType, chunk); };
     const emitterFn = (chunk) => { ee.emit(eventType, chunk); };
     // Before each test:
     // remove all listeners

@@ -32,7 +32,7 @@ describe('Write error tests', function() {
     const params = { useApi: true };
     // try to do backup and check err was set in callback
     return assert.rejects(u.testBackup(params, 'animaldb', backupStream), { name: 'TypeError', message: 'dest.write is not a function' })
-      .finally(async() => {
+      .finally(async () => {
         // Destroy the read stream we didn't use
         backupStream.destroy();
         // cleanup temp dir
