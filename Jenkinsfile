@@ -86,9 +86,7 @@ def runTest(version, filter=null, testSuite='test') {
         def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
         
         // Actions:
-        //  3. Install mocha-jenkins-reporter so that we can get junit style output
-        //  4. Fetch database compare tool for CI tests
-        //  5. Run tests using filter
+        // Run tests using filter
         withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
             withNpmEnv(registryArtifactoryDown) {
@@ -106,7 +104,7 @@ def runTest(version, filter=null, testSuite='test') {
                 export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8888' : '${COUCH_BACKEND_URL}'}"
                 export PROXY_URL='http://127.0.0.1:8474'
                 set -x
-                ./node_modules/mocha/bin/mocha.js --reporter mocha-jenkins-reporter --reporter-options junit_report_path=${testReportPath},junit_report_stack=true,junit_report_name=${testSuite} ${filter} ${testRun}
+                ./node_modules/mocha/bin/mocha.js --reporter xunit --reporter-options output=${testReportPath},suiteName=${testSuite} ${filter} ${testRun}
               """
             }
           }
@@ -141,7 +139,6 @@ pipeline {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
             withNpmEnv(registryArtifactoryDown) {
               sh 'npm ci'
-              sh 'npm install mocha-jenkins-reporter --no-save'
             }
           }
         }
