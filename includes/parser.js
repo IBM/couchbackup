@@ -62,6 +62,7 @@ function parseBackupArgs() {
       Number)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url))
+    .allowExcessArguments()
     .parse(process.argv);
 
   // Remove defaults that don't apply when using shallow mode
@@ -117,6 +118,7 @@ function parseRestoreArgs() {
       Number)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url))
+    .allowExcessArguments()
     .parse(process.argv);
 
   // Apply the options in order so that the CLI overrides env vars and env variables
