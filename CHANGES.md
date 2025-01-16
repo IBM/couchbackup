@@ -1,3 +1,8 @@
+# 2.11.2 (2025-01-16)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.0`.
+- [UPGRADED] `commander` dependency to version `13.0.0`
+- [UPGRADED] `debug` dependency to version `4.4.0`.
+
 # 2.11.1 (2024-11-19)
 - [FIXED] Error messages from retried requests.
 - [IMPROVED] Updated error response messages.
