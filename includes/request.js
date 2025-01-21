@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ function newSimpleClient(rawUrl, opts) {
   // Split the URL to separate service from database
   // Use origin as the "base" to remove auth elements
   const actUrl = new URL(url.pathname.substring(0, url.pathname.lastIndexOf('/')), url.origin);
-  const dbName = url.pathname.substring(url.pathname.lastIndexOf('/') + 1);
+  const dbName = decodeURIComponent(url.pathname.substring(url.pathname.lastIndexOf('/') + 1));
   let authenticator;
   // Default to cookieauth unless an IAM key is provided
   if (opts.iamApiKey) {
