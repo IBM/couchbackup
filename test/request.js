@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -191,6 +191,7 @@ describe('#unit Check request response error callback', function() {
         return true;
       });
   });
+
   describe('#unit Check credentials', async function() {
     it('should properly decode username and password', async function() {
       const username = 'user%123';
@@ -204,6 +205,29 @@ describe('#unit Check request response error callback', function() {
         .reply(200);
       const db = newClient(url, { parallelism: 1 });
       return db.service.getServerInformation().then(response => {
+        assert.ok(response);
+        assert.ok(couch.isDone());
+      });
+    });
+  });
+
+  describe('#unit Check database names', async function() {
+    it('should handle special characters', async function() {
+      const serverUrl = 'http://localhost:7777';
+      const actualDbName = 'a_$()+/-';
+      const encodedDbName = encodeURIComponent(actualDbName);
+      // Note this is not the user provided URL
+      // It is mocking the internal (encoded) one provided by cliutils.databaseUrl
+      const url = `${serverUrl}/${encodedDbName}`;
+      const couch = nock(serverUrl)
+        .get(`/${encodedDbName}`)
+        .reply(200, { ok: true });
+      const db = newClient(url, { parallelism: 1 });
+      assert.strictEqual(db.dbName, actualDbName,
+        `The stored DB name was ${db.dbName} but should match the expected ${actualDbName}`);
+      return db.service.getDatabaseInformation({
+        db: db.dbName
+      }).then(response => {
         assert.ok(response);
         assert.ok(couch.isDone());
       });
