@@ -1,3 +1,7 @@
+# 2.11.3 (unreleased)
+- [FIXED] Incorrect encoding of special characters in database names.
+- [UPGRADED] `commander` dependency to version `13.1.0`
+
 # 2.11.2 (2025-01-16)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.0`.
 - [UPGRADED] `commander` dependency to version `13.0.0`
