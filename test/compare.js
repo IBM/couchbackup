@@ -1,4 +1,4 @@
-// Copyright © 2023, 2024 IBM Corp. All rights reserved.
+// Copyright © 2023, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 // limitations under the License.
 
 const assert = require('node:assert');
+const { setInterval } = require('node:timers/promises');
 const client = require('./hooks.js').sharedClient;
-
 /**
  * Compare 2 databases to check the contents match.
  * Since all docs is ordered the comparison can be
@@ -31,14 +31,47 @@ const client = require('./hooks.js').sharedClient;
  * @returns Promise resolving to true if the contents match or rejecting with an assertion error
  */
 const compare = async function(database1, database2) {
-  const dbInfoResponses = await Promise.all([client.getDatabaseInformation({ db: database1 }), client.getDatabaseInformation({ db: database2 })]);
-  const db1DocCount = dbInfoResponses[0].result.docCount;
-  const db1DocDelCount = dbInfoResponses[0].result.docDelCount;
-  const db2DocCount = dbInfoResponses[1].result.docCount;
-  const db2DocDelCount = dbInfoResponses[1].result.docDelCount;
-  // Assert the doc counts match
-  assert.strictEqual(db2DocCount, db1DocCount);
-  assert.strictEqual(db2DocDelCount, db1DocDelCount);
+  const sourceDbInfoResponse = await client.getDatabaseInformation({ db: database1 });
+  const sourceDocCount = sourceDbInfoResponse.result.docCount;
+  const sourceDocDelCount = sourceDbInfoResponse.result.docDelCount;
+  // Assert the doc counts match, allowing multiple attempts for eventual constency to settle after the restore completes
+  // Abort signal for document count check iterator
+  const ac = new AbortController();
+  // Check once per second while doc counts are changing until the assertion passes.
+  // If doc counts aren't changing then try up to 5 times for a change before failing.
+  let lastTargetDocCount = 0;
+  let lastTargetDocDelCount = 0;
+  let tryCount = 0;
+  try {
+    for await (const maxTries of setInterval(1000, 5, { signal: ac.signal })) {
+      const resp = await client.getDatabaseInformation({ db: database2 });
+      const targetDocCount = resp.result.docCount;
+      const targetDocDelCount = resp.result.docDelCount;
+      try {
+        assert.strictEqual(targetDocCount, sourceDocCount);
+        assert.strictEqual(targetDocDelCount, sourceDocDelCount);
+        // Assertion passed, break the loop
+        break;
+      } catch (e) {
+        // Assertion failed, check if making progress
+        if (targetDocCount > lastTargetDocCount || targetDocDelCount > lastTargetDocDelCount) {
+          // Making progress, set new values and continue
+          // assertion failure is suppressed
+          lastTargetDocCount = targetDocCount;
+          lastTargetDocDelCount = targetDocDelCount;
+          tryCount = 0;
+        } else {
+          // Not making progress, suppress exception and try again
+          if (++tryCount > maxTries) {
+            throw e;
+          }
+        }
+      }
+    }
+  } finally {
+    // Clean up the interval iterator
+    ac.abort();
+  }
   const limit = 2000;
   let startKey = '\u0000';
   let count = 0;
@@ -73,7 +106,7 @@ const compare = async function(database1, database2) {
             // Set null to break the loop
             startKey = null;
             // Assert that we actually got all the docs
-            assert.strictEqual(count, db1DocCount);
+            assert.strictEqual(count, sourceDocCount);
           } else {
             // Set start key for next page
             startKey = docIds[limit - 1] + '\u0000';
