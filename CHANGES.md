@@ -1,5 +1,5 @@
-# 2.11.3 (unreleased)
-- [FIXED] Incorrect encoding of special characters in database names.
+# 2.11.3 (2025-01-23)
+- [FIXED] Encoding of special characters in database names.
 - [UPGRADED] `commander` dependency to version `13.1.0`
 
 # 2.11.2 (2025-01-16)
