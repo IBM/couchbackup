@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -454,14 +454,15 @@ async function assertGzipFile(path) {
 
 async function assertEncryptedFile(path) {
   // Openssl encrypted files start with Salted
-  const expectedBytes = Buffer.from('Salted');
-  const buffer = Buffer.alloc(6);
+  // base64 encoded is U2FsdGVk
+  const expectedBytes = Buffer.from('U2FsdGVk');
+  const buffer = Buffer.alloc(8);
   let fileHandle;
   try {
     fileHandle = await open(path, 'r');
-    // Read the first six bytes
-    readSync(fileHandle.fd, buffer, 0, 6, 0);
-    // Assert first 6 characters of the file are "Salted"
+    // Read the first eight bytes
+    readSync(fileHandle.fd, buffer, 0, 8, 0);
+    // Assert first 8 characters of the file are "U2FsdGVk"
     assert.deepStrictEqual(buffer, expectedBytes, 'The backup file should be encrypted.');
   } finally {
     await fileHandle?.close();
