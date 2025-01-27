@@ -1,4 +1,4 @@
-// Copyright © 2023, 2024 IBM Corp. All rights reserved.
+// Copyright © 2023, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -150,9 +150,24 @@ module.exports = {
     return new TestProcess('gunzip', []);
   },
   cliEncrypt: function() {
-    return new TestProcess('openssl', ['aes-128-cbc', '-pass', 'pass:12345']);
+    return new TestProcess('openssl', [
+      'enc',
+      '-base64',
+      '-aes256',
+      '-md', 'sha512',
+      '-pbkdf2',
+      '-iter', '100',
+      '-pass', 'pass:12345']);
   },
   cliDecrypt: function() {
-    return new TestProcess('openssl', ['aes-128-cbc', '-d', '-pass', 'pass:12345']);
+    return new TestProcess('openssl', [
+      'enc',
+      '-d',
+      '-base64',
+      '-aes256',
+      '-md', 'sha512',
+      '-pbkdf2',
+      '-iter', '100',
+      '-pass', 'pass:12345']);
   }
 };
