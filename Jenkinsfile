@@ -17,19 +17,34 @@ def getEnvForSuite(suiteName, version) {
 
   def envVars = []
 
+  portOffset = 0
+  switch(version) {
+    case 'old-maintenance':
+      portOffset += 30
+      break
+    case 'maintenance':
+      portOffset += 20
+      break
+    case 'active':
+      portOffset += 10
+      break
+    default:
+      break
+  }
+
   // Add test suite specific environment variables
   switch(suiteName) {
     case 'test':
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7700 + version.toInteger()}")
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7700 + portOffset}")
       break
     case 'test-network/conditions':
       envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7800 + version.toInteger()}")
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7800 + portOffset}")
       break
     case 'test-iam':
       envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7900 + version.toInteger()}")
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7900 + portOffset}")
       break
     default:
       error("Unknown test suite environment ${suiteName}")
@@ -161,45 +176,45 @@ pipeline {
             }
           }
         }
-        stage('Node LTS') {
+        stage('Node Active LTS') {
           steps {
             script{
-              runTest('22')
+              runTest('active')
             }
           }
         }
-        stage('IAM Node LTS') {
+        stage('IAM Node Active LTS') {
           steps {
             script{
-              runTest('22', '-i -g \'#unit|#slowe\'', 'test-iam')
+              runTest('active', '-i -g \'#unit|#slowe\'', 'test-iam')
             }
           }
         }
-        stage('Network Node LTS') {
+        stage('Network Node Active LTS') {
           when {
             beforeAgent true
             environment name: 'RUN_TOXY_TESTS', value: 'true'
           }
           steps {
             script{
-              runTest('22', '', 'test-network/conditions')
+              runTest('active', '', 'test-network/conditions')
             }
           }
         }
-        stage('Node 18x') {
+        stage('Node Old Maintenance LTS') {
           steps {
-            container('node18') {
+            container('node-old-maintenance-lts') {
               script{
-                runTest('18')
+                runTest('old-maintenance')
               }
             }
           }
         }
-        stage('Node 20x') {
+        stage('Node Maintenance LTS') {
           steps {
-            container('node20') {
+            container('node-maintenance-lts') {
               script{
-                runTest('20')
+                runTest('maintenance')
               }
             }
           }
