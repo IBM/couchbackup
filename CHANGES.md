@@ -1,4 +1,6 @@
-# Unreleased
+# 2.11.6 (2025-05-01)
+- [IMPROVED] Avoid poll delay collecting changes from empty databases.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.3`.
 - [NOTE] Updated minimum supported engine to Node.js 20 LTS.
 
 # 2.11.5 (2025-03-11)
