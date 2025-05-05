@@ -1,4 +1,4 @@
-# CouchBackup
+# CouchBackup test
 
 [![npm (scoped)](https://img.shields.io/npm/v/@cloudant/couchbackup.svg?colorB=0000ff)](https://www.npmjs.com/package/@cloudant/couchbackup)
 [![npm (scoped with tag)](https://img.shields.io/npm/v/@cloudant/couchbackup/snapshot.svg?colorB=666699)](https://www.npmjs.com/package/@cloudant/couchbackup)
