@@ -5,23 +5,23 @@ This folder contains example Node.js scripts which use the `couchbackup` library
 These scripts are for inspiration and demonstration.
 They are not a supported part of couchbackup and should not be considered production ready.
 
-#### Prerequisites
+## Prerequisites
 
-##### Install the dependencies
+### Install the dependencies
 
 Use `npm install` in this folder to install the script
 dependencies.
 Note: this uses the latest release of couchbackup, not the
 checked out version.
 
-##### IBM COS SDK configuration
+### IBM COS SDK configuration
 
 The scripts expect the following values:
 * shared credentials file `~/.bluemix/cos_credentials` or target file from `COS_CREDENTIALS_FILE` environment variable
 * `CLOUDANT_IAM_API_KEY` environment variable set to API key with permission to the Cloudant instance
 * (optional) `CLOUDANT_IAM_TOKEN_URL` environment variable set to the URL of token endpoint (defaults to `https://iam.cloud.ibm.com`)
 
-###### IBM COS
+#### IBM COS
 
 When using IBM Cloud Object Storage create a service credential with __disabled__ `Include HMAC Credential` option.
 
@@ -34,7 +34,7 @@ ibmcloud resource service-key <credentials-name> --output JSON | jq '.[].credent
 More info on generating the credentials:
 https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-service-credentials
 
-###### Service Credentials file structure:
+#### Service Credentials file structure:
 ```json
 {
     "apikey": "<API_KEY>",
@@ -48,22 +48,24 @@ https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-servi
 }
 ```
 
-###### IBM COS
+#### IBM COS
 
 Run the scripts with the `--cos_url` option pointing to your COS instance S3 endpoint.
 
 Corresponding endpoint URLs can be found under the link found in the Service Credentials file or on the IBM Cloud UI (`endpoints` field).
 
-#### Usage
+## Usage
 
-Run a script without arguments to receive help e.g.
+### Backup Scripts
+
+Run a backup script without arguments to receive help e.g.
 
 ```bash 
 node cos-backup-file.js
 ```
 
 The source database and destination bucket are required options.
-The minimum needed to run the scripts are thus:
+The minimum needed to run the backup scripts are thus:
 
 ```bash
 node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/exampledb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
@@ -74,9 +76,24 @@ named according to a prefix (default `couchbackup`), DB name and timestamp e.g.
 
 `couchbackup-exampledb-2024-01-25T09:45:11.730Z`
 
-#### Progress and debug
+### Restore Scripts
 
-To see detailed progress of the backup and upload or additional debug information
+Run a restore script without arguments to receive help e.g.
+
+```bash
+node cos-restore-file.js
+```
+
+The target database URL, source bucket, and backup object name are required options.
+The minimum needed to run the restore scripts are thus:
+
+```bash
+node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/newdb' -b 'examplebucket' -o 'couchbackup-exampledb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+```
+
+## Progress and debug
+
+To see detailed progress of the backup/restore and upload/download or additional debug information
 use the `DEBUG` environment variable with label `couchbackup-cos` e.g.
 
 ```bash
