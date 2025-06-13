@@ -175,7 +175,7 @@ describe('#unit should do transforms', function() {
       }).then((outputArray) => {
         if (concurrency) {
           // Order may change if we're using concurrency so sort before comparing
-          outputArray.sort();
+          outputArray.sort((a, b) => a - b);
         }
         assert.deepStrictEqual(expected, outputArray, 'The output should be mapped.');
       });
