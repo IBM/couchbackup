@@ -31,7 +31,7 @@ const url = require('url');
 function main() {
   const argv = require('yargs')
     .usage('Usage: $0 [options]')
-    .example('$0 -s https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/db -b <bucket> --cos_url <url>', 'Backup db to bucket using IAM authentication')
+    .example('$0 -s https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb -b <bucket> --cos_url <url>', 'Backup db to bucket using IAM authentication')
     .options({
       source: { alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL' },
       bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket' },

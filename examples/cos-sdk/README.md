@@ -68,13 +68,13 @@ The source database and destination bucket are required options.
 The minimum needed to run the backup scripts are thus:
 
 ```bash
-node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/exampledb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
 ```
 
 The object created in the bucket for the backup file will be
 named according to a prefix (default `couchbackup`), DB name and timestamp e.g.
 
-`couchbackup-exampledb-2024-01-25T09:45:11.730Z`
+`couchbackup-sourcedb-2024-01-25T09:45:11.730Z`
 
 ### Restore Scripts
 
@@ -88,7 +88,7 @@ The target database URL, source bucket, and backup object name are required opti
 The minimum needed to run the restore scripts are thus:
 
 ```bash
-node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/newdb' -b 'examplebucket' -o 'couchbackup-exampledb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb' -b 'examplebucket' -o 'couchbackup-sourcedb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
 ```
 
 ## Progress and debug
@@ -97,20 +97,20 @@ To see detailed progress of the backup/restore and upload/download or additional
 use the `DEBUG` environment variable with label `couchbackup-cos` e.g.
 
 ```bash
-DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/exampledb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud"
+DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud"
 ```
 
 ```
-  couchbackup-cos Creating a new backup of https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/exampledb at couchbackup-example/couchbackup-exampledb-2025-05-27T13:04:51.321Z... +0ms
+  couchbackup-cos Creating a new backup of https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb at couchbackup-example/couchbackup-sourcedb-2025-05-27T13:04:51.321Z... +0ms
   couchbackup-cos couchbackup to file done; uploading to IBM COS S3 +2s
-  couchbackup-cos Uploading from /var/folders/lf/0mhmct8912qbgxq_hyv8nr9m0000gn/T/tmp-6623-dC9cBol6Y2Qj to couchbackup-example/couchbackup-exampledb-2025-05-27T13:04:51.321Z +0ms
+  couchbackup-cos Uploading from /var/folders/lf/0mhmct8912qbgxq_hyv8nr9m0000gn/T/tmp-6623-dC9cBol6Y2Qj to couchbackup-example/couchbackup-sourcedb-2025-05-27T13:04:51.321Z +0ms
   couchbackup-cos IBM COS S3 upload done +611ms
   couchbackup-cos Upload succeeded +0ms
   couchbackup-cos {
   couchbackup-cos   ETag: '"937f4ad657897f7cf883bdad0a6dfb76"',
-  couchbackup-cos   Location: 'https://couchbackup-example.s3.eu-de.cloud-object-storage.appdomain.cloud/couchbackup-exampledb-2025-05-27T13%3A04%3A51.321Z',
-  couchbackup-cos   key: 'couchbackup-exampledb-2025-05-27T13:04:51.321Z',
-  couchbackup-cos   Key: 'couchbackup-exampledb-2025-05-27T13:04:51.321Z',
+  couchbackup-cos   Location: 'https://couchbackup-example.s3.eu-de.cloud-object-storage.appdomain.cloud/couchbackup-sourcedb-2025-05-27T13%3A04%3A51.321Z',
+  couchbackup-cos   key: 'couchbackup-sourcedb-2025-05-27T13:04:51.321Z',
+  couchbackup-cos   Key: 'couchbackup-sourcedb-2025-05-27T13:04:51.321Z',
   couchbackup-cos   Bucket: 'couchbackup-example'
   couchbackup-cos } +0ms
   couchbackup-cos Backup successful! +2ms
