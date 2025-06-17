@@ -27,7 +27,7 @@ const { pipeline } = require('stream/promises');
 function main() {
   const argv = require('yargs')
     .usage('Usage: $0 [options]')
-    .example('$0 -t https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/database -b <bucket> -o <object> --cos_url <cos_endpoint>', 'Restore database from a bucket')
+    .example('$0 -t https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb -b <bucket> -o <object> --cos_url <cos_endpoint>', 'Restore database from a bucket')
     .options({
       target: { alias: 't', nargs: 1, demandOption: true, describe: 'Target database URL' },
       bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Source bucket containing backup' },
@@ -154,10 +154,6 @@ async function restoreFromFile(restoreFileName, targetUrl, cloudantApiKey) {
 
     restoreStream.on('restored', progress => {
       debug('Restored batch:', progress.batch, 'Total document revisions written:', progress.total, 'Time:', progress.time);
-    });
-
-    restoreStream.on('error', (err) => {
-      reject(err);
     });
   });
 

@@ -24,7 +24,7 @@ const url = require('url');
 function main() {
   const argv = require('yargs')
     .usage('Usage: $0 [options]')
-    .example('$0 -t https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/database -b <bucket> -o <object> --cos_url <cos_endpoint>', 'Restore database from a bucket via direct streaming')
+    .example('$0 -t https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb -b <bucket> -o <object> --cos_url <cos_endpoint>', 'Restore database from a bucket via direct streaming')
     .options({
       target: { alias: 't', nargs: 1, demandOption: true, describe: 'Target database URL' },
       bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Source bucket containing backup' },
@@ -128,10 +128,6 @@ async function restoreFromCOS(cosClient, cosBucket, cosObjectKey, targetUrl, clo
     );
     restoreStream.on('restored', progress => {
       debug('Restored batch:', progress.batch, 'Total document revisions written:', progress.total, 'Time:', progress.time);
-    });
-    restoreStream.on('error', (err) => {
-      debug('Restore stream error:', err);
-      reject(err);
     });
   });
 
