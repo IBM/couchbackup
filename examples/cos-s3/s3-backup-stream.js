@@ -34,7 +34,7 @@ const VError = require('verror').VError;
 function main() {
   const argv = require('yargs')
     .usage('Usage: $0 [options]')
-    .example('$0 -s https://user:pass@host/db -b <bucket>', 'Backup db to bucket')
+    .example('$0 -s https://user:pass@host/sourcedb -b <bucket>', 'Backup db to bucket')
     .options({
       source: { alias: 's', nargs: 1, demandOption: true, describe: 'Source database URL' },
       bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Destination bucket' },
