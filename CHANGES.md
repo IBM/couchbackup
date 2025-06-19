@@ -1,3 +1,9 @@
+# 2.11.7 (2025-06-20)
+- [IMPROVED] Added and improved existing examples.
+- [UPGRADED] `commander` dependency to version `14.0.0`
+- [UPGRADED] `debug` dependency to version `4.4.1`.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.4`.
+
 # 2.11.6 (2025-05-01)
 - [IMPROVED] Avoid poll delay collecting changes from empty databases.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.3`.
