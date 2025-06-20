@@ -1,6 +1,6 @@
 {
   "name": "@cloudant/couchbackup",
-  "version": "2.11.7",
+  "version": "2.11.8-SNAPSHOT",
   "description": "CouchBackup - command-line backup utility for Cloudant/CouchDB",
   "homepage": "https://github.com/IBM/couchbackup",
   "repository": {
