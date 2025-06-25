@@ -24,7 +24,11 @@ it does not change your rights to use your own Contributions for any other purpo
 Please read the agreement and acknowledge it by ticking the appropriate box in the PR
  text, for example:
 
-- [x] Tick to sign-off your agreement to the Developer Certificate of Origin (DCO) 1.1
+Please read the agreement and acknowledge it by signing-off your commit.
+
+### AI-generated code policy
+
+Before submitting your pull request, please ensure you've reviewed and adhere to our [AI policy](AI_CODE_POLICY.md).
 
 ## General information
 
@@ -44,10 +48,6 @@ produce the CLI stderr output statements.
 This project uses [semi-standard](https://github.com/Flet/semistandard).
 If you `npm install`, you'll get a local [eslint](http://eslint.org/)
 configured with our settings which your editor will hopefully pick up.
-
-### AI-generated code policy
-
-Before submitting your pull request, please ensure you've reviewed and adhere to our [AI policy](AI_CODE_POLICY.md).
 
 ## Requirements
 
