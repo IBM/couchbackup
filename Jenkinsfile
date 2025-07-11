@@ -141,6 +141,12 @@ pipeline {
     disableConcurrentBuilds()
   }
   stages {
+    stage('Detect Secrets') {
+      steps {
+        detectSecrets()
+      }
+    }
+
     stage('Build') {
       when {
         beforeAgent true
