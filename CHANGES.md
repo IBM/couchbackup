@@ -1,3 +1,7 @@
+# 2.11.8 (2025-07-23)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.6`.
+- [NOTE] Add AI code policy to contributing guide.
+
 # 2.11.7 (2025-06-20)
 - [IMPROVED] Added and improved existing examples.
 - [UPGRADED] `commander` dependency to version `14.0.0`
