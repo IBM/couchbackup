@@ -1,3 +1,6 @@
+# 2.11.9 (2025-07-25)
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.7`.
+
 # 2.11.8 (2025-07-23)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.6`.
 - [NOTE] Add AI code policy to contributing guide.
