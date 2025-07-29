@@ -234,22 +234,17 @@ pipeline {
     }
     stage('SonarQube analysis') {
       when {
-        beforeAgent true
-        allOf {
-          expression { env.BRANCH_NAME }
-          not {
-            expression { env.BRANCH_NAME.startsWith('dependabot/') }
-          }
-          not {
-            buildingTag()
-          }
+        changeRequest()
+        expression { env.BRANCH_IS_PRIMARY }
+        not {
+          changeRequest branch: 'dependabot*', comparator: 'GLOB'
         }
       }
       steps {
         script {
           def scannerHome = tool 'SonarQubeScanner';
           withSonarQubeEnv(installationName: 'SonarQubeServer') {
-            sh "${scannerHome}/bin/sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup -Dsonar.branch.name=${env.BRANCH_NAME}"
+            sh "${scannerHome}/bin/sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup"
           }
         }
       }
