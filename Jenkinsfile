@@ -234,8 +234,10 @@ pipeline {
     }
     stage('SonarQube analysis') {
       when {
-        changeRequest()
-        expression { env.BRANCH_IS_PRIMARY }
+        anyOf {
+          changeRequest()
+          expression { env.BRANCH_IS_PRIMARY }
+        }
         not {
           changeRequest branch: 'dependabot*', comparator: 'GLOB'
         }
