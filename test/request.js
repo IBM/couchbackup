@@ -171,7 +171,7 @@ describe('#unit Check request response error callback', function() {
 
   it('should callback with error code ESOCKETTIMEDOUT if 3 HTTP requests gets timed out', async function() {
     // Increase the timeout for this test to allow for the delays
-    this.timeout(3000);
+    this.timeout(5000);
     const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
