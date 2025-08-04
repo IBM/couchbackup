@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+@Library('integrations-pipeline@couchbackup-size') _
+
 def getEnvForSuite(suiteName, version) {
 
   def envVars = []
