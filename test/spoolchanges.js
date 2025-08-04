@@ -45,11 +45,13 @@ function changes(bufferSize, tolerance) {
 describe('Check spool changes', function() {
   describe('#unit error cases', function() {
     it('should terminate on request error', async function() {
+      const e = new Error('socket hang up');
+      e.code = 'ECONNRESET';
       nock(url)
         .post(`/${dbName}/_changes`)
         .query(true)
         .times(3)
-        .replyWithError({ code: 'ECONNRESET', message: 'socket hang up' });
+        .replyWithError(e);
 
       // Note this is setting changes follower tolerance to 0
       // so that the error is not suppressed beyond 3 configured retries
