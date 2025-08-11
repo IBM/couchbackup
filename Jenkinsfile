@@ -251,6 +251,17 @@ pipeline {
         }
       }
     }
+    stage('Mend scan') {
+      when {
+        expression { env.BRANCH_IS_PRIMARY }
+      }
+      environment {
+        WS_PROJECTNAME='couchbackup'
+      }
+      steps {
+        mendScan()
+      }
+    }
     // Publish the primary branch
     stage('Publish') {
       when {
