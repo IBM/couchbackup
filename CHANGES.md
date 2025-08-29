@@ -1,4 +1,4 @@
-# 2.11.9 (2025-08-29)
+# 2.11.10 (2025-08-29)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.8`.
 
 # 2.11.9 (2025-07-25)
