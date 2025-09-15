@@ -25,7 +25,7 @@
   "dependencies": {
     "@ibm-cloud/cloudant": "0.12.9",
     "commander": "14.0.0",
-    "debug": "4.4.1"
+    "debug": "4.4.3"
   },
   "peerDependencies": {
     "ibm-cloud-sdk-core": "^5.4.2",
