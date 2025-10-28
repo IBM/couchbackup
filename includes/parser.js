@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,7 +62,6 @@ function parseBackupArgs() {
       Number)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url))
-    .allowExcessArguments()
     .parse(process.argv);
 
   // Remove defaults that don't apply when using shallow mode
@@ -81,7 +80,6 @@ function parseBackupArgs() {
     // We have to do this check here for the CLI case because of the default.
     error.terminationCallback(new error.BackupError('NoLogFileName', 'To resume a backup, a log file must be specified'));
   }
-
   return opts;
 }
 
@@ -118,7 +116,6 @@ function parseRestoreArgs() {
       Number)
     .option('-u, --url <url>',
       cliutils.getUsage('URL of the CouchDB/Cloudant server', defaults.url))
-    .allowExcessArguments()
     .parse(process.argv);
 
   // Apply the options in order so that the CLI overrides env vars and env variables
