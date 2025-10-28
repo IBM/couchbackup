@@ -100,7 +100,6 @@ module.exports = {
       }
       if (params.opts.resume) {
         args.push('--resume');
-        args.push(params.opts.resume);
       }
       if (params.opts.bufferSize) {
         args.push('--buffer-size');
@@ -112,7 +111,6 @@ module.exports = {
       }
       if (params.opts.attachments) {
         args.push('--attachments');
-        args.push(params.opts.attachments);
       }
     }
     return new TestProcess('./bin/couchbackup.bin.js', args, 'readable');
@@ -138,7 +136,6 @@ module.exports = {
       }
       if (params.opts.attachments) {
         args.push('--attachments');
-        args.push(params.opts.attachments);
       }
     }
     return new TestProcess('./bin/couchrestore.bin.js', args, 'writable');
