@@ -1,3 +1,6 @@
+# Unreleased
+- [NOTE] Updated Node.js version requirement statement for LTS 24.
+
 # 2.11.11 (2025-10-20)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.10`.
 - [UPGRADED] `ibm-cloud-sdk-core` peerDependency to minimum version `5.4.3` to match version provided from `@ibm-cloud/cloudant`.
