@@ -67,17 +67,15 @@ class TestProcess {
 
     switch (mode) {
       case 'readable':
-        this.duplexFrom = this.childProcess.stdout;
+        this.stream = this.childProcess.stdout;
         break;
       case 'writable':
-        this.duplexFrom = this.childProcess.stdin;
+        this.stream = this.childProcess.stdin;
         break;
       default:
         // Default is duplex
-        this.duplexFrom = { writable: this.childProcess.stdin, readable: this.childProcess.stdout };
+        this.stream = Duplex.from({ writable: this.childProcess.stdin, readable: this.childProcess.stdout });
     }
-
-    this.stream = Duplex.from(this.duplexFrom);
   }
 }
 
