@@ -13,7 +13,7 @@
 // limitations under the License.
 
 const { createInterface } = require('node:readline');
-const { PassThrough, Duplex } = require('node:stream');
+const { Transform, Duplex } = require('node:stream');
 const debug = require('debug');
 
 /**
@@ -39,7 +39,17 @@ class Liner extends Duplex {
   // Buffer of processed lines
   lines = [];
   // Stream of bytes that will be processed to lines.
-  inStream = new PassThrough({ objectMode: false })
+  inStream = new Transform({
+    objectMode: false,
+    transform(chunk, encoding, callback) {
+      try {
+        this.push(chunk.toString('utf-8').replace(/\u2028/, '\\u2028').replace(/\u2029/, '\\u2029'));
+        callback();
+      } catch (e) {
+        callback(e);
+      }
+    }
+  })
     // if there is an error destroy this Duplex with it
     .on('error', e => this.destroy(e));
 
