@@ -16,9 +16,10 @@
 
 const assert = require('node:assert');
 const fs = require('node:fs');
+const { versions } = require('node:process');
+const { Readable, Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { Liner } = require('../includes/liner.js');
-const { Writable } = require('node:stream');
 
 describe('#unit liner', function() {
   // Use a liner to make the line objects
@@ -53,6 +54,23 @@ describe('#unit liner', function() {
     const inputLines = input.map(e => `${e}\n`);
     const expected = input.map((e, i) => { return { lineNumber: i + 1, line: e }; });
     await pipeline(inputLines, liner, destination);
+    assert.deepStrictEqual(output, expected);
+  });
+
+  it('should split on unicode separators if not sanitizing', async function() {
+    // This test will only split on /u2028 and /u2029 in Node.js >=24
+    const nodeMajorVersion = parseInt(versions.node.split('.', 2)[0]);
+    const expectedLines = nodeMajorVersion >= 24 ? ['foo', 'bar', 'foo', 'bar', 'foo'] : ['foo', 'bar', 'foo\u2028bar\u2029foo'];
+    const input = 'foo\nbar\nfoo\u2028bar\u2029foo';
+    const expected = expectedLines.map((e, i) => { return { lineNumber: i + 1, line: e }; });
+    await pipeline(Readable.from(input), liner, destination);
+    assert.deepStrictEqual(output, expected);
+  });
+
+  it('should sanitize unicode separators when enabled', async function() {
+    const expected = ['foo', 'bar', 'foo\\u2028bar\\u2029foo'].map((e, i) => { return { lineNumber: i + 1, line: e }; });
+    const input = 'foo\nbar\nfoo\u2028bar\u2029foo';
+    await pipeline(Readable.from(input), new Liner(true), destination);
     assert.deepStrictEqual(output, expected);
   });
 });
