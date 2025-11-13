@@ -2,6 +2,7 @@
 - [FIXED] Restore issue with document values containing `\u2028` and `\u2029` on Node.js 24.
 - [FIXED] Restore issue with readline pause/resume after close on Node.js 24.
 - [UPGRADED] `axios` peerDependency to minimum version `1.13.1` to avoid broken `1.13.0` version.
+- [NOTE] Updated Node.js version requirement statement for LTS 24.
 
 # 2.11.11 (2025-10-20)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.10`.
