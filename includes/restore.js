@@ -50,7 +50,7 @@ module.exports = function(dbClient, options, readstream, ee) {
 
   const batchPreparationStreams = [
     readstream, // the backup file
-    new Liner(), // line by line
+    new Liner(true), // line by line (for Node.js 24 compatibility santize unicode line separators)
     new MappingStream(restore.backupLineToDocsArray), // convert line to a docs array
     new BatchingStream(options.bufferSize, true), // make new arrays of the correct buffer size
     new MappingStream(restore.docsToRestoreBatch) // make a restore batch
