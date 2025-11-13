@@ -1,6 +1,5 @@
 # Unreleased
 - [UPGRADED] `axios` peerDependency to minimum version `1.13.1` to avoid broken `1.13.0` version.
-- [NOTE] Updated Node.js version requirement statement for LTS 24.
 
 # 2.11.11 (2025-10-20)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.10`.
