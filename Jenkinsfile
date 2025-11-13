@@ -134,7 +134,7 @@ def runTest(version, filter=null, testSuite='test') {
 pipeline {
   agent {
     kubernetes {
-      yaml kubePodTemplate(name: 'couchbackup.yaml', full_jnlp: 'sdks-pinned-agent:node-22')
+      yaml kubePodTemplate(name: 'couchbackup.yaml')
     }
   }
   options {
