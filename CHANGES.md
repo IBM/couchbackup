@@ -1,4 +1,5 @@
 # Unreleased
+- [FIXED] Restore issue with readline pause/resume after close on Node.js 24.
 - [UPGRADED] `axios` peerDependency to minimum version `1.13.1` to avoid broken `1.13.0` version.
 
 # 2.11.11 (2025-10-20)
