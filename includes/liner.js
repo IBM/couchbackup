@@ -1,4 +1,4 @@
-// Copyright © 2017, 2025 IBM Corp. All rights reserved.
+// Copyright © 2017, 2024 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ class Liner extends Duplex {
   log = debug(('couchbackup:liner'));
   // Flag for whether the readline interface is running
   isRunning = true;
-  // Flag for whether the readline interface is closed
-  isClosed = false;
   // Line number state
   lineNumber = 0;
   // Buffer of processed lines
@@ -62,8 +60,7 @@ class Liner extends Duplex {
       const bufferedLines = this.lines.push(this.wrapLine(line));
       this.log(`Liner processed line ${this.lineNumber}. Buffered lines available: ${bufferedLines}.`);
       this.pushAvailable();
-    }).once('close', () => {
-      this.isClosed = true;
+    }).on('close', () => {
       this.log('Liner readline interface closed.');
       // Push null onto our lines buffer to signal EOF to downstream consumers.
       this.lines.push(null);
@@ -90,16 +87,13 @@ class Liner extends Duplex {
     // Check readline is running flag and whether there is content to push.
     while (this.isRunning && this.lines.length > 0) {
       if (!this.push(this.lines.shift())) {
-        this.log(`Back-pressure from push. Buffered lines available: ${this.lines.length}.`);
         // Push returned false, this indicates downstream back-pressure.
         // Pause the readline interface to stop pushing more lines downstream.
         // Resumption is triggered by downstream calling _read which happens
         // when it is ready for more data.
+        this.log(`Liner pausing after back-pressure from push. Buffered lines available: ${this.lines.length}.`);
         this.isRunning = false;
-        if (!this.isClosed) {
-          this.log('Liner pausing.');
-          this.readlineInterface.pause();
-        }
+        this.readlineInterface.pause();
         break;
       } else {
         this.log(`Liner pushed. Buffered lines available: ${this.lines.length}.`);
@@ -120,11 +114,9 @@ class Liner extends Duplex {
     // is called to ensure that pushes are able to happen (and thereby trigger)
     // subsequent reads.
     if (!this.isRunning) {
+      this.log('Liner resuming after read.');
       this.isRunning = true;
-      if (!this.isClosed) {
-        this.log('Liner resuming after read.');
-        this.readlineInterface.resume();
-      }
+      this.readlineInterface.resume();
     }
     this.pushAvailable();
   }
