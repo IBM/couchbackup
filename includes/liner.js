@@ -13,7 +13,7 @@
 // limitations under the License.
 
 const { createInterface } = require('node:readline');
-const { Duplex, PassThrough, Transform } = require('node:stream');
+const { Transform, Duplex } = require('node:stream');
 const debug = require('debug');
 
 /**
@@ -38,8 +38,22 @@ class Liner extends Duplex {
   lineNumber = 0;
   // Buffer of processed lines
   lines = [];
+  // Stream of bytes that will be processed to lines.
+  inStream = new Transform({
+    objectMode: false,
+    transform(chunk, encoding, callback) {
+      try {
+        this.push(chunk.toString('utf-8').replace(/\u2028/, '\\u2028').replace(/\u2029/, '\\u2029'));
+        callback();
+      } catch (e) {
+        callback(e);
+      }
+    }
+  })
+    // if there is an error destroy this Duplex with it
+    .on('error', e => this.destroy(e));
 
-  constructor(sanitize = false) {
+  constructor() {
     // Configuration of this Duplex:
     // objectMode: false on the writable input (file chunks), true on the readable output (line objects)
     // The readableHighWaterMark controls the number of lines buffered after this implementation calls
@@ -47,25 +61,6 @@ class Liner extends Duplex {
     // there is additional buffering downstream and file processing is faster than the network ops
     // we don't bottleneck here even without a large buffer.
     super({ readableObjectMode: true, readableHighWaterMark: 0, writableObjectMode: false });
-    // Set up the stream of bytes that will be processed to lines.
-    if (sanitize) {
-      // Handle unescaped unicode "newlines" by escaping them before passing to readline
-      this.inStream = new Transform({
-        objectMode: false,
-        transform(chunk, encoding, callback) {
-          try {
-            this.push(chunk.toString('utf-8').replace(/\u2028/, '\\u2028').replace(/\u2029/, '\\u2029'));
-            callback();
-          } catch (e) {
-            callback(e);
-          }
-        }
-      });
-    } else {
-      this.inStream = new PassThrough({ objectMode: false });
-    }
-    // if there is an error destroy this Duplex with it
-    this.inStream.on('error', e => this.destroy(e));
     // Built-in readline interface over the inStream
     this.readlineInterface = createInterface({
       input: this.inStream, // the writable side of Liner, passed through
