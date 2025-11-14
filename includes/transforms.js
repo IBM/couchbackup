@@ -1,4 +1,4 @@
-// Copyright © 2023, 2024 IBM Corp. All rights reserved.
+// Copyright © 2023, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -187,45 +187,57 @@ class DelegateWritable extends Writable {
 
   _write(chunk, encoding, callback) {
     const toWrite = (this.chunkMapFn) ? this.chunkMapFn(chunk) : chunk;
-    this.targetWritable.write(toWrite, encoding, (err) => {
-      if (!err) {
-        this.log('completed target chunk write');
-        if (this.postWriteFn) {
-          this.postWriteFn(chunk);
+    if (!this.targetWritable.destroyed) {
+      this.targetWritable.write(toWrite, encoding, (err) => {
+        if (!err) {
+          this.log('completed target chunk write');
+          if (this.postWriteFn) {
+            this.postWriteFn(chunk);
+          }
         }
-      }
-      callback(err);
-    });
+        callback(err);
+      });
+    } else {
+      // Avoid write after destroy errors
+      this.log('supressing write after destroy error');
+      callback();
+    }
   }
 
   _final(callback) {
     this.log('Finalizing');
     const lastChunk = (this.lastChunkFn && this.lastChunkFn()) || null;
-    // We can't 'end' stdout, so use a final write instead for that case
-    if (this.targetWritable === process.stdout) {
-      // we can't 'write' null, so don't do anything if there is no last chunk
-      if (lastChunk) {
-        this.targetWritable.write(lastChunk, 'utf-8', (err) => {
+    if (!this.targetWritable.destroyed) {
+      // We can't 'end' stdout, so use a final write instead for that case
+      if (this.targetWritable === process.stdout) {
+        // we can't 'write' null, so don't do anything if there is no last chunk
+        if (lastChunk) {
+          this.targetWritable.write(lastChunk, 'utf-8', (err) => {
+            if (!err) {
+              this.log('wrote last chunk to stdout');
+            } else {
+              this.log('error writing last chunk to stdout');
+            }
+            callback(err);
+          });
+        } else {
+          this.log('no last chunk to write to stdout');
+          callback();
+        }
+      } else {
+        this.targetWritable.end(lastChunk, 'utf-8', (err) => {
           if (!err) {
-            this.log('wrote last chunk to stdout');
+            this.log('wrote last chunk and ended target writable');
           } else {
-            this.log('error writing last chunk to stdout');
+            this.log('error ending target writable');
           }
           callback(err);
         });
-      } else {
-        this.log('no last chunk to write to stdout');
-        callback();
       }
     } else {
-      this.targetWritable.end(lastChunk, 'utf-8', (err) => {
-        if (!err) {
-          this.log('wrote last chunk and ended target writable');
-        } else {
-          this.log('error ending target writable');
-        }
-        callback(err);
-      });
+      // Avoid write after destroy errors
+      this.log('supressing write after destroy error');
+      callback();
     }
   }
 }
