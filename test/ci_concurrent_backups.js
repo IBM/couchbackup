@@ -1,4 +1,4 @@
-// Copyright © 2018, 2023 IBM Corp. All rights reserved.
+// Copyright © 2018, 2025 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
 
 /* global describe it */
 
-const fs = require('fs');
+const assert = require('node:assert');
+const fs = require('node:fs');
 const { once } = require('node:events');
-const readline = require('readline');
-const u = require('./citestutils.js');
 const uuid = require('uuid').v4;
+const u = require('./citestutils.js');
+const { Liner } = require('../includes/liner.js');
 
 const params = { useApi: true };
 
@@ -28,29 +29,14 @@ describe(u.scenario('Concurrent database backups', params), function() {
     u.setTimeout(this, 900);
 
     const checkForEmptyBatches = async function(fileName) {
-      let foundEmptyBatch = false;
-
-      const rd = readline.createInterface({
-        input: fs.createReadStream(fileName),
-        output: fs.createWriteStream('/dev/null'),
-        terminal: false
-      });
-
-      rd.on('line', function(line) {
-        if (JSON.parse(line).length === 0) {
-          // Note: Empty batch arrays indicate that the running backup is
-          // incorrectly sharing a log file with another ongoing backup job.
-          foundEmptyBatch = true;
-        }
-      });
-
-      rd.on('close', function() {
-        if (foundEmptyBatch) {
-          return Promise.reject(new Error(`Log file '${fileName}' contains empty batches`));
-        } else {
-          return Promise.resolve();
-        }
-      });
+      assert.ok(await fs.createReadStream(fileName) // backup file
+        .pipe(new Liner(true)) // split to lines
+        .map(linerLine => JSON.parse(linerLine.line)) // parse JSON
+        .filter(parsedJson => Array.isArray(parsedJson)) // we want batches so filter to arrays
+        // Note: Empty batch arrays indicate that the running backup is
+        // incorrectly sharing a log file with another ongoing backup job.
+        .every(batch => batch.length > 0),
+        `Backup file ${fileName} contains empty batches.`);
     };
 
     const backupPromise = async function() {
