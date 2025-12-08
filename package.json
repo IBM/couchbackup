@@ -28,8 +28,8 @@
     "debug": "4.4.3"
   },
   "peerDependencies": {
-    "ibm-cloud-sdk-core": "^5.4.3",
-    "axios": "^1.13.1"
+    "ibm-cloud-sdk-core": "^5.4.5",
+    "axios": "^1.13.2"
   },
   "main": "app.js",
   "bin": {
