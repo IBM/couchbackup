@@ -7,3 +7,5 @@ updates:
       interval: "daily"
     cooldown:
       default-days: 4
+      exclude: 
+        - "@ibm-cloud/cloudant"
