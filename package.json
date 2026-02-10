@@ -29,7 +29,7 @@
   },
   "peerDependencies": {
     "ibm-cloud-sdk-core": "^5.4.5",
-    "axios": "^1.13.2"
+    "axios": "^1.13.5"
   },
   "main": "app.js",
   "bin": {

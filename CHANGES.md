@@ -1,3 +1,6 @@
+# 2.11.13 (Unreleased)
+- [UPGRADED] `axios` peerDependency to minimum version `1.13.5`.
+
 # 2.11.12 (2025-12-09)
 - [FIXED] Restore issue with document values containing `\u2028` and `\u2029` on Node.js 24.
 - [FIXED] Restore issue with readline pause/resume after close on Node.js 24.
