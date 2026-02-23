@@ -92,7 +92,7 @@ def runTest(version, filter=null, testSuite='test') {
   def testReportPath = "${testSuite}-${version}-results.xml"
   // Run tests using creds
   withEnv(getEnvForSuite("${testSuite}", version)) {
-    withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+    withCredentials([usernamePassword(credentialsId: 'releng', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
                       usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
                       string(credentialsId: 'testServerIamApiKey', variable: "${(testSuite == 'test-iam' || testSuite == 'test-network/conditions') ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
       try {
@@ -114,7 +114,7 @@ def runTest(version, filter=null, testSuite='test') {
               // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
               sh """
                 set +x
-                export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
+                export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@relengtest001.cloudant.com"
                 export COUCH_BACKEND_URL="${(testSuite == 'test-iam' || testSuite == 'test-network/conditions') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
                 export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8888' : '${COUCH_BACKEND_URL}'}"
                 export PROXY_URL='http://127.0.0.1:8474'
