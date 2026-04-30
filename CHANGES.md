@@ -1,3 +1,6 @@
+# Unreleased
+- [NOTE] Updated minimum supported engine to Node.js 22 LTS.
+
 # 2.11.17 (2026-04-28)
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.19`.
 - [UPGRADED] `ibm-cloud-sdk-core` peerDependency to version `5.4.12` to match version provided from `@ibm-cloud/cloudant`.
