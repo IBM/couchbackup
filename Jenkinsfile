@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-def getEnvForSuite(suiteName, version) {
+def getEnvForSuite(suiteName, version, iamAuth) {
 
   def envVars = []
 
+  basePort = 7700
   portOffset = 0
   switch(version) {
     case 'old-maintenance':
@@ -32,28 +33,93 @@ def getEnvForSuite(suiteName, version) {
       break
   }
 
-  // Add test suite specific environment variables
-  switch(suiteName) {
-    case 'test':
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7700 + portOffset}")
-      break
-    case 'test-network/conditions':
-      envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
+  // Add test suite specific environment variables and offset
+  if (suiteName == 'test-network/conditions') {
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7800 + portOffset}")
-      break
-    case 'test-iam':
-      envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
-      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${7900 + portOffset}")
-      break
-    default:
-      error("Unknown test suite environment ${suiteName}")
+      portOffset = portOffset + 100
   }
+
+  // Add IAM auth specific environment variables and offset
+  if (iamAuth) {
+    envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
+    portOffset = portOffset + 200
+  }
+
+  envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${basePort + portOffset}")
 
   return envVars
 }
 
+def shouldRunQaCombination(version, iamAuth, tests) {
+  // List of version:iamAuth:tests to include
+  // version is one of: active, maintenance, old-maintenance
+  // iamAuth is true or false (and is irrelevant for unit tests)
+  // tests is one of: unit, e2e or network
+  // Valid axes (12 combinations):
+  // - unit tests: all node versions with iamAuth=false (3)
+  // - e2e tests: all node versions with iamAuth=true or false (6)
+  // - network tests: all node versions with iamAuth=true (3)
+  def defaultQaMatrixIncludes = '''
+    active:false:unit
+    maintenance:false:unit
+    old-maintenance:false:unit
+    active:false:e2e
+    maintenance:false:e2e
+    old-maintenance:false:e2e
+    active:true:e2e
+  '''
+  // defaultQaMatrixIncludes is used for regular branch builds
+  // For "big" regression check builds we use the build parameters:
+  //    QA_MATRIX_INCLUDE to specify e2e axes and network tests
+  //    TEST_FILTER to enable slower tests on the e2e axes
+  def matrixIncludes = env.QA_MATRIX_INCLUDE?.trim() ? env.QA_MATRIX_INCLUDE : defaultQaMatrixIncludes
+  def combination = "${version}:${iamAuth}:${tests}".toString()
 
+  // Make the multiline string a list of valid combinations
+  matrixIncludes = matrixIncludes
+    .split('\n')
+    .collect { it.trim().toString() }
+    .findAll { !it.isEmpty() }
+
+  return matrixIncludes.contains(combination)
+}
+
+def runQaCombination(version, iamAuth, tests) {
+  iamAuth = iamAuth.toBoolean()
+  def suiteName
+  def filter
+  switch (tests) {
+    case 'unit':
+      suiteName = 'test'
+      reportName = 'unit'
+      // Filter to only unit tests
+      filter = '-g \'#unit\''
+      break
+    case 'e2e':
+      suiteName = 'test'
+      // Use the env var filter or default to all e2e tests except slow ones (no unit tests)
+      filter = env.TEST_FILTER == null ? '-i -g \'#unit|#slowe\'' : env.TEST_FILTER
+      break
+    case 'network':
+      suiteName = 'test-network/conditions'
+      // Network tests use an empty string filter because they load specific e2e tests inside the poisons
+      filter = ''
+      break
+    default:
+      error("Unknown tests: ${tests}")
+  }
+
+  // Run the tests in the correct container
+  // Active version is run in the default executor
+  // Other versions use a custom container
+  if (version == 'active') {
+    runTest(version, filter, suiteName, tests, iamAuth)
+  } else {
+    container("node-${version}-lts") {
+      runTest(version, filter, suiteName, tests, iamAuth)
+    }
+  }
+}
 
 // NB these registry URLs must have trailing slashes
 
@@ -79,53 +145,47 @@ def withNpmEnv(registry, closure) {
   }
 }
 
-def runTest(version, filter=null, testSuite='test') {
-  if (filter == null) {
-    if (env.TEST_FILTER == null) {
-      // The set of default tests includes unit and integration tests, but
-      // not ones tagged #slower, #slowest.
-      filter = '-i -g \'#slowe\''
-    } else {
-      filter = env.TEST_FILTER
-    }
-  }
-  def testReportPath = "${testSuite}-${version}-results.xml"
-  // Run tests using creds
-  withEnv(getEnvForSuite("${testSuite}", version)) {
-    withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
-                      usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
-                      string(credentialsId: 'testServerIamApiKey', variable: "${(testSuite == 'test-iam' || testSuite == 'test-network/conditions') ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
-      try {
-        // For the IAM tests we want to run the normal 'test' suite, but we
-        // want to keep the report named 'test-iam'
-        def testRun = (testSuite != 'test-iam') ? testSuite : 'test'
-        
-        // Actions:
-        // Run tests using filter
-        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
-          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
-            withNpmEnv(registryArtifactoryDown) {
-              // A note on credential encoding
-              // The couchbackup tool requires legacy credentials in the user-info portion of a URL, so creds in the URL must be encoded.
-              // Encoding in the Jenkins credentials store is not an option because the creds are also used [unencoded] in other places.
-              // Encoding in the couchbackup test code is not an option because the environment variable is used directly by couchbackup during tests.
-              // Encoding in this file is not an option because the credential must be interpolated by groovy which is a Jenkins "no no".
-              // Ergo we need to encode when we expand the env var in the shell. We do this by running $(node -e ...) as node is always available
-              // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
-              sh """
-                set +x
-                export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
-                export COUCH_BACKEND_URL="${(testSuite == 'test-iam' || testSuite == 'test-network/conditions') ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
-                export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8888' : '${COUCH_BACKEND_URL}'}"
-                export PROXY_URL='http://127.0.0.1:8474'
-                set -x
-                ./node_modules/mocha/bin/mocha.js --reporter xunit --reporter-options output=${testReportPath},suiteName=${testSuite} ${filter} ${testRun}
-              """
+def runTest(version, filter, testSuite, reportName, iamAuth) {
+  def reportSuiteName = "${reportName}-${iamAuth ? 'iam' : 'legacy'}-${version}"
+  def testReportPath = "${reportSuiteName}-results.xml"
+  // Use 'network' as lock resource for network tests to make them sequential
+  // Use reportSuiteName for other tests to allow parallel execution
+  def lockResource = reportName == 'network' ? 'network' : reportSuiteName
+  
+  lock(resource: lockResource) {
+    // Run tests using creds
+    withEnv(getEnvForSuite("${testSuite}", version, iamAuth)) {
+      withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+                        usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
+                        string(credentialsId: 'testServerIamApiKey', variable: "${iamAuth && testSuite != 'unit' ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
+        try {
+          // Actions:
+          // Run tests using filter
+          withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+            withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+              withNpmEnv(registryArtifactoryDown) {
+                // A note on credential encoding
+                // The couchbackup tool requires legacy credentials in the user-info portion of a URL, so creds in the URL must be encoded.
+                // Encoding in the Jenkins credentials store is not an option because the creds are also used [unencoded] in other places.
+                // Encoding in the couchbackup test code is not an option because the environment variable is used directly by couchbackup during tests.
+                // Encoding in this file is not an option because the credential must be interpolated by groovy which is a Jenkins "no no".
+                // Ergo we need to encode when we expand the env var in the shell. We do this by running $(node -e ...) as node is always available
+                // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
+                sh """
+                  set +x
+                  export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
+                  export COUCH_BACKEND_URL="${iamAuth ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
+                  export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8888' : '${COUCH_BACKEND_URL}'}"
+                  export PROXY_URL='http://127.0.0.1:8474'
+                  set -x
+                  ./node_modules/mocha/bin/mocha.js --reporter xunit --reporter-options output=${testReportPath},suiteName=${reportSuiteName} ${filter} ${testSuite}
+                """
+              }
             }
           }
+        } finally {
+          junit "**/${testReportPath}"
         }
-      } finally {
-        junit "**/${testReportPath}"
       }
     }
   }
@@ -173,8 +233,7 @@ pipeline {
           buildingTag()
         }
       }
-      parallel {
-        // Stages that run on LTS version from full agent default container
+      stages {
         stage('Lint') {
           steps {
             script{
@@ -182,84 +241,102 @@ pipeline {
             }
           }
         }
-        stage('Node Active LTS') {
-          steps {
-            script{
-              runTest('active')
-            }
-          }
-        }
-        stage('IAM Node Active LTS') {
-          steps {
-            script{
-              runTest('active', '-i -g \'#unit|#slowe\'', 'test-iam')
-            }
-          }
-        }
-        stage('Network Node Active LTS') {
+        stage('SonarQube analysis') {
           when {
-            beforeAgent true
-            environment name: 'RUN_TOXY_TESTS', value: 'true'
-          }
-          steps {
-            script{
-              runTest('active', '', 'test-network/conditions')
+            anyOf {
+              changeRequest()
+              expression { env.BRANCH_IS_PRIMARY }
+            }
+            not {
+              changeRequest branch: 'dependabot*', comparator: 'GLOB'
             }
           }
-        }
-        stage('Node Old Maintenance LTS') {
           steps {
-            container('node-old-maintenance-lts') {
-              script{
-                runTest('old-maintenance')
+            script {
+              def scannerHome = tool 'SonarQubeScanner';
+              withSonarQubeEnv(installationName: 'SonarQubeServer') {
+                sh "${scannerHome}/bin/sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup"
               }
             }
           }
         }
-        stage('Node Maintenance LTS') {
+        stage('Mend scan') {
+          when {
+            expression { env.BRANCH_IS_PRIMARY }
+          }
+          environment {
+            WS_PROJECTNAME='couchbackup'
+          }
           steps {
-            container('node-maintenance-lts') {
-              script{
-                runTest('maintenance')
+            mendScan()
+          }
+        }
+        stage('Test Matrix') {
+          matrix {
+            // This matrix defines the possible axes and excludes non-working combinations
+            // Running of any particular axis is determined by shouldRunQaCombination
+            // by checking the QA_MATRIX_INCLUDE parameter or defaultQaMatrixIncludes
+            axes {
+              axis {
+                name 'NODE_VERSION'
+                values 'active', 'maintenance', 'old-maintenance'
+              }
+              axis {
+                name 'IAM_AUTH'
+                values 'true', 'false'
+              }
+              axis {
+                name 'TESTS'
+                values 'unit', 'e2e', 'network'
+              }
+            }
+            excludes {
+              // No handling for basic auth in the toxics http proxy
+              exclude {
+                axis {
+                  name 'TESTS'
+                  values 'network'
+                }
+                axis {
+                  name 'IAM_AUTH'
+                  values 'false'
+                }
+              }
+              // Auth is not used in unit tests
+              // exclude one of the two types to avoid duplication
+              exclude {
+                axis {
+                  name 'TESTS'
+                  values 'unit'
+                }
+                axis {
+                  name 'IAM_AUTH'
+                  values 'true'
+                }
+              }
+            }
+            when {
+              beforeAgent true
+              expression {
+                shouldRunQaCombination(env.NODE_VERSION, env.IAM_AUTH, env.TESTS)
+              }
+            }
+            stages {
+              stage('Run Test') {
+                steps {
+                  script {
+                    runQaCombination(env.NODE_VERSION, env.IAM_AUTH, env.TESTS)
+                  }
+                }
               }
             }
           }
         }
-      }
-    }
-    stage('Log check') {
-      steps {
-        findText regexp: '.*EPIPE|DEP0137.*', alsoCheckConsoleOutput: true, unstableIfFound: true
-      }
-    }
-    stage('SonarQube analysis') {
-      when {
-        anyOf {
-          changeRequest()
-          expression { env.BRANCH_IS_PRIMARY }
-        }
-        not {
-          changeRequest branch: 'dependabot*', comparator: 'GLOB'
-        }
-      }
-      steps {
-        script {
-          def scannerHome = tool 'SonarQubeScanner';
-          withSonarQubeEnv(installationName: 'SonarQubeServer') {
-            sh "${scannerHome}/bin/sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.projectKey=couchbackup"
+        stage('Log check') {
+          steps {
+            findText regexp: '.*EPIPE|DEP0137.*', alsoCheckConsoleOutput: true, unstableIfFound: true
           }
         }
-      }
-    }
-    stage('Mend scan') {
-      when {
-        expression { env.BRANCH_IS_PRIMARY }
-      }
-      environment {
-        WS_PROJECTNAME='couchbackup'
-      }
-      steps {
-        mendScan()
       }
     }
     // Publish the primary branch
