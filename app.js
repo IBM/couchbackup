@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2026 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ function isSafePositiveInteger(x) {
  * @param {boolean} isIAM - A flag if IAM authentication been used.
  * @returns Boolean true if all checks are passing.
  */
-async function validateURL(url, isIAM) {
+function validateURL(url, isIAM) {
   if (typeof url !== 'string') {
     throw new OptionError('Invalid URL, must be type string');
   }
@@ -83,7 +83,7 @@ async function validateURL(url, isIAM) {
  * @param {object} opts - Options.
  * @returns Boolean true if all checks are passing.
  */
-async function validateOptions(opts) {
+function validateOptions(opts) {
   // if we don't have opts then we'll be using defaults
   if (!opts) {
     return true;
@@ -139,7 +139,7 @@ async function validateOptions(opts) {
  *
  * @param {object} opts - Options.
  */
-async function shallowModeWarnings(opts) {
+function shallowModeWarnings(opts) {
   if (!opts || opts.mode !== 'shallow') {
     return;
   }
@@ -161,7 +161,7 @@ async function shallowModeWarnings(opts) {
  * @returns Boolean true if all checks are passing.
  */
 
-async function validateLogOnResume(opts) {
+function validateLogOnResume(opts) {
   const logFileExists = opts && opts.log && fs.existsSync(opts.log);
   if (!opts || opts.mode === 'shallow') {
     // No opts specified, defaults will be populated.
@@ -190,7 +190,7 @@ async function validateLogOnResume(opts) {
   return true;
 }
 
-async function attachmentWarnings(opts) {
+function attachmentWarnings(opts) {
   if (opts && opts.attachments) {
     console.warn('WARNING: The "attachments" option is provided as-is and is not supported. ' +
       'This option is for Apache CouchDB only and is experimental. ' +
@@ -204,22 +204,18 @@ async function attachmentWarnings(opts) {
  * @param {string} url - URL of database.
  * @param {object} opts - Options.
  * @param {boolean} backup - true for backup, false for restore
- * @returns Boolean true if all checks are passing.
+ * @returns {Promise<boolean>} `true` if all checks are passing, otherwise rejected.
  */
 async function validateArgs(url, opts, isBackup = true) {
   const isIAM = opts && typeof opts.iamApiKey === 'string';
-  const validations = [
-    validateURL(url, isIAM),
-    validateOptions(opts),
-    attachmentWarnings(opts)
-  ];
+  validateURL(url, isIAM);
+  validateOptions(opts);
+  attachmentWarnings(opts);
   if (isBackup) {
-    validations.push(
-      shallowModeWarnings(opts),
-      validateLogOnResume(opts)
-    );
+    shallowModeWarnings(opts);
+    validateLogOnResume(opts);
   }
-  return Promise.all(validations);
+  return true;
 }
 
 /**
