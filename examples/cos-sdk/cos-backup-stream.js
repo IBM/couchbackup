@@ -19,7 +19,8 @@
 // part of the database URL and the current time.
 
 const stream = require('stream');
-const IBM_COS = require('ibm-cos-sdk');
+const { S3Client, HeadBucketCommand } = require('ibm-cos-sdk-v2');
+const { Upload } = require('@ibm-cos/lib-storage');
 const VError = require('verror').VError;
 const couchbackup = require('@cloudant/couchbackup');
 const debug = require('debug')('couchbackup-cos');
@@ -61,9 +62,8 @@ function main() {
   *  */
   const config = {
     endpoint: cosEndpoint,
-    credentials: new IBM_COS.SharedJSONFileCredentials(),
   };
-  const COS = new IBM_COS.S3(config);
+  const COS = new S3Client(config);
   debug(`Creating a new backup of ${sourceUrl} at ${backupBucket}/${backupKey}...`);
   bucketAccessible(COS, backupBucket)
     .then(() => {
@@ -82,7 +82,7 @@ function main() {
  * Return a promise that resolves if the bucket is available and
  * rejects if not.
  *
- * @param {IBM_COS.S3} s3 IBM COS S3 client object
+ * @param {S3Client} s3 IBM COS S3 client object
  * @param {any} bucketName Bucket name
  * @returns Promise
  */
@@ -90,7 +90,7 @@ function bucketAccessible(s3, bucketName) {
   const params = {
     Bucket: bucketName
   };
-  return s3.headBucket(params).promise()
+  return s3.send(new HeadBucketCommand(params))
     .then(() => { debug('Bucket is accessible'); })
     .catch((reason) => {
       console.error(reason);
@@ -123,11 +123,12 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, cloudantApiKey, mode) 
     Key: s3Key,
     Body: streamToUpload
   };
-  const options = {
+  const upload = new Upload({
+    client: s3Client,
+    params: params,
     partSize: 5 * 1024 * 1024, // max 5 MB part size (minimum size)
     queueSize: 5  // allow 5 parts at a time
-  };
-  const upload = s3Client.upload(params, options);
+  });
   upload.on('httpUploadProgress', (progress) => {
     debug(`IBM COS upload progress: ${JSON.stringify(progress)}`);
   });
@@ -155,7 +156,7 @@ function backupToS3(sourceUrl, s3Client, s3Bucket, s3Key, cloudantApiKey, mode) 
     .on('changes', batch => debug('Couchbackup changes batch: ', batch))
     .on('written', progress => debug('Fetched batch:', progress.batch, 'Total document revisions written:', progress.total, 'Time:', progress.time))
   );
-  return Promise.all([backupPromise, upload.promise()]);
+  return Promise.all([backupPromise, upload.done()]);
 }
 
 main();
