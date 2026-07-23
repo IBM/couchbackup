@@ -50,7 +50,7 @@ https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-servi
 
 #### IBM COS
 
-Run the scripts with the `--cos_url` option pointing to your COS instance S3 endpoint.
+Run the scripts with the `--cos_url` option pointing to your COS instance S3 endpoint and `--cos_region` set to the region of your bucket (e.g. `us-south`, `eu-de`).
 
 Corresponding endpoint URLs can be found under the link found in the Service Credentials file or on the IBM Cloud UI (`endpoints` field).
 
@@ -68,7 +68,7 @@ The source database and destination bucket are required options.
 The minimum needed to run the backup scripts are thus:
 
 ```bash
-node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud' --cos_region 'eu-de'
 ```
 
 The object created in the bucket for the backup file will be
@@ -88,7 +88,7 @@ The target database URL, source bucket, and backup object name are required opti
 The minimum needed to run the restore scripts are thus:
 
 ```bash
-node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb' -b 'examplebucket' -o 'couchbackup-sourcedb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb' -b 'examplebucket' -o 'couchbackup-sourcedb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud' --cos_region 'eu-de'
 ```
 
 ## Progress and debug
@@ -97,7 +97,7 @@ To see detailed progress of the backup/restore and upload/download or additional
 use the `DEBUG` environment variable with label `couchbackup-cos` e.g.
 
 ```bash
-DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud"
+DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud" --cos_region "eu-de"
 ```
 
 ```
