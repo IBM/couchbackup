@@ -15,7 +15,7 @@
 // Small script which restores a Cloudant or CouchDB database from an IBM Cloud Object Storage (COS)
 // bucket via direct stream rather than on-disk file
 
-const IBM_COS = require('ibm-cos-sdk');
+const { S3Client, HeadObjectCommand, GetObjectCommand } = require('ibm-cos-sdk-v2');
 const VError = require('verror');
 const couchbackup = require('@cloudant/couchbackup');
 const debug = require('debug')('couchbackup-cos');
@@ -30,6 +30,7 @@ function main() {
       bucket: { alias: 'b', nargs: 1, demandOption: true, describe: 'Source bucket containing backup' },
       object: { alias: 'o', nargs: 1, demandOption: true, describe: 'Backup Object name in IBM COS' },
       cos_url: { nargs: 1, demandOption: true, describe: 'IBM COS S3 endpoint URL' },
+      cos_region: { nargs: 1, demandOption: true, describe: 'IBM COS S3 endpoint region' },
     })
     .help('h').alias('h', 'help')
     .epilog('Copyright (C) IBM 2025')
@@ -37,17 +38,18 @@ function main() {
 
   const restoreBucket = argv.bucket;
   const objectKey = argv.object;
-  const cosEndpoint = argv.cos_url;
+  const cosEndpoint = argv.cos_url.startsWith('https://') ? argv.cos_url : `https://${argv.cos_url}`;
+  const cosRegion = argv.cos_region;
   const targetUrl = argv.target;
 
   const cloudantApiKey = process.env.CLOUDANT_IAM_API_KEY;
 
   const config = {
     endpoint: cosEndpoint,
-    credentials: new IBM_COS.SharedJSONFileCredentials(),
+    region: cosRegion,
   };
 
-  const COS = new IBM_COS.S3(config);
+  const COS = new S3Client(config);
 
   objectAccessible(COS, restoreBucket, objectKey)
     .then(() => {
@@ -65,7 +67,7 @@ function main() {
 
 /**
  * Check if object is accessible in COS
- * @param {IBM_COS.S3} s3
+ * @param {S3Client} s3
  * @param {string} bucketName
  * @param {string} objectKey
  */
@@ -75,7 +77,7 @@ async function objectAccessible(s3, bucketName, objectKey) {
     Bucket: bucketName,
   };
   try {
-    await s3.headObject(params).promise();
+    await s3.send(new HeadObjectCommand(params));
     debug(`Object '${objectKey}' is accessible`);
   } catch (reason) {
     debug(reason);
@@ -87,7 +89,7 @@ async function objectAccessible(s3, bucketName, objectKey) {
  * Restore directly from a backup file on IBM COS S3 to a new and empty CouchDB or Cloudant database.
  * Uses direct streaming without intermediate files.
  *
- * @param {IBM_COS.S3} cosClient Object store client
+ * @param {S3Client} cosClient Object store client
  * @param {string} cosBucket Backup source bucket
  * @param {string} cosObjectKey Backup file name on IBM COS
  * @param {string} targetUrl URL of database
@@ -96,19 +98,24 @@ async function objectAccessible(s3, bucketName, objectKey) {
 async function restoreFromCOS(cosClient, cosBucket, cosObjectKey, targetUrl, cloudantApiKey) {
   debug(`Starting direct stream restore from ${cosBucket}/${cosObjectKey} to ${s(targetUrl)}`);
 
-  const cosInputStream = cosClient.getObject({
-    Bucket: cosBucket,
-    Key: cosObjectKey
-  }).createReadStream({
-    highWaterMark: 16 * 1024 * 1024 // 16MB buffer
-  });
-
-  cosInputStream.on('error', (err) => {
-    debug('COS input stream error:', err);
-    throw new VError(err, 'Failed to read from COS object');
-  });
+  let cosInputStream;
+  try {
+    const response = await cosClient.send(new GetObjectCommand({
+      Bucket: cosBucket,
+      Key: cosObjectKey,
+    }));
+    cosInputStream = response.Body;
+  } catch (err) {
+    debug('COS GetObjectCommand error:', err);
+    throw new VError(err, 'Failed to fetch object from COS');
+  }
 
   const restorePromise = new Promise((resolve, reject) => {
+    cosInputStream.on('error', (err) => {
+      debug('COS input stream error:', err);
+      reject(new VError(err, 'Failed to read from COS object'));
+    });
+
     const params = {
       iamApiKey: cloudantApiKey,
       ...(process.env.CLOUDANT_IAM_TOKEN_URL && { iamTokenUrl: process.env.CLOUDANT_IAM_TOKEN_URL }),
