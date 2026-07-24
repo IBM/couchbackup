@@ -4,7 +4,8 @@
   "description": "Examples of using CouchBackup as a library",
   "dependencies": {
     "@cloudant/couchbackup": "^2.11.6",
-    "ibm-cos-sdk": "^1.14.1",
+    "@ibm-cos/lib-storage": "^1.0.0",
+    "ibm-cos-sdk-v2": "^1.0.0",
     "tmp": "^0.2.3",
     "verror": "^1.10.1",
     "yargs": "^17.7.2"

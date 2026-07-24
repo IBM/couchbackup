@@ -18,7 +18,8 @@
 // The script generates the backup object name by combining together the path
 // part of the database URL and the current time.
 
-const IBM_COS = require('ibm-cos-sdk');
+const { S3Client, HeadBucketCommand } = require('ibm-cos-sdk-v2');
+const { Upload } = require('@ibm-cos/lib-storage');
 const fs = require('fs');
 const VError = require('verror');
 const tmp = require('tmp');
@@ -63,9 +64,8 @@ function main() {
   *  */
   const config = {
     endpoint: cosEndpoint,
-    credentials: new IBM_COS.SharedJSONFileCredentials(),
   };
-  const COS = new IBM_COS.S3(config);
+  const COS = new S3Client(config);
   debug(`Creating a new backup of ${sourceUrl} at ${backupBucket}/${backupKey}...`);
   bucketAccessible(COS, backupBucket)
     .then(() => {
@@ -87,7 +87,7 @@ function main() {
  * Return a promise that resolves if the bucket is available and
  * rejects if not.
  *
- * @param {IBM_COS.S3} s3 IBM COS S3 client object
+ * @param {S3Client} s3 IBM COS S3 client object
  * @param {any} bucketName Bucket name
  * @returns Promise
  */
@@ -95,7 +95,7 @@ function bucketAccessible(s3, bucketName) {
   const params = {
     Bucket: bucketName
   };
-  return s3.headBucket(params).promise()
+  return s3.send(new HeadBucketCommand(params))
     .then(() => { debug('Bucket is accessible'); })
     .catch((reason) => {
       console.error(reason);
@@ -145,7 +145,7 @@ function createBackupFile(sourceUrl, backupTmpFilePath, cloudantApiKey, mode) {
 /**
  * Upload a backup file to an IBM COS bucket.
  *
- * @param {IBM_COS.S3} cos Object store client
+ * @param {S3Client} cos Object store client
  * @param {any} backupTmpFilePath Path of backup file to write.
  * @param {any} bucket Object store bucket name
  * @param {any} key Object store key name
@@ -160,17 +160,17 @@ function uploadNewBackup(cos, backupTmpFilePath, bucket, key) {
     Key: key,
     Body: inputStream
   };
-  const options = {
+  const upload = new Upload({
+    client: cos,
+    params: params,
     partSize: 5 * 1024 * 1024, // max 5 MB part size (minimum size)
     queueSize: 5  // allow 5 parts at a time
-  };
-
-  const upload = cos.upload(params, options);
+  });
   upload.on('httpUploadProgress', (progress) => {
     debug(`IBM COS S3 upload progress: ${JSON.stringify(progress)}`);
   });
 
-  return upload.promise()
+  return upload.done()
     .then(() => {
       debug('Upload succeeded!');
     })

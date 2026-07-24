@@ -15,7 +15,7 @@
 // Small script which restores a Cloudant or CouchDB database from an IBM Cloud Object Storage (COS)
 // bucket using an intermediary file on disk
 
-const IBM_COS = require('ibm-cos-sdk');
+const { S3Client, HeadObjectCommand, GetObjectCommand } = require('ibm-cos-sdk-v2');
 const VError = require('verror');
 const couchbackup = require('@cloudant/couchbackup');
 const debug = require('debug')('couchbackup-cos');
@@ -48,9 +48,8 @@ function main() {
 
   const config = {
     endpoint: cosEndpoint,
-    credentials: new IBM_COS.SharedJSONFileCredentials(),
   };
-  const COS = new IBM_COS.S3(config);
+  const COS = new S3Client(config);
   restoreProcess(COS, restoreBucket, objectKey, targetUrl, cloudantApiKey, restoreTmpFile.name)
     .then(() => {
       debug('Restore completed successfully');
@@ -73,7 +72,7 @@ async function restoreProcess(COS, restoreBucket, objectKey, targetUrl, cloudant
 
 /**
  * Check if object is accessible in COS
- * @param {IBM_COS.S3} s3
+ * @param {S3Client} s3
  * @param {string} bucketName
  * @param {string} objectKey
  */
@@ -83,7 +82,7 @@ async function objectAccessible(s3, bucketName, objectKey) {
     Bucket: bucketName,
   };
   try {
-    await s3.headObject(params).promise();
+    await s3.send(new HeadObjectCommand(params));
     debug(`Object '${objectKey}' is accessible`);
   } catch (reason) {
     debug(reason);
@@ -93,7 +92,7 @@ async function objectAccessible(s3, bucketName, objectKey) {
 
 /**
  * Download backup file from COS to local temporary file
- * @param {IBM_COS.S3} COS
+ * @param {S3Client} COS
  * @param {string} restoreBucket
  * @param {string} objectKey
  * @param {string} restoreTmpFilePath
@@ -101,12 +100,17 @@ async function objectAccessible(s3, bucketName, objectKey) {
 async function createRestoreFile(COS, restoreBucket, objectKey, restoreTmpFilePath) {
   debug(`Downloading from ${restoreBucket}/${objectKey} to ${restoreTmpFilePath}`);
 
-  const inputStream = COS.getObject({
-    Bucket: restoreBucket,
-    Key: objectKey
-  }).createReadStream({
-    highWaterMark: 16 * 1024 * 1024 // 16MB buffer
-  });
+  let inputStream;
+  try {
+    const response = await COS.send(new GetObjectCommand({
+      Bucket: restoreBucket,
+      Key: objectKey
+    }));
+    inputStream = response.Body;
+  } catch (err) {
+    debug('COS GetObjectCommand error:', err);
+    throw new VError(err, 'Failed to fetch object from COS');
+  }
 
   const outputStream = fs.createWriteStream(restoreTmpFilePath, {
     highWaterMark: 16 * 1024 * 1024 // 16MB buffer
