@@ -191,6 +191,10 @@ def runTest(version, filter, testSuite, reportName, iamAuth) {
   }
 }
 
+def sdkVersion
+def coreVersion
+def axiosVersion
+
 pipeline {
   agent {
     kubernetes {
@@ -220,6 +224,48 @@ pipeline {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
             withNpmEnv(registryArtifactoryDown) {
               sh 'npm ci'
+            }
+          }
+        }
+      }
+    }
+    stage('Update peerDependencies') {
+      when {
+        beforeAgent true
+        branch pattern: 'dependabot/npm_and_yarn/ibm-cloud/cloudant-\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+        environment name: 'BUILD_NUMBER', value: '1'
+        expression {
+          sh(returnStatus: true, script: '''
+            ! git diff HEAD~1 --name-only | grep -qvE '^package(-lock)?\\.json$' &&
+            git diff HEAD~1 -- package.json | grep '^[+-]' | grep -v '^[+-][+-][+-]' | grep -q '@ibm-cloud/cloudant'
+          ''') == 0
+        }
+      }
+      steps {
+        script {
+          sdkVersion = sh(returnStdout: true, script: "jq -r '.dependencies.\"@ibm-cloud/cloudant\"' package.json").trim()
+        }
+        withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
+          withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
+            withNpmEnv(registryArtifactoryDown) {
+              script {
+                coreVersion = sh(returnStdout: true, script: "npm view @ibm-cloud/cloudant@${sdkVersion} dependencies.ibm-cloud-sdk-core").trim()
+                axiosVersion = sh(returnStdout: true, script: "npm view ibm-cloud-sdk-core@${coreVersion} dependencies.axios").trim()
+              }
+              sh "npm install --save-exact --save-peer axios@${axiosVersion} ibm-cloud-sdk-core@${coreVersion}"
+            }
+          }
+        }
+        sh """sed -i -E 's|"resolved": "${getRegistryArtifactoryDown()}([^"?]+)\\?dl=https%3A%2F%2F[^"]*"|"resolved": "${getRegistryPublic()}\\1"|g' package-lock.json"""
+        gitsh('github.com') {
+          script {
+            def diffStatus = sh(returnStatus: true, script: 'git diff --quiet package.json package-lock.json')
+            if (diffStatus == 1) {
+              sh 'git add package.json package-lock.json'
+              sh "git commit -m 'chore: update peerDependencies for @ibm-cloud/cloudant@${sdkVersion}'"
+              sh "git push origin HEAD:${env.BRANCH_NAME}"
+            } else {
+              echo 'No peerDependency changes to commit'
             }
           }
         }
