@@ -103,8 +103,8 @@ async function restoreHttpError(opts, errorName, errorCode) {
       // setup environment variables
       process.env.COUCH_URL = (params.useApi) ? url : `http://localhost:${proxyPort}`;
 
-      nock.emitter.on('no match', (req, opts) => {
-        console.error(`Unmatched nock request ${opts.method} ${opts.protocol}${opts.host}${opts.path}`);
+      nock.emitter.on('no match', (req) => {
+        console.error(`Unmatched nock request ${req.method} ${req.proto || req.protocol}//${req.host}${req.path}`);
       });
     });
 
