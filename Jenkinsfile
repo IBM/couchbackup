@@ -96,7 +96,7 @@ def runQaCombination(version, iamAuth, tests) {
       filter = '-g \'#unit\''
       break
     case 'e2e':
-      suiteName = 'test'
+      suiteName = 'test/ci_*.js'
       // Use the env var filter or default to all e2e tests except slow ones (no unit tests)
       filter = env.TEST_FILTER == null ? '-i -g \'#unit|#slowe\'' : env.TEST_FILTER
       break
