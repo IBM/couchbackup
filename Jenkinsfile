@@ -256,7 +256,6 @@ pipeline {
             }
           }
         }
-        sh """sed -i -E 's|"resolved": "${getRegistryArtifactoryDown()}([^"?]+)\\?dl=https%3A%2F%2F[^"]*"|"resolved": "${getRegistryPublic()}\\1"|g' package-lock.json"""
         gitsh('github.com') {
           script {
             def diffStatus = sh(returnStatus: true, script: 'git diff --quiet package.json package-lock.json')
