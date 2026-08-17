@@ -232,7 +232,7 @@ pipeline {
     stage('Update peerDependencies') {
       when {
         beforeAgent true
-        branch pattern: 'dependabot/npm_and_yarn/ibm-cloud/cloudant-\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+        changeRequest branch: 'dependabot/npm_and_yarn/ibm-cloud/cloudant-\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
         environment name: 'BUILD_NUMBER', value: '1'
         expression {
           sh(returnStatus: true, script: '''
@@ -262,7 +262,7 @@ pipeline {
             if (diffStatus == 1) {
               sh 'git add package.json package-lock.json'
               sh "git commit -m 'chore: update peerDependencies for @ibm-cloud/cloudant@${sdkVersion}'"
-              sh "git push origin HEAD:${env.BRANCH_NAME}"
+              sh "git push origin HEAD:${env.CHANGE_BRANCH}"
             } else {
               echo 'No peerDependency changes to commit'
             }
