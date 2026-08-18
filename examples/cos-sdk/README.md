@@ -17,7 +17,8 @@ checked out version.
 ### IBM COS SDK configuration
 
 The scripts expect the following values:
-* shared credentials file `~/.bluemix/cos_credentials` or target file from `COS_CREDENTIALS_FILE` environment variable
+* `IBM_API_KEY_ID` environment variable set to the `apikey` from your COS service credentials
+* `IBM_SERVICE_INSTANCE_ID` environment variable set to the `resource_instance_id` from your COS service credentials
 * `CLOUDANT_IAM_API_KEY` environment variable set to API key with permission to the Cloudant instance
 * (optional) `CLOUDANT_IAM_TOKEN_URL` environment variable set to the URL of token endpoint (defaults to `https://iam.cloud.ibm.com`)
 
@@ -25,32 +26,24 @@ The scripts expect the following values:
 
 When using IBM Cloud Object Storage create a service credential with __disabled__ `Include HMAC Credential` option.
 
-Copy the credentials into `~/.bluemix/cos_credentials` or generate it using the `ibmcloud` CLI tool:
+To retrieve your COS credentials using the `ibmcloud` CLI tool:
 ```bash
 ibmcloud resource service-key-create <credentials-name> --instance-name <cos-instance-name>
 
-ibmcloud resource service-key <credentials-name> --output JSON | jq '.[].credentials' > ~/.bluemix/cos_credentials
+ibmcloud resource service-key <credentials-name> --output JSON | jq '.[].credentials'
 ```
 More info on generating the credentials:
 https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-service-credentials
 
-#### Service Credentials file structure:
-```json
-{
-    "apikey": "<API_KEY>",
-    "endpoints": "https://control.cloud-object-storage.cloud.ibm.com/v2/endpoints",
-    "iam_apikey_description": "Auto-generated for key crn:v1:...f9d5b",
-    "iam_apikey_id": "ApiKey-6f...b1",
-    "iam_apikey_name": "<NAME>",
-    "iam_role_crn": "...Writer",
-    "iam_serviceid_crn": "crn:v1:...",
-    "resource_instance_id": "crn:v1:..."
-}
+From the output, set the environment variables:
+```bash
+export IBM_API_KEY_ID=<apikey value>
+export IBM_SERVICE_INSTANCE_ID=<resource_instance_id value>
 ```
 
 #### IBM COS
 
-Run the scripts with the `--cos_url` option pointing to your COS instance S3 endpoint.
+Run the scripts with the `--cos_url` option pointing to your COS instance S3 endpoint and `--cos_region` set to the region of your bucket (e.g. `us-south`, `eu-de`).
 
 Corresponding endpoint URLs can be found under the link found in the Service Credentials file or on the IBM Cloud UI (`endpoints` field).
 
@@ -68,7 +61,7 @@ The source database and destination bucket are required options.
 The minimum needed to run the backup scripts are thus:
 
 ```bash
-node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'examplebucket' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud' --cos_region 'eu-de'
 ```
 
 The object created in the bucket for the backup file will be
@@ -88,7 +81,7 @@ The target database URL, source bucket, and backup object name are required opti
 The minimum needed to run the restore scripts are thus:
 
 ```bash
-node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb' -b 'examplebucket' -o 'couchbackup-sourcedb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud'
+node cos-restore-file.js -t 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/targetdb' -b 'examplebucket' -o 'couchbackup-sourcedb-2024-01-25T09:45:11.730Z' --cos_url 's3.eu-de.cloud-object-storage.appdomain.cloud' --cos_region 'eu-de'
 ```
 
 ## Progress and debug
@@ -97,7 +90,7 @@ To see detailed progress of the backup/restore and upload/download or additional
 use the `DEBUG` environment variable with label `couchbackup-cos` e.g.
 
 ```bash
-DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud"
+DEBUG='couchbackup-cos' node cos-backup-file.js -s 'https://~replaceWithYourUniqueHost~.cloudantnosqldb.appdomain.cloud/sourcedb' -b 'couchbackup-example' --cos_url "s3.eu-de.cloud-object-storage.appdomain.cloud" --cos_region "eu-de"
 ```
 
 ```
