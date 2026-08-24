@@ -45,7 +45,7 @@
     "neostandard": "0.13.0",
     "nock": "14.0.17",
     "tail": "2.2.6",
-    "uuid": "14.0.1"
+    "uuid": "14.0.2"
   },
   "scripts": {
     "lint": "eslint .",
