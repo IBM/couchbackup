@@ -223,7 +223,7 @@ pipeline {
         withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
           withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
             withNpmEnv(registryArtifactoryDown) {
-              sh 'npm ci'
+              sh 'npm ci --min-release-age=0'
             }
           }
         }
