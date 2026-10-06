@@ -18,6 +18,8 @@
 const assert = require('assert');
 const axios = require('axios');
 const net = require('node:net');
+const { once } = require('node:events');
+const { setInterval } = require('node:timers/promises');
 
 // Import the common hooks
 require('../test/hooks.js');
@@ -58,29 +60,23 @@ const toxicProxyURL = process.env.PROXY_URL + '/proxies/' + toxicProxyName;
 const upstreamURL = new URL(process.env.COUCH_UPSTREAM_URL);
 const upstream = upstreamURL.hostname + ':' + (upstreamURL.port || (upstreamURL.protocol === 'https:' ? '443' : '80'));
 
-const waitForSocket = (port) => {
-  return new Promise((resolve) => {
+const waitForSocket = async (port, interval = 1000, maxWait = 8000) => {
+  const ac = new AbortController();
+  let attempts = 0;
+  for await (const maxAttempts of setInterval(interval, Math.trunc(maxWait / interval), { signal: ac.signal })) {
     const socket = new net.Socket();
-    const connect = () => socket.connect({ port });
-    let reConnect = false;
-
-    socket.on('connect', async () => {
-      if (reConnect !== false) {
-        clearInterval(reConnect);
-        reConnect = false;
-      }
+    socket.connect({ port });
+    try {
+      await once(socket, 'connect', { signal: ac.signal });
+      ac.abort();
       socket.end();
-      resolve(socket);
-    });
-
-    socket.on('error', () => {
-      if (reConnect === false) {
-        reConnect = setInterval(connect, 1000);
+      return;
+    } catch {
+      if (++attempts >= maxAttempts) {
+        throw new Error(`Port ${port} not reachable after ${maxAttempts} attempts`);
       }
-    });
-
-    connect();
-  });
+    }
+  }
 };
 
 describe('unreliable network tests', function() {
