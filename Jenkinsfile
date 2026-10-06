@@ -35,6 +35,8 @@ def getEnvForSuite(suiteName, version, iamAuth) {
 
   // Add test suite specific environment variables and offset
   if (suiteName == 'test-network/conditions') {
+      // For network tests we override so COUCH_BACKEND_URL resolves to toxiproxy
+      envVars.add("NODE_OPTIONS=--require ${WORKSPACE}/test-network/toxic-dns-override.js")
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
       portOffset = portOffset + 100
   }
@@ -175,7 +177,13 @@ def runTest(version, filter, testSuite, reportName, iamAuth) {
                   set +x
                   export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
                   export COUCH_BACKEND_URL="${iamAuth ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
-                  export COUCH_URL="${(testSuite == 'test-network/conditions') ? 'http://127.0.0.1:8888' : '${COUCH_BACKEND_URL}'}"
+                  ${(testSuite == 'test-network/conditions') ? '''
+                  export COUCH_UPSTREAM_URL="${COUCH_BACKEND_URL}"
+                  export COUCH_BACKEND_URL="$(node -e "const u = new URL(process.env.COUCH_UPSTREAM_URL); u.port=8889; console.log(u.href);")"
+                  export COUCH_URL="$(node -e "const u = new URL(process.env.COUCH_UPSTREAM_URL); u.port=8888; console.log(u.href);")"
+                  ''' : '''
+                  export COUCH_URL="${COUCH_BACKEND_URL}"
+                  '''}
                   export PROXY_URL='http://127.0.0.1:8474'
                   set -x
                   ./node_modules/mocha/bin/mocha.js --reporter xunit --reporter-options output=${testReportPath},suiteName=${reportSuiteName} ${filter} ${testSuite}
