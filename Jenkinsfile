@@ -60,13 +60,7 @@ def shouldRunQaCombination(version, iamAuth, tests) {
   // - e2e tests: all node versions with iamAuth=true or false (6)
   // - network tests: all node versions with iamAuth=true (3)
   def defaultQaMatrixIncludes = '''
-    active:false:unit
-    maintenance:false:unit
-    old-maintenance:false:unit
-    active:false:e2e
-    maintenance:false:e2e
-    old-maintenance:false:e2e
-    active:true:e2e
+    active:true:network
   '''
   // defaultQaMatrixIncludes is used for regular branch builds
   // For "big" regression check builds we use the build parameters:
