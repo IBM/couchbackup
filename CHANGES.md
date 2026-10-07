@@ -1,3 +1,6 @@
+# UNRELEASED
+- [FIXED] Correct exit code and error type for invalid URL options.
+
 # 2.11.19 (2026-08-19)
 - [FIXED] Option validation to prevent `[DEP0187] DeprecationWarning` from `fs.existsSync` when invalid types are passed.
 - [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.24`.

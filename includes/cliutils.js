@@ -40,7 +40,7 @@ module.exports = {
     try {
       return new url.URL(encodeURIComponent(databaseName), root).toString();
     } catch (err) {
-      throw error.wrapPossibleInvalidUrlError(err);
+      throw error.convertError(err);
     }
   },
 
