@@ -16,6 +16,7 @@
 
 const cliutils = require('../includes/cliutils.js');
 const assert = require('assert');
+const { OptionError } = require('../includes/error.js');
 
 describe('#unit Check URL handling', function() {
   it('should encode database names', async function() {
@@ -30,5 +31,15 @@ describe('#unit Check URL handling', function() {
     assert.strictEqual(url, expectedUrl,
       `The url was ${url} but should be ${expectedUrl}`
     );
+  });
+
+  it('should throw OptionError for invalid URLs', function() {
+    assert.throws(() => {
+      cliutils.databaseUrl('not a valid url', 'animaldb');
+    }, function(err) {
+      assert.ok(err instanceof OptionError, `Expected OptionError, got ${err}`);
+      assert.strictEqual(err.name, 'InvalidOption');
+      return true;
+    });
   });
 });
