@@ -39,6 +39,7 @@ const compare = async function(database1, database2) {
   const ac = new AbortController();
   // Check once per second while doc counts are changing until the assertion passes.
   // If doc counts aren't changing then try up to 5 times for a change before failing.
+  let overCount = false;
   let lastTargetDocCount = 0;
   let lastTargetDocDelCount = 0;
   let tryCount = 0;
@@ -53,19 +54,32 @@ const compare = async function(database1, database2) {
         // Assertion passed, break the loop
         break;
       } catch (e) {
-        // Assertion failed, check if making progress
+        // Assertion failed
+
+        // Check if over count
+        if (targetDocCount > sourceDocCount || targetDocDelCount > sourceDocDelCount) {
+          // Too many docs, we need to do the tree comparison to see why
+          // so suppress the assertion failure and reassert at end of tree comparison
+          overCount = true;
+          break;
+        }
+
+        // Check if making progress
         if (targetDocCount > lastTargetDocCount || targetDocDelCount > lastTargetDocDelCount) {
-          // Making progress, set new values and continue
-          // assertion failure is suppressed
-          lastTargetDocCount = targetDocCount;
-          lastTargetDocDelCount = targetDocDelCount;
+          // Progress detected, suppress the assertion failure
+          // Reset the count and continue to iterate
           tryCount = 0;
+          continue;
         } else {
           // Not making progress, suppress exception and try again
           if (++tryCount > maxTries) {
             throw e;
           }
         }
+      } finally {
+        // Update the last values
+        lastTargetDocCount = targetDocCount;
+        lastTargetDocDelCount = targetDocDelCount;
       }
     }
   } finally {
@@ -116,6 +130,11 @@ const compare = async function(database1, database2) {
       return Promise.reject(e);
     }
   } while (startKey != null);
+  if (overCount) {
+    // Reassert the counts in case we were over
+    assert.strictEqual(lastTargetDocCount, sourceDocCount);
+    assert.strictEqual(lastTargetDocDelCount, sourceDocDelCount);
+  }
   return true;
 };
 
