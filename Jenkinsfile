@@ -148,10 +148,11 @@ def withNpmEnv(registry, closure) {
 def runTest(version, filter, testSuite, reportName, iamAuth) {
   def reportSuiteName = "${reportName}-${iamAuth ? 'iam' : 'legacy'}-${version}"
   def testReportPath = "${reportSuiteName}-results.xml"
-  // Use 'network' as lock resource for network tests to make them sequential
-  // Use reportSuiteName for other tests to allow parallel execution
-  def lockResource = reportName == 'network' ? 'network' : reportSuiteName
-  
+  // Use 'network' as lock resource for network tests to make them sequential within the agent.
+  // Use reportSuiteName for other tests to allow parallel execution within the agent.
+  // Append the BUILD_TAG to ensure parallelism between build agents
+  def lockResource = "${reportName == 'network' ? 'network' : reportSuiteName}-${BUILD_TAG}"
+
   lock(resource: lockResource) {
     // Run tests using creds
     withEnv(getEnvForSuite("${testSuite}", version, iamAuth)) {
