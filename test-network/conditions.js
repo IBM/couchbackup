@@ -19,8 +19,6 @@ const assert = require('assert');
 const axios = require('axios');
 const net = require('node:net');
 
-const httpProxy = require('http-proxy');
-
 // Import the common hooks
 require('../test/hooks.js');
 
@@ -54,7 +52,11 @@ const poisons = [
   }
 ];
 
-const proxyURL = process.env.PROXY_URL + '/proxies/couchdb';
+const proxyName = 'couchdb';
+const toxicProxyName = proxyName + '_toxic';
+const toxicProxyURL = process.env.PROXY_URL + '/proxies/' + toxicProxyName;
+const upstreamURL = new URL(process.env.COUCH_UPSTREAM_URL);
+const upstream = upstreamURL.hostname + ':' + (upstreamURL.port || (upstreamURL.protocol === 'https:' ? '443' : '80'));
 
 const waitForSocket = (port) => {
   return new Promise((resolve) => {
@@ -82,51 +84,53 @@ const waitForSocket = (port) => {
 };
 
 describe('unreliable network tests', function() {
-  let proxy;
-  before('add proxy', async function() {
+  before('add proxies', async function() {
     // wait up to 10 sec for both proxies to allocate ports.
     this.timeout(10000);
 
-    proxy = httpProxy.createProxyServer({
-      target: process.env.COUCH_BACKEND_URL,
-      changeOrigin: true
-    }).listen(8080);
-
-    await waitForSocket(8080);
-
-    const toxiProxy = {
-      name: 'couchdb',
-      listen: '127.0.0.1:8888',
-      upstream: '127.0.0.1:8080',
-      enabled: true
-    };
-    const resp = await axios.post(process.env.PROXY_URL + '/proxies', toxiProxy);
-    assert.equal(resp.status, 201, 'Should create proxy "couchdb".');
+    // We create 2 proxies on different ports
+    // 1. will use toxics (COUCH_URL)
+    // 2. will only forward with no toxics (COUCH_BACKEND_URL)
+    const toxiProxy = [
+      {
+        name: toxicProxyName,
+        listen: '127.0.0.1:8888',
+        upstream,
+        enabled: true
+      },
+      {
+        name: proxyName,
+        listen: '127.0.0.1:8889',
+        upstream,
+        enabled: true
+      },
+    ];
+    const resp = await axios.post(process.env.PROXY_URL + '/populate', toxiProxy);
+    assert.equal(resp.status, 201, 'Should create proxies.');
     await waitForSocket(8888);
+    await waitForSocket(8889);
   });
 
-  after('remove proxy', async function() {
-    const resp = await axios.delete(proxyURL);
-    assert.equal(resp.status, 204, 'Should remove proxy "couchdb".');
-    // shutdown http proxy
-    return new Promise((resolve) => {
-      proxy.close(() => {
-        resolve();
-      });
-    });
+  after('remove proxies', async function() {
+    const resetResp = await axios.post(process.env.PROXY_URL + '/reset');
+    assert.equal(resetResp.status, 204, 'Should reset proxies.');
+    const deleteToxicProxyResp = await axios.delete(toxicProxyURL);
+    assert.equal(deleteToxicProxyResp.status, 204, `Should remove proxy "${toxicProxyName}".`);
+    const deleteProxyResp = await axios.delete(process.env.PROXY_URL + '/proxies/' + proxyName);
+    assert.equal(deleteProxyResp.status, 204, `Should remove proxy "${proxyName}".`);
   });
 
   poisons.forEach(function(poison) {
     describe(`tests using poison '${poison.name}'`, function() {
       before(`add toxic ${poison.name}`, async function() {
         if (poison.name === 'normal') return;
-        const resp = await axios.post(proxyURL + '/toxics', poison);
+        const resp = await axios.post(toxicProxyURL + '/toxics', poison);
         assert.equal(resp.status, 200, `Should create toxic ${poison.name}`);
       });
 
       after(`remove toxic ${poison.name}`, async function() {
         if (poison.name === 'normal') return;
-        const resp = await axios.delete(proxyURL + '/toxics/' + poison.name);
+        const resp = await axios.delete(toxicProxyURL + '/toxics/' + poison.name);
         assert.equal(resp.status, 204, `Should remove toxic ${poison.name}`);
       });
 
