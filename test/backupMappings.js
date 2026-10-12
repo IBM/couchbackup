@@ -142,7 +142,7 @@ describe('#unit backup mappings', function() {
           .post(`/${dbName}/_bulk_get`)
           .query({ ...{ revs: true }, ...opts })
           .times(1)
-          .reply(200, (uri, requestBody) => {
+          .reply(200, () => {
             // mock a _bulk_get response
             return {
               results: [
@@ -181,9 +181,10 @@ describe('#unit backup mappings', function() {
         .post(`/${dbName}/_bulk_get`)
         .query(true)
         .times(3)
-        .reply(200, (uri, requestBody) => {
+        .reply(200, async (request) => {
         // mock a _bulk_get response
-          const batchDocs = requestBody.docs.map((doc) => {
+          const body = await request.json();
+          const batchDocs = body.docs.map((doc) => {
             return { _id: doc.id, foo: `bar${doc.id}` };
           });
           // add to the expected lines

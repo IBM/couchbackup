@@ -57,8 +57,7 @@ describe('#unit Check request response error callback', function() {
     const couch = nock(url)
       .get('/bad')
       .times(3)
-      .reply(500, function(uri, requestBody) {
-        this.req.response.statusMessage = 'Internal Server Error';
+      .reply(500, () => {
         return { error: 'foo', reason: 'bar' };
       });
 
@@ -78,8 +77,7 @@ describe('#unit Check request response error callback', function() {
       .post('/_bulk_get')
       .query(true)
       .times(3)
-      .reply(503, function(uri, requestBody) {
-        this.req.response.statusMessage = 'Service Unavailable';
+      .reply(503, () => {
         return { error: 'service_unavailable', reason: 'Service unavailable' };
       });
 
@@ -98,8 +96,7 @@ describe('#unit Check request response error callback', function() {
     const couch = nock(url)
       .get('/bad')
       .times(3)
-      .reply(429, function(uri, requestBody) {
-        this.req.response.statusMessage = 'Too Many Requests';
+      .reply(429, () => {
         return { error: 'foo', reason: 'bar' };
       });
 
@@ -117,8 +114,7 @@ describe('#unit Check request response error callback', function() {
   it('should callback with fatal error for 404 response', async function() {
     const couch = nock(url)
       .get('/bad')
-      .reply(404, function(uri, requestBody) {
-        this.req.response.statusMessage = 'Not Found';
+      .reply(404, () => {
         return { error: 'foo', reason: 'bar' };
       });
 
