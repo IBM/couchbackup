@@ -20,7 +20,7 @@ const u = require('./citestutils.js');
 const mockServerPort = +process.env.COUCHBACKUP_MOCK_SERVER_PORT || 7777;
 const { once } = require('node:events');
 const url = `http://localhost:${mockServerPort}`;
-const nock = require('nock');
+const { default: nock } = require('nock');
 const httpProxy = require('http-proxy');
 const Readable = require('stream').Readable;
 

@@ -19,7 +19,7 @@ const backup = require('../includes/backup.js');
 const { convertError } = require('../includes/error.js');
 const { newClient } = require('../includes/request.js');
 const fs = require('fs');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const events = require('events');
 
 // Note all these tests include a body parameter of include_docs and a query

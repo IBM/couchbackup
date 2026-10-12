@@ -17,7 +17,7 @@
 const assert = require('assert');
 const { EventEmitter } = require('events');
 const fs = require('fs');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const { newClient } = require('../includes/request.js');
 const restorePipeline = require('../includes/restore.js');
 

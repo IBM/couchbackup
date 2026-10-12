@@ -17,7 +17,7 @@
 const assert = require('assert');
 const backup = require('../app.js').backup;
 const fs = require('fs');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const util = require('util');
 const backupPromise = util.promisify(backup);
 

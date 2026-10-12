@@ -18,7 +18,7 @@ const asyncGenerator = require('../includes/allDocsGenerator.js');
 const assert = require('assert');
 const { newClient } = require('../includes/request.js');
 const fs = require('fs');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const { Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 
