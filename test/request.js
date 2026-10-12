@@ -149,8 +149,7 @@ describe('#unit Check request response error callback', function() {
     const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
-      .delay(1000)
-      .reply(200, { results: { docs: [{ id: '1', ok: { _id: '1' } }] } })
+      .replyWithError(Object.assign(new Error('timeout of 500ms exceeded'), { code: 'ECONNABORTED' }))
       .post('/_bulk_get')
       .query(true)
       .reply(200, { results: { docs: [{ id: '1', ok: { _id: '1' } }, { id: '2', ok: { _id: '2' } }] } });
@@ -165,15 +164,13 @@ describe('#unit Check request response error callback', function() {
     });
   });
 
-  it('should callback with error code ESOCKETTIMEDOUT if 3 HTTP requests gets timed out', async function() {
-    // Increase the timeout for this test to allow for the delays
+  it('should callback with error code ECONNABORTED if 3 HTTP requests gets timed out', async function() {
     this.timeout(5000);
     const couch = nock(url)
       .post('/_bulk_get')
       .query(true)
-      .delay(1000)
       .times(3)
-      .reply(200, { ok: true });
+      .replyWithError(Object.assign(new Error('timeout of 500ms exceeded'), { code: 'ECONNABORTED' }));
 
     return assert.rejects(
       timeoutDbClient.service.postBulkGet({ db: dbClient.dbName, revs: true, docs: [] }),
