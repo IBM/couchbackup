@@ -131,7 +131,7 @@ describe('#unit backup mappings', function() {
   });
 
   describe('getPendingToFetchedMapper', function() {
-    const nock = require('nock');
+    const { default: nock } = require('nock');
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
     const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
@@ -169,7 +169,7 @@ describe('#unit backup mappings', function() {
 
   describe('end to end mapping', function() {
     it('should correctly map a log file to a backup', async function() {
-      const nock = require('nock');
+      const { default: nock } = require('nock');
       const url = 'http://localhost:7777';
       const dbName = 'fakenockdb';
       const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });

@@ -15,7 +15,7 @@
 /* global describe it beforeEach */
 
 const assert = require('assert');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const { newClient } = require('../includes/request.js');
 const { convertError } = require('../includes/error.js');
 

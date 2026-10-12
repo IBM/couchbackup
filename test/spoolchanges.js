@@ -15,7 +15,7 @@
 /* global afterEach beforeEach describe it */
 
 const assert = require('assert');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const http = require('node:http');
 const { newClient } = require('../includes/request.js');
 const spoolchanges = require('../includes/spoolchanges.js');

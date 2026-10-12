@@ -215,7 +215,7 @@ describe('#unit restore mappings', function() {
   });
 
   describe('pendingToRestored', function() {
-    const nock = require('nock');
+    const { default: nock } = require('nock');
     const url = 'http://localhost:7777';
     const dbName = 'fakenockdb';
     const dbClient = newClient(`${url}/${dbName}`, { parallelism: 1 });
