@@ -225,8 +225,8 @@ describe('#unit restore mappings', function() {
         .post(`/${dbName}/_bulk_docs`)
         .times(times)
         .optionally(optional)
-        .reply(200, (uri, requestBody) => {
-          // mock a _bulk_get response
+        .reply(200, () => {
+          // mock a _bulk_docs response
           return [];
         });
     }
@@ -266,7 +266,7 @@ describe('#unit restore mappings', function() {
       nock(url)
         .post(`/${dbName}/_bulk_docs`)
         .times(1)
-        .reply(400, (uri, requestBody) => {
+        .reply(400, () => {
           // mock an error response
           return { error: 'bad request', reason: 'mocking error' };
         });

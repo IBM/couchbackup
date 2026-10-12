@@ -68,8 +68,7 @@ describe('Check spool changes', function() {
         .post(`/${dbName}/_changes`)
         .query(true)
         .times(3)
-        .reply(500, function(uri, requestBody) {
-          this.req.response.statusMessage = 'Internal Server Error';
+        .reply(500, () => {
           return { error: 'foo', reason: 'bar' };
         });
 
