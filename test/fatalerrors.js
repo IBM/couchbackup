@@ -14,15 +14,17 @@
 
 /* global describe it before after beforeEach */
 
-const assert = require('assert');
-const fs = require('fs');
-const u = require('./citestutils.js');
-const mockServerPort = +process.env.COUCHBACKUP_MOCK_SERVER_PORT || 7777;
+const assert = require('node:assert');
+const fs = require('node:fs');
 const { once } = require('node:events');
-const url = `http://localhost:${mockServerPort}`;
+const http = require('node:http');
+const { pipeline } = require('node:stream/promises');
+const { Readable } = require('node:stream');
 const { default: nock } = require('nock');
-const httpProxy = require('http-proxy');
-const Readable = require('stream').Readable;
+const u = require('./citestutils.js');
+
+const mockServerPort = +process.env.COUCHBACKUP_MOCK_SERVER_PORT || 7777;
+const url = `http://localhost:${mockServerPort}`;
 
 // Create an infinite stream to read.
 // It just keeps sending a backup line, useful for testing cases of
@@ -90,14 +92,48 @@ async function restoreHttpError(opts, errorName, errorCode) {
       // Set up a proxy to point to our nock server because the nock override
       // isn't visible to the spawned CLI process
       if (!params.useApi) {
-        proxy = httpProxy.createProxyServer({ target: url }).listen(proxyPort, 'localhost');
-        proxy.on('error', (err, req, res) => {
-          console.log(`Proxy received error ${err}`);
-          res.writeHead(400, {
-            'Content-Type': 'application/json'
+        proxy = http.createServer(async (req, res) => {
+          // Fixed target host/port; only the path and query are taken from the incoming request
+          const { pathname, search } = new URL(req.url, url);
+          const reqStream = http.request({
+            hostname: 'localhost',
+            port: mockServerPort,
+            path: `${pathname}${search}`,
+            method: req.method,
+            headers: {
+              ...req.headers,
+              host: `localhost:${mockServerPort}`,
+              connection: 'close'
+            }
           });
-          res.end(JSON.stringify(err));
+
+          const handleError = (err) => {
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json', connection: 'close' });
+              res.end(JSON.stringify({ error: err.message }));
+            } else {
+              res.destroy(err);
+            }
+          };
+
+          // Forward request body with pipeline (not awaited directly so it doesn't block on response)
+          pipeline(req, reqStream).catch(handleError);
+
+          try {
+            const [response] = await once(reqStream, 'response');
+            res.writeHead(response.statusCode, {
+              ...response.headers,
+              connection: 'close'
+            });
+            await pipeline(response, res);
+          } catch (err) {
+            handleError(err);
+          } finally {
+            req.destroy();
+            reqStream.destroy();
+          }
         });
+        proxy.listen(proxyPort, 'localhost');
       }
 
       // setup environment variables
@@ -112,6 +148,7 @@ async function restoreHttpError(opts, errorName, errorCode) {
       process.env = processEnvCopy;
       nock.emitter.removeAllListeners();
       if (!params.useApi) {
+        proxy.closeAllConnections();
         proxy.close(done);
       } else {
         done();
