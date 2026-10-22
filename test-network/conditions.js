@@ -57,8 +57,10 @@ const poisons = [
 const proxyName = 'couchdb';
 const toxicProxyName = proxyName + '_toxic';
 const toxicProxyURL = process.env.PROXY_URL + '/proxies/' + toxicProxyName;
-const upstreamURL = new URL(process.env.COUCH_UPSTREAM_URL);
-const upstream = upstreamURL.hostname + ':' + (upstreamURL.port || (upstreamURL.protocol === 'https:' ? '443' : '80'));
+// COUCH_BACKEND_URL includes our 8889 non-toxic port number, we need to reset it to the real backend port
+// that value is saved in COUCH_UPSTREAM_PORT or falls back to a default
+const upstreamURL = new URL(process.env.COUCH_BACKEND_URL);
+const upstream = upstreamURL.hostname + ':' + (process.env.COUCH_UPSTREAM_PORT || (upstreamURL.protocol === 'https:' ? '443' : '80'));
 
 const waitForSocket = async (port, interval = 1000, maxWait = 8000) => {
   const ac = new AbortController();

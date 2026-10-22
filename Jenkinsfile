@@ -13,12 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-def getEnvForSuite(suiteName, version, iamAuth) {
+// Replaces (or appends) the port in a URL string with newPort.
+// Returns a map [port: originalPort, url: rewrittenURL] where
+// originalPort is the extracted port string (empty if the URL had no explicit port).
+def withPort(url, newPort) {
+  // find() returns null when there is no explicit port, whereas matcher[0] throws IndexOutOfBoundsException
+  def originalPort = url.find(/:\d+(?=\/|$)/)?.substring(1) ?: ''
+  def rewritten = url.replaceFirst(/:\d+(?=\/|$)/, '').replaceFirst(/(https?:\/\/[^\/]+)/, "\$1:${newPort}")
+  return [port: originalPort, url: rewritten]
+}
+
+def getEnvForSuite(suiteName, version, server, auth) {
 
   def envVars = []
 
-  basePort = 7700
-  portOffset = 0
+  def basePort = 7700
+  def portOffset = 0
   switch(version) {
     case 'old-maintenance':
       portOffset += 30
@@ -33,61 +43,115 @@ def getEnvForSuite(suiteName, version, iamAuth) {
       break
   }
 
+  def backendURL
+  def couchBackendURL
+  def couchURL
+  switch("${server}") {
+    case 'none':
+      envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${basePort + portOffset}")
+      return envVars
+    case 'gen2':
+      backendURL = env.SDKS_TEST_G2_SERVER_URL
+      break
+    case 'gen1':
+      backendURL = env.SDKS_TEST_SERVER_URL
+      envVars.add("CLOUDANT_IAM_TOKEN_URL=${env.SDKS_TEST_IAM_URL}")
+      break
+  }
+
+  // For legacy auth, add user info parameters into the backendURL.
+  // The replacement must contain literal shell syntax so the shell (not Groovy) expands
+  // ${DB_USER} and $(node -e ...) when COUCH_URL is re-exported in the sh step.
+  if ("${auth}" == 'legacy') {
+    backendURL = backendURL.replaceFirst(/(https?:\/\/)/) {
+      it[1] + '${DB_USER}:$(node -e \'console.log(encodeURIComponent(process.env.DB_PASSWORD));\')@'
+    }
+  }
+
   // Add test suite specific environment variables and offset
   if (suiteName == 'test-network/conditions') {
-      // For network tests we override so COUCH_BACKEND_URL resolves to toxiproxy
+      // For network tests we override DNS so the COUCH_URL host resolves to toxiproxy
       envVars.add("NODE_OPTIONS=--require ${WORKSPACE}/test-network/toxic-dns-override.js")
+      // Add the proxy URL
+      envVars.add("PROXY_URL=http://127.0.0.1:8474")
+      // Rewrite the backend URL to the two proxy ports; extract the original port for the upstream config
+      def couchURLResult = withPort(backendURL, 8888)
+      envVars.add("COUCH_UPSTREAM_PORT=${couchURLResult.port}")
+      couchURL = couchURLResult.url
+      couchBackendURL = withPort(backendURL, 8889).url
+      // Scale up test timeouts to account for toxic delays
       envVars.add("TEST_TIMEOUT_MULTIPLIER=50")
-      portOffset = portOffset + 100
+  } else {
+    // For tests without a toxic proxy both COUCH_URL and COUCH_BACKEND_URL are the backendURL
+    couchBackendURL = backendURL
+    couchURL = backendURL
   }
 
-  // Add IAM auth specific environment variables and offset
-  if (iamAuth) {
-    envVars.add("CLOUDANT_IAM_TOKEN_URL=${SDKS_TEST_IAM_URL}")
-    portOffset = portOffset + 200
-  }
-
-  envVars.add("COUCHBACKUP_MOCK_SERVER_PORT=${basePort + portOffset}")
+  envVars.add("COUCH_BACKEND_URL=${couchBackendURL}")
+  envVars.add("COUCH_URL=${couchURL}")
 
   return envVars
 }
 
-def shouldRunQaCombination(version, iamAuth, tests) {
-  // List of version:iamAuth:tests to include
-  // version is one of: active, maintenance, old-maintenance
-  // iamAuth is true or false (and is irrelevant for unit tests)
-  // tests is one of: unit, e2e or network
-  // Valid axes (12 combinations):
-  // - unit tests: all node versions with iamAuth=false (3)
-  // - e2e tests: all node versions with iamAuth=true or false (6)
-  // - network tests: all node versions with iamAuth=true (3)
+def getCredsForSuite(server, auth) {
+  def creds = []
+  switch("${auth}") {
+    case 'legacy':
+      switch("${server}") {
+        case 'gen1':
+          creds.add(usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'))
+          break
+      }
+      break
+    case 'iamkey':
+      switch("${server}") {
+        case 'gen2':
+          creds.add(string(credentialsId: 'testCdpServerIamApiKey', variable: 'COUCHBACKUP_TEST_IAM_API_KEY'))
+          break
+        case 'gen1':
+          creds.add(string(credentialsId: 'testServerIamApiKey', variable: 'COUCHBACKUP_TEST_IAM_API_KEY'))
+          break
+      }
+      break
+  }
+  return creds
+}
+
+def shouldRunQaCombination(version, tests, server, auth) {
+  // All combinations are 4-part strings: version:tests:server:auth
+  //   server is one of: none (unit tests), gen1, gen2
+  //   auth   is one of: none (unit tests), legacy, iamkey
+  // Entries with fewer than 4 parts are padded with :none, so shorthand
+  // like "active:unit" work naturally.
   def defaultQaMatrixIncludes = '''
-    active:false:unit
-    maintenance:false:unit
-    old-maintenance:false:unit
-    active:false:e2e
-    maintenance:false:e2e
-    old-maintenance:false:e2e
-    active:true:e2e
+    active:unit
+    active:e2e:gen1:legacy
+    active:e2e:gen1:iamkey
+    maintenance:unit
+    maintenance:e2e:gen1:legacy
+    maintenance:e2e:gen2:iamkey
+    old-maintenance:unit
+    old-maintenance:e2e:gen1:legacy
   '''
   // defaultQaMatrixIncludes is used for regular branch builds
   // For "big" regression check builds we use the build parameters:
   //    QA_MATRIX_INCLUDE to specify e2e axes and network tests
   //    TEST_FILTER to enable slower tests on the e2e axes
   def matrixIncludes = env.QA_MATRIX_INCLUDE?.trim() ? env.QA_MATRIX_INCLUDE : defaultQaMatrixIncludes
-  def combination = "${version}:${iamAuth}:${tests}".toString()
 
-  // Make the multiline string a list of valid combinations
+  def combination = "${version}:${tests}:${server}:${auth}".toString()
+
+  // Normalise entries by trimming space or newlines and padding those with fewer than 4 parts with :none
   matrixIncludes = matrixIncludes
     .split('\n')
     .collect { it.trim().toString() }
     .findAll { !it.isEmpty() }
+    .collect { def s = it; while (s.count(':') < 3) s = "${s}:none"; s.toString() }
 
   return matrixIncludes.contains(combination)
 }
 
-def runQaCombination(version, iamAuth, tests) {
-  iamAuth = iamAuth.toBoolean()
+def runQaCombination(version, tests, server, auth) {
   def suiteName
   def filter
   switch (tests) {
@@ -115,10 +179,10 @@ def runQaCombination(version, iamAuth, tests) {
   // Active version is run in the default executor
   // Other versions use a custom container
   if (version == 'active') {
-    runTest(version, filter, suiteName, tests, iamAuth)
+    runTest(version, filter, suiteName, tests, server, auth)
   } else {
     container("node-${version}-lts") {
-      runTest(version, filter, suiteName, tests, iamAuth)
+      runTest(version, filter, suiteName, tests, server, auth)
     }
   }
 }
@@ -147,8 +211,10 @@ def withNpmEnv(registry, closure) {
   }
 }
 
-def runTest(version, filter, testSuite, reportName, iamAuth) {
-  def reportSuiteName = "${reportName}-${iamAuth ? 'iam' : 'legacy'}-${version}"
+def runTest(version, filter, testSuite, reportName, server, auth) {
+  def reportSuiteName = (reportName == 'unit')
+    ? "${reportName}-${version}"
+    : "${reportName}-${version}-${server}-${auth}"
   def testReportPath = "${reportSuiteName}-results.xml"
   // Use 'network' as lock resource for network tests to make them sequential within the agent.
   // Use reportSuiteName for other tests to allow parallel execution within the agent.
@@ -156,14 +222,9 @@ def runTest(version, filter, testSuite, reportName, iamAuth) {
   def lockResource = "${reportName == 'network' ? 'network' : reportSuiteName}-${BUILD_TAG}"
 
   lock(resource: lockResource) {
-    // Run tests using creds
-    withEnv(getEnvForSuite("${testSuite}", version, iamAuth)) {
-      withCredentials([usernamePassword(credentialsId: 'testServerLegacy', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
-                        usernamePassword(credentialsId: 'artifactory', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PW'),
-                        string(credentialsId: 'testServerIamApiKey', variable: "${iamAuth && testSuite != 'unit' ? 'COUCHBACKUP_TEST_IAM_API_KEY' : 'IAM_API_KEY'}")]) {
+    withEnv(getEnvForSuite("${testSuite}", version, server, auth)) {
+      withCredentials(getCredsForSuite(server, auth)) {
         try {
-          // Actions:
-          // Run tests using filter
           withCredentials([usernamePassword(usernameVariable: 'NPMRC_USER', passwordVariable: 'NPMRC_TOKEN', credentialsId: 'artifactory')]) {
             withEnv(['NPMRC_EMAIL=' + env.NPMRC_USER]) {
               withNpmEnv(registryArtifactoryDown) {
@@ -174,18 +235,11 @@ def runTest(version, filter, testSuite, reportName, iamAuth) {
                 // Encoding in this file is not an option because the credential must be interpolated by groovy which is a Jenkins "no no".
                 // Ergo we need to encode when we expand the env var in the shell. We do this by running $(node -e ...) as node is always available
                 // when we are running couchbackup tests, other utilities that could encode like jq may not always be available.
+                // We need to re-export COUCH_URL and COUCH_BACKEND_URL so that these get resolved for legacy credentials cases.
                 sh """
                   set +x
-                  export COUCH_LEGACY_URL="https://\${DB_USER}:\$(node -e "console.log(encodeURIComponent(process.env.DB_PASSWORD));")@\${SDKS_TEST_SERVER_HOST}"
-                  export COUCH_BACKEND_URL="${iamAuth ? '${SDKS_TEST_SERVER_URL}' : '${COUCH_LEGACY_URL}'}"
-                  ${(testSuite == 'test-network/conditions') ? '''
-                  export COUCH_UPSTREAM_URL="${COUCH_BACKEND_URL}"
-                  export COUCH_BACKEND_URL="$(node -e "const u = new URL(process.env.COUCH_UPSTREAM_URL); u.port=8889; console.log(u.href);")"
-                  export COUCH_URL="$(node -e "const u = new URL(process.env.COUCH_UPSTREAM_URL); u.port=8888; console.log(u.href);")"
-                  ''' : '''
-                  export COUCH_URL="${COUCH_BACKEND_URL}"
-                  '''}
-                  export PROXY_URL='http://127.0.0.1:8474'
+                  export COUCH_BACKEND_URL="${env.COUCH_BACKEND_URL ?: ''}"
+                  export COUCH_URL="${env.COUCH_URL ?: ''}"
                   set -x
                   ./node_modules/mocha/bin/mocha.js --reporter xunit --reporter-options output=${testReportPath},suiteName=${reportSuiteName} ${filter} ${testSuite}
                 """
@@ -336,50 +390,86 @@ pipeline {
                 values 'active', 'maintenance', 'old-maintenance'
               }
               axis {
-                name 'IAM_AUTH'
-                values 'true', 'false'
-              }
-              axis {
                 name 'TESTS'
                 values 'unit', 'e2e', 'network'
               }
+              axis {
+                name 'SERVER'
+                values 'none', 'gen1', 'gen2'
+              }
+              axis {
+                name 'AUTH'
+                values 'none', 'legacy', 'iamkey'
+              }
             }
             excludes {
-              // No handling for basic auth in the toxics http proxy
-              exclude {
-                axis {
-                  name 'TESTS'
-                  values 'network'
-                }
-                axis {
-                  name 'IAM_AUTH'
-                  values 'false'
-                }
-              }
-              // Auth is not used in unit tests
-              // exclude one of the two types to avoid duplication
+              // Unit tests have no server interaction; only SERVER=none is valid
               exclude {
                 axis {
                   name 'TESTS'
                   values 'unit'
                 }
                 axis {
-                  name 'IAM_AUTH'
-                  values 'true'
+                  name 'SERVER'
+                  values 'gen1', 'gen2'
+                }
+              }
+              // e2e and network tests require a real server; SERVER=none is not valid
+              exclude {
+                axis {
+                  name 'TESTS'
+                  values 'e2e', 'network'
+                }
+                axis {
+                  name 'SERVER'
+                  values 'none'
+                }
+              }
+              // Unit tests have no auth; only AUTH=none is valid
+              exclude {
+                axis {
+                  name 'TESTS'
+                  values 'unit'
+                }
+                axis {
+                  name 'AUTH'
+                  values 'legacy', 'iamkey'
+                }
+              }
+              // e2e and network tests require auth; AUTH=none is not valid
+              exclude {
+                axis {
+                  name 'TESTS'
+                  values 'e2e', 'network'
+                }
+                axis {
+                  name 'AUTH'
+                  values 'none'
+                }
+              }
+              // gen2 is IAM-only so legacy auth is not valid
+              exclude {
+                axis {
+                  name 'SERVER'
+                  values 'gen2'
+                }
+                axis {
+                  name 'AUTH'
+                  values 'legacy'
                 }
               }
             }
             when {
               beforeAgent true
               expression {
-                shouldRunQaCombination(env.NODE_VERSION, env.IAM_AUTH, env.TESTS)
+                shouldRunQaCombination(env.NODE_VERSION, env.TESTS, env.SERVER, env.AUTH)
               }
             }
             stages {
               stage('Run Test') {
                 steps {
                   script {
-                    runQaCombination(env.NODE_VERSION, env.IAM_AUTH, env.TESTS)
+                    runQaCombination(env.NODE_VERSION, env.TESTS, env.SERVER, env.AUTH)
                   }
                 }
               }

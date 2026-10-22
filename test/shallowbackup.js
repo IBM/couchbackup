@@ -21,6 +21,7 @@ const { newClient } = require('../includes/request.js');
 const fs = require('fs');
 const { default: nock } = require('nock');
 const events = require('events');
+const { Writable } = require('stream');
 
 // Note all these tests include a body parameter of include_docs and a query
 // string of include_docs because of a quirk of nano that when using the fetch
@@ -42,7 +43,10 @@ describe('#unit Perform backup using shallow backup', function() {
     // Disable compression to make body assertions easier
     db.service.setEnableGzipCompression(false);
     opts.mode = 'shallow';
-    return backup(db, opts, fs.createWriteStream('/dev/null'), ee);
+    // Use a discarding Writable that completes writes immediately rather than
+    // a file stream.
+    const target = new Writable({ write(chunk, encoding, callback) { callback(); } });
+    return backup(db, opts, target, ee);
   }
 
   beforeEach('Reset nocks and event emitter', function() {
