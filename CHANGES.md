@@ -1,5 +1,9 @@
-# UNRELEASED
+# 2.11.20 (2026-10-22)
 - [FIXED] Correct exit code and error type for invalid URL options.
+- [IMPROVED] Migrated COS SDK examples from ibm-cos-sdk v1 to v2.
+- [UPGRADED] `@ibm-cloud/cloudant` dependency to version `0.12.26`.
+- [UPGRADED] `ibm-cloud-sdk-core` peerDependency to version `5.9.0` to match version provided from `@ibm-cloud/cloudant`.
+- [UPGRADED] `axios` peerDependency to version `1.20.0` to match version provided from `@ibm-cloud/cloudant`.
 
 # 2.11.19 (2026-08-19)
 - [FIXED] Option validation to prevent `[DEP0187] DeprecationWarning` from `fs.existsSync` when invalid types are passed.
