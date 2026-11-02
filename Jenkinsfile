@@ -117,27 +117,39 @@ def getCredsForSuite(server, auth) {
   return creds
 }
 
+// Parameter defaults can't depend on the build trigger, so builds started by
+// a cron timer ("big" regression check builds) ignore the parameter values and
+// use these cron specific values instead.
+// QA_MATRIX_INCLUDE specifies the e2e axes and network tests to run
+// TEST_FILTER enables the slower tests on the e2e axes
+// (Methods rather than top-level variables, because those are not visible inside other methods.)
+def getCronQaMatrixIncludes() {
+  return '''
+    active:e2e:gen1:iamkey
+    maintenance:e2e:gen1:iamkey
+    old-maintenance:e2e:gen1:iamkey
+    old-maintenance:e2e:gen2:iamkey
+    active:network:gen1:iamkey
+  '''
+}
+
+def getCronTestFilter() {
+  return "-g '#slowe'"
+}
+
+def isTimerTriggered() {
+  return !currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause').isEmpty()
+}
+
 def shouldRunQaCombination(version, tests, server, auth) {
   // All combinations are 4-part strings: version:tests:server:auth
   //   server is one of: none (unit tests), gen1, gen2
   //   auth   is one of: none (unit tests), legacy, iamkey
   // Entries with fewer than 4 parts are padded with :none, so shorthand
   // like "active:unit" work naturally.
-  def defaultQaMatrixIncludes = '''
-    active:unit
-    active:e2e:gen1:legacy
-    active:e2e:gen1:iamkey
-    maintenance:unit
-    maintenance:e2e:gen1:legacy
-    maintenance:e2e:gen2:iamkey
-    old-maintenance:unit
-    old-maintenance:e2e:gen1:legacy
-  '''
-  // defaultQaMatrixIncludes is used for regular branch builds
-  // For "big" regression check builds we use the build parameters:
-  //    QA_MATRIX_INCLUDE to specify e2e axes and network tests
-  //    TEST_FILTER to enable slower tests on the e2e axes
-  def matrixIncludes = env.QA_MATRIX_INCLUDE?.trim() ? env.QA_MATRIX_INCLUDE : defaultQaMatrixIncludes
+  // The QA_MATRIX_INCLUDE parameter default is used for regular branch builds,
+  // cron triggered builds use getCronQaMatrixIncludes().
+  def matrixIncludes = isTimerTriggered() ? getCronQaMatrixIncludes() : env.QA_MATRIX_INCLUDE
 
   def combination = "${version}:${tests}:${server}:${auth}".toString()
 
@@ -163,8 +175,9 @@ def runQaCombination(version, tests, server, auth) {
       break
     case 'e2e':
       suiteName = 'test/ci_*.js'
-      // Use the env var filter or default to all e2e tests except slow ones (no unit tests)
-      filter = env.TEST_FILTER == null ? '-i -g \'#unit|#slowe\'' : env.TEST_FILTER
+      // Use the cron filter or the TEST_FILTER parameter, if empty default to all e2e tests except slow ones (no unit tests)
+      def testFilter = isTimerTriggered() ? getCronTestFilter() : env.TEST_FILTER
+      filter = testFilter?.trim() ? testFilter : '-i -g \'#unit|#slowe\''
       break
     case 'network':
       suiteName = 'test-network/conditions'
@@ -266,6 +279,23 @@ pipeline {
   }
   options {
     disableConcurrentBuilds()
+  }
+  parameters {
+    // NB defaults here are for branch/PR builds, cron triggered builds use
+    // getCronQaMatrixIncludes() and getCronTestFilter() instead
+    text(name: 'QA_MATRIX_INCLUDE',
+         defaultValue: '''active:unit
+active:e2e:gen1:legacy
+active:e2e:gen1:iamkey
+maintenance:unit
+maintenance:e2e:gen1:legacy
+maintenance:e2e:gen2:iamkey
+old-maintenance:unit
+old-maintenance:e2e:gen1:legacy''',
+         description: 'Test matrix combinations to run, one per line as version:tests:server:auth (shorthand like active:unit is allowed). Ignored for cron triggered builds.')
+    string(name: 'TEST_FILTER',
+           defaultValue: '',
+           description: 'Mocha filter for e2e tests, e.g. -g \'#slowe\'. Empty runs all e2e tests except slow ones. Ignored for cron triggered builds.')
   }
   stages {
     stage('Detect Secrets') {
