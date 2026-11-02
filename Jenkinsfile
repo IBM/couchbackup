@@ -281,6 +281,11 @@ pipeline {
     disableConcurrentBuilds()
   }
   parameters {
+    validatingString( name: 'TARGET_VERSION',
+                      defaultValue: 'NONE',
+                      description: 'Tag to create after successful QA',
+                      failedValidationMessage: 'Tag name must be NONE or a semantic version release or pre-release (i.e. no build metadata)',
+                      regex: /NONE|${globals.SVRE_PRE_RELEASE}/)
     // NB defaults here are for branch/PR builds, cron triggered builds use
     // getCronQaMatrixIncludes() and getCronTestFilter() instead
     text(name: 'QA_MATRIX_INCLUDE',
@@ -523,54 +528,61 @@ old-maintenance:e2e:gen1:legacy''',
         }
       }
       stages {
-        stage('Tag and GH release') {
+        stage('Update version and tag') {
           when {
             beforeAgent true
-            branch 'main'
+            allOf {
+              // We only bump the version and create a tag when building the default primary branch with a TARGET_VERSION
+              branch 'main'
+              not {
+                equals expected: 'NONE', actual: "${params.TARGET_VERSION}"
+              }
+            }
           }
           steps {
-            // Run the gitTagAndPublish which tags/publishes to github for release builds
-            // and does a dry run for snapshot builds
-            script {
-              gitTagAndPublish {
-                  versionFile='package.json'
-                  releaseApiUrl='https://api.github.com/repos/IBM/couchbackup/releases'
-              }
+            gitsh('github.com') {
+              // Apply the new version and commit and tag (note: the signing config is handled by gitsh wrapper)
+              // TARGET_VERSION is intentionally read from the shell environment not interpolated by Groovy for security
+              sh 'npm version -m "chore: update version to %s" "$TARGET_VERSION"'
+              // Bump to the next patch SNAPSHOT so main is not left on the released version
+              sh '''
+                # npm prints the new version with a v prefix
+                SNAPSHOT_VERSION=$(npm version --no-git-tag-version "$(npm version --no-git-tag-version patch)-SNAPSHOT")
+                git commit -m "chore: update version to ${SNAPSHOT_VERSION#v}" package.json package-lock.json
+              '''
+              // Push the release version commit and the snapshot commit to main
+              sh 'git push origin HEAD:main'
+              // Push only the release tag for the new version
+              sh 'git push origin "refs/tags/v$TARGET_VERSION"'
             }
           }
         }
-        stage('NPM snapshot publish') {
+        stage('Publish release') {
           when {
             beforeAgent true
-            branch 'main'
-          }
-          steps {
-            // Make a snapshot version with the build ID added
-            sh "npm version --no-git-tag-version \$(npm version --json | jq -r '.[\"@cloudant/couchbackup\"]')-${env.BUILD_ID}"
-            // Upload using the NPM creds
-            withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
-                            usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
-              // publish the snapshot build to NPM
-              withNpmEnv(registryPublic) {
-                sh 'npm publish --tag snapshot'
-              }
+            allOf {
+              buildingTag()
+              tag pattern: /${env.SVRE_PRE_RELEASE_TAG}/, comparator: "REGEXP"
             }
           }
-        }
-        stage('NPM publish') {
-          when {
-            beforeAgent true
-            buildingTag()
+          environment {
+            // e.g. v1.2.3 -> cloudant-couchbackup-1.2.3.tgz, matching the file produced by npm pack
+            PACK_FILE = "cloudant-couchbackup-${env.TAG_NAME.replaceFirst(/^v(?=${env.SVRE_RELEASE})/,'')}.tgz"
           }
           steps {
-            // Upload using the NPM creds
-            withCredentials([string(credentialsId: 'npm-mail', variable: 'NPMRC_EMAIL'),
-                            usernamePassword(credentialsId: 'npm-creds', passwordVariable: 'NPMRC_TOKEN', usernameVariable: 'NPMRC_USER')]) {
-              // publish the tag build to NPM
-              withNpmEnv(registryPublic) {
-                sh 'npm publish'
-              }
-            }
+            // Create a pack
+            sh 'npm pack'
+            // Create a GH release with the pack
+            publishGitHubRelease(
+              tag: env.TAG_NAME,
+              assets: [
+                [
+                  name: env.PACK_FILE,
+                  path: env.PACK_FILE,
+                  contentType: 'application/gzip'
+                ]
+              ]
+            )
           }
         }
       }
