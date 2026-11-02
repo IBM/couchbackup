@@ -1,3 +1,6 @@
+Discover changes for newer releases in [GitHub Releases](https://github.com/IBM/couchbackup/releases).
+This file is not updated any more.
+
 # 2.11.20 (2026-10-22)
 - [FIXED] Correct exit code and error type for invalid URL options.
 - [IMPROVED] Migrated COS SDK examples from ibm-cos-sdk v1 to v2.
