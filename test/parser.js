@@ -1,4 +1,4 @@
-// Copyright © 2017, 2024 IBM Corp. All rights reserved.
+// Copyright © 2017, 2026 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,12 @@ describe('#unit Default parameters', function() {
   });
 
   after('Reset process data', function() {
-    process.env = processEnvCopy;
+    for (const key of Object.keys(process.env)) {
+      if (!(key in processEnvCopy)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, processEnvCopy);
     process.argv = processArgvCopy;
   });
 

@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2026 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,13 +81,12 @@ async function restoreHttpError(opts, errorName, errorCode) {
     // the 2 second default mocha timeout can be insufficient, use 10 s
     this.timeout(10000);
 
-    let processEnvCopy;
+    let prevCouchUrl;
     let proxy;
 
     before('Set process data for test', function() {
       const proxyPort = mockServerPort + 1000;
-      // Copy env and argv so we can reset them after the tests
-      processEnvCopy = JSON.parse(JSON.stringify(process.env));
+      prevCouchUrl = process.env.COUCH_URL;
 
       // Set up a proxy to point to our nock server because the nock override
       // isn't visible to the spawned CLI process
@@ -145,7 +144,11 @@ async function restoreHttpError(opts, errorName, errorCode) {
     });
 
     after('Reset process data', function(done) {
-      process.env = processEnvCopy;
+      if (typeof prevCouchUrl !== 'undefined') {
+        process.env.COUCH_URL = prevCouchUrl;
+      } else {
+        delete process.env.COUCH_URL;
+      }
       nock.emitter.removeAllListeners();
       if (!params.useApi) {
         proxy.closeAllConnections();
