@@ -1,4 +1,4 @@
-// Copyright © 2017, 2023 IBM Corp. All rights reserved.
+// Copyright © 2017, 2026 IBM Corp. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,12 @@ function makeSharedClient() {
   const opts = {};
   opts.iamApiKey = process.env.COUCHBACKUP_TEST_IAM_API_KEY || null;
   opts.iamTokenUrl = process.env.CLOUDANT_IAM_TOKEN_URL || null;
-  return newSimpleClient(url, opts).service;
+  const client = newSimpleClient(url, opts).service;
+  // The shared client can sit idle for long periods (e.g. during a large backup/restore).
+  // A pooled keep-alive connection may be closed by the server before it is next used.
+  // Enable retries so a resulting "socket hang up" doesn't fail the test.
+  client.enableRetries({ maxRetries: 2 });
+  return client;
 }
 
 // Mocha hooks that will be at the root context so run for all tests
