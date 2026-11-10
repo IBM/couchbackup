@@ -133,6 +133,22 @@ def getCronQaMatrixIncludes() {
   '''
 }
 
+// Default for the QA_MATRIX_INCLUDE parameter. Also used as a fallback because
+// on the first build of a new branch the parameters are not yet defined, so
+// env.QA_MATRIX_INCLUDE is null.
+def getDefaultQaMatrixIncludes() {
+  return '''
+    active:unit
+    active:e2e:gen1:legacy
+    active:e2e:gen1:iamkey
+    maintenance:unit
+    maintenance:e2e:gen1:legacy
+    maintenance:e2e:gen2:iamkey
+    old-maintenance:unit
+    old-maintenance:e2e:gen1:legacy
+  '''
+}
+
 def getCronTestFilter() {
   return "-g '#slowe'"
 }
@@ -149,7 +165,7 @@ def shouldRunQaCombination(version, tests, server, auth) {
   // like "active:unit" work naturally.
   // The QA_MATRIX_INCLUDE parameter default is used for regular branch builds,
   // cron triggered builds use getCronQaMatrixIncludes().
-  def matrixIncludes = isTimerTriggered() ? getCronQaMatrixIncludes() : env.QA_MATRIX_INCLUDE
+  def matrixIncludes = isTimerTriggered() ? getCronQaMatrixIncludes() : (env.QA_MATRIX_INCLUDE ?: getDefaultQaMatrixIncludes())
 
   def combination = "${version}:${tests}:${server}:${auth}".toString()
 
@@ -289,14 +305,7 @@ pipeline {
     // NB defaults here are for branch/PR builds, cron triggered builds use
     // getCronQaMatrixIncludes() and getCronTestFilter() instead
     text(name: 'QA_MATRIX_INCLUDE',
-         defaultValue: '''active:unit
-active:e2e:gen1:legacy
-active:e2e:gen1:iamkey
-maintenance:unit
-maintenance:e2e:gen1:legacy
-maintenance:e2e:gen2:iamkey
-old-maintenance:unit
-old-maintenance:e2e:gen1:legacy''',
+         defaultValue: getDefaultQaMatrixIncludes(),
          description: 'Test matrix combinations to run, one per line as version:tests:server:auth (shorthand like active:unit is allowed). Ignored for cron triggered builds.')
     string(name: 'TEST_FILTER',
            defaultValue: '',
